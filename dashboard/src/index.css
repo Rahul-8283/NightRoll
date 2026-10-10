@@ -47,7 +47,7 @@ a {
 :focus-visible {
   outline: 2px solid var(--lamp);
   outline-offset: 3px;
-  border-radius: 4px;
+  border-radius: var(--r-window);
 }
 
 ::selection {
@@ -175,7 +175,7 @@ a {
 .rail__dot {
   width: 8px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--r-pane);
   background: var(--ink-4);
   transition:
     background 200ms var(--ease),
@@ -299,7 +299,7 @@ a {
 .swatch {
   width: 9px;
   height: 11px;
-  border-radius: 2px;
+  border-radius: var(--r-pane);
   flex: none;
 }
 
@@ -325,7 +325,7 @@ a {
   align-items: center;
   gap: var(--s-2);
   padding: 5px 11px;
-  border-radius: 999px;
+  border-radius: var(--r-control);
   font-size: var(--text-sm);
   font-weight: 500;
   white-space: nowrap;
@@ -434,7 +434,7 @@ a.window:hover {
   width: 132px;
   gap: 6px;
   padding: 8px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
 }
 
 .pane {
@@ -627,7 +627,7 @@ a.window:hover {
 .timeline {
   position: relative;
   height: 10px;
-  border-radius: 999px;
+  border-radius: var(--r-control);
   background: var(--ink-0);
   border: 1px solid var(--line-soft);
   margin: var(--s-5) 0 var(--s-3);
@@ -637,7 +637,7 @@ a.window:hover {
   position: absolute;
   top: -1px;
   bottom: -1px;
-  border-radius: 999px;
+  border-radius: var(--r-control);
   background: linear-gradient(90deg, var(--lamp-deep), var(--lamp-bright));
   box-shadow: 0 0 18px var(--lamp-glow);
 }
@@ -689,7 +689,7 @@ a.window:hover {
   padding: var(--s-6);
   background: linear-gradient(180deg, var(--ink-2), var(--ink-1));
   border: 1px solid var(--line-soft);
-  border-radius: 22px;
+  border-radius: var(--r-card);
   box-shadow: 0 40px 120px -40px rgba(0, 0, 0, 0.9);
 }
 
@@ -858,7 +858,7 @@ a.window:hover {
   align-items: center;
   gap: var(--s-2);
   padding: 5px 11px;
-  border-radius: 999px;
+  border-radius: var(--r-control);
   border: 1px solid var(--line);
   background: var(--ink-2);
   color: var(--paper-2);
@@ -981,7 +981,7 @@ a.window:hover {
 .window__pulse {
   position: absolute;
   inset: -5px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   border: 2px solid var(--lamp-bright);
   box-shadow: 0 0 22px var(--lamp-glow);
   pointer-events: none;
@@ -1270,7 +1270,7 @@ a.window:hover {
   margin-left: auto;
   min-width: 22px;
   padding: 0 7px;
-  border-radius: 999px;
+  border-radius: var(--r-control);
   background: var(--moon-wash);
   border: 1px solid rgba(169, 193, 232, 0.3);
   color: var(--moon);
@@ -1437,11 +1437,73 @@ a.window:hover {
 .window__flag {
   max-width: 100%;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--r-control);
   border: 1px solid rgba(238, 108, 77, 0.35);
   background: var(--ember-wash);
   color: var(--ember);
   font-size: 10px;
   line-height: 1.4;
   text-align: center;
+}
+
+/* ---------- Form controls: selects and text areas match inputs ---------- */
+
+.field select,
+.field textarea {
+  padding: 11px 14px;
+  border-radius: var(--r-control);
+  border: 1px solid var(--line);
+  background: var(--ink-0);
+  color: var(--paper);
+  font: inherit;
+  transition: border-color 160ms var(--ease);
+}
+
+.field select {
+  appearance: none;
+  padding-right: 40px;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--paper-2) 50%),
+    linear-gradient(135deg, var(--paper-2) 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) 50%,
+    calc(100% - 15px) 50%;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+
+.field select option {
+  background: var(--ink-2);
+  color: var(--paper);
+}
+
+.field textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.field select:hover:not(:disabled),
+.field textarea:hover:not(:disabled) {
+  border-color: var(--ink-4);
+}
+
+.field select:focus-visible,
+.field textarea:focus-visible {
+  outline: none;
+  border-color: var(--lamp);
+  box-shadow: 0 0 0 3px var(--lamp-wash);
+}
+
+.field select:disabled,
+.field textarea:disabled {
+  opacity: 0.5;
+}
+
+/* Audit rows: time on the left, the entry filling the rest. */
+.audit__row .ledger__main {
+  flex: 1;
+  min-width: 0;
 }
