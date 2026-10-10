@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import time
+from datetime import UTC, datetime
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
@@ -16,8 +17,11 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 from pydantic import ValidationError
 
+from app.db.queries import students as students_q
 from app.db.queries import verification as verification_q
+from app.db.queries import windows as windows_q
 from app.schemas.verify import SubmissionPayload
+from app.services import nonces
 from app.services.verification import integrity
 from app.services.verification.runner import GateCheck, Submission
 
@@ -103,3 +107,44 @@ async def integrity_gate(submission: Submission) -> GateCheck:
     if detail:
         return _integrity_failure(submission, detail)
     return GateCheck.ok(warning=warning)
+
+
+async def window_gate(submission: Submission) -> GateCheck:
+    """Gate 2: the payload's window must be the open one, and the server clock must agree.
+
+    The phone's `client_time` is recorded but never used for this decision.
+    """
+    payload = submission.payload
+    window = await windows_q.open_window(submission.pool)
+    if window is None or window["id"] != payload.window_id:
+        return GateCheck.fail("OUTSIDE_WINDOW", "the signed window is not the open window")
+
+    now = datetime.now(UTC)
+    if not (window["opens_at"] <= now < window["closes_at"]):
+        return GateCheck.fail("OUTSIDE_WINDOW", "server clock is outside the window")
+
+    student = await students_q.get_active_enrolled(submission.pool, payload.student_id)
+    if student is None:
+        return GateCheck.fail("DEVICE_NOT_ENROLLED", "student is not active and enrolled")
+
+    submission.window = window
+    return GateCheck.ok()
+
+
+async def nonce_gate(submission: Submission) -> GateCheck:
+    """Gate 3: the nonce is fresh, single use, and was issued with this challenge.
+
+    The challenge is compared before the nonce is consumed, so a wrong challenge does not burn it.
+    """
+    payload = submission.payload
+    window_id = submission.window["id"]
+    status, value, challenge = await nonces.peek(submission.redis, window_id, payload.student_id)
+    if status != "ok" or value != payload.nonce:
+        return GateCheck.fail("NONCE_INVALID", f"nonce {status}")
+    if challenge is None or challenge != [step.action for step in payload.challenge]:
+        return GateCheck.fail("NONCE_INVALID", "challenge does not match the one issued")
+
+    consumed = await nonces.consume(submission.redis, window_id, payload.student_id, payload.nonce)
+    if consumed != "ok":
+        return GateCheck.fail("NONCE_INVALID", f"nonce {consumed}")
+    return GateCheck.ok()
