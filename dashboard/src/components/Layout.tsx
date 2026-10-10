@@ -9,6 +9,7 @@ const links = [
   { to: '/dashboard', label: 'Tonight', end: true },
   { to: '/dashboard/review', label: 'Review', end: false },
   { to: '/dashboard/absentees', label: 'Absentees', end: false },
+  { to: '/dashboard/export', label: 'Export', end: false },
   { to: '/dashboard/windows', label: 'Windows', end: false },
   { to: '/dashboard/enrollment', label: 'Enrollment', end: false },
 ]

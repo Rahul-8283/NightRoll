@@ -3,6 +3,7 @@ import { RequireWarden } from './auth/RequireWarden'
 import { Layout } from './components/Layout'
 import { Absentees } from './pages/Absentees'
 import { Enrollment } from './pages/Enrollment'
+import { Export } from './pages/Export'
 import { Landing } from './pages/Landing'
 import { Login } from './pages/Login'
 import { NotFound } from './pages/NotFound'
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Tonight /> },
           { path: 'review', element: <Review /> },
           { path: 'absentees', element: <Absentees /> },
+          { path: 'export', element: <Export /> },
           { path: 'rooms/:roomId', element: <Room /> },
           { path: 'windows', element: <Windows /> },
           { path: 'enrollment', element: <Enrollment /> },
