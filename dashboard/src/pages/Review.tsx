@@ -163,6 +163,8 @@ export function Review() {
     },
   })
 
+  const { mutate: decideMutate, isPending: deciding } = decide
+
   // Keyboard: J/K or arrows move, A approves, D opens decline, Escape cancels. Ignored while typing.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -177,8 +179,8 @@ export function Review() {
       } else if (event.key === 'k' || event.key === 'ArrowUp') {
         event.preventDefault()
         setIndex(Math.max(current - 1, 0))
-      } else if (event.key === 'a' && !decide.isPending) {
-        decide.mutate({ markId: item.mark_id, decision: 'APPROVED', note: '' })
+      } else if (event.key === 'a' && !deciding) {
+        decideMutate({ markId: item.mark_id, decision: 'APPROVED', note: '' })
       } else if (event.key === 'd') {
         setDeclining(item.mark_id)
       } else if (event.key === 'Escape') {
@@ -187,7 +189,7 @@ export function Review() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [items, current, decide.isPending, decide.mutate])
+  }, [items, current, deciding, decideMutate])
 
   return (
     <>
