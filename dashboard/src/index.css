@@ -1227,3 +1227,56 @@ a.window:hover {
   outline: 2px solid var(--lamp);
   outline-offset: 2px;
 }
+
+/* ---------- Enrollment page (Phase 10) ---------- */
+
+.result {
+  width: 100%;
+  border: 0;
+  border-radius: var(--r-control);
+  padding: var(--s-3);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.result:hover {
+  background: var(--ink-2);
+}
+
+.result.is-selected {
+  background: var(--ink-3);
+  box-shadow: inset 3px 0 0 var(--lamp);
+}
+
+.result:focus-visible {
+  outline: 2px solid var(--lamp);
+  outline-offset: 2px;
+}
+
+.field__spacer {
+  display: block;
+  height: 1.4em;
+}
+
+.code-display {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-5);
+  margin-bottom: var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--ink-0);
+  text-align: center;
+}
+
+.code-display__value {
+  font-size: var(--text-3xl);
+  letter-spacing: 0.18em;
+  color: var(--lamp-bright);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
