@@ -34,3 +34,33 @@ class RoomDetailOut(ApiModel):
     subnet: str | None
     access_points: list[AccessPointOut]
     students: list[RoomStudentOut]
+
+
+class WifiNetworkScan(ApiModel):
+    bssid: str
+    rssi: float
+    band: str  # '2.4GHz' or '5GHz'
+
+
+class RoomScanObservation(ApiModel):
+    networks: list[WifiNetworkScan]
+
+
+class SubmitRoomScansRequest(ApiModel):
+    scans: list[RoomScanObservation]
+
+
+class RoomFingerprintResponse(ApiModel):
+    id: UUID
+    room_id: UUID
+    version: int
+    pattern: dict
+    ap_count: int
+    created_at: str
+    age_seconds: int
+    reset_pending: bool
+
+
+class FingerprintResetResponse(ApiModel):
+    reset_pending: bool
+    room_id: UUID

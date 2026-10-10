@@ -5,9 +5,18 @@ from uuid import UUID
 from fastapi import APIRouter
 
 from app.db.queries import rooms as rooms_q
-from app.deps import CurrentWarden, DbPool
+from app.deps import CurrentStudent, CurrentWarden, DbPool
 from app.errors import AppError
-from app.schemas.rooms import AccessPointOut, RoomDetailOut, RoomOut, RoomStudentOut
+from app.schemas.rooms import (
+    AccessPointOut,
+    FingerprintResetResponse,
+    RoomDetailOut,
+    RoomFingerprintResponse,
+    RoomOut,
+    RoomStudentOut,
+    SubmitRoomScansRequest,
+)
+from app.services import fingerprint as fingerprint_svc
 
 router = APIRouter(prefix="/v1/rooms", tags=["rooms"])
 
@@ -33,3 +42,44 @@ async def get_room(room_id: UUID, pool: DbPool, _: CurrentWarden) -> RoomDetailO
         access_points=[AccessPointOut(**dict(row)) for row in access_points],
         students=[RoomStudentOut(**dict(row)) for row in students],
     )
+
+
+@router.post("/{room_id}/fingerprint", response_model=RoomFingerprintResponse)
+async def submit_room_fingerprint_endpoint(
+    room_id: UUID,
+    payload: SubmitRoomScansRequest,
+    pool: DbPool,
+    student_id: CurrentStudent,
+) -> RoomFingerprintResponse:
+    result = await fingerprint_svc.submit_room_fingerprint(
+        pool,
+        room_id=room_id,
+        student_id=student_id,
+        payload=payload,
+    )
+    return RoomFingerprintResponse(**result)
+
+
+@router.post("/{room_id}/fingerprint/reset", response_model=FingerprintResetResponse)
+async def reset_room_fingerprint_endpoint(
+    room_id: UUID,
+    pool: DbPool,
+    warden: CurrentWarden,
+) -> FingerprintResetResponse:
+    result = await fingerprint_svc.reset_room_fingerprint(
+        pool,
+        room_id=room_id,
+        actor_id=warden.user_id,
+    )
+    return FingerprintResetResponse(**result)
+
+
+@router.get("/{room_id}/fingerprint", response_model=RoomFingerprintResponse)
+async def get_room_fingerprint_endpoint(
+    room_id: UUID,
+    pool: DbPool,
+    _: CurrentWarden,
+) -> RoomFingerprintResponse:
+    result = await fingerprint_svc.get_room_fingerprint_status(pool, room_id)
+    return RoomFingerprintResponse(**result)
+
