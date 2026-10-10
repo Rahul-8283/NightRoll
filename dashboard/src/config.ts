@@ -7,6 +7,8 @@ export const config = {
   wsUrl: env.VITE_WS_URL ?? 'ws://localhost:8000/v1/ws/rooms',
   supabaseUrl: env.VITE_SUPABASE_URL ?? '',
   supabaseAnonKey: env.VITE_SUPABASE_ANON_KEY ?? '',
+  // Shows made-up rooms and students so pages can be looked at before they are wired to the API.
+  sampleData: env.VITE_SAMPLE_DATA === 'true',
 }
 
 export const missingConfig: string[] = [
