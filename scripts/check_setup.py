@@ -226,9 +226,32 @@ def check_tools() -> None:
         record("WARN", "Node major version", f"{node_major}; the team pins Node 20 in .nvmrc")
 
 
+REQUIRED_PATHS = [
+    "app/.nvmrc", "app/.env.example",
+    "backend/.python-version", "backend/.env.example", "backend/README.md",
+    "face/.python-version", "face/.env.example", "face/models/README.md", "face/README.md",
+    "dashboard/.nvmrc", "dashboard/.env.example", "dashboard/README.md",
+    "supabase/README.md", "supabase/migrations/README.md",
+    "infra/docker-compose.yml", "infra/README.md",
+    "config/rooms.example.json", "config/README.md",
+    "scripts/README.md", "scripts/spikes/RESULTS.md",
+    "docs/PRD.md", "docs/TRD.md", "docs/architecture.md",
+    "phase/phase_0.md", "CLAUDE.md", "LICENSE", "README.md", ".gitignore",
+]
+
+
+def check_structure() -> None:
+    missing = [p for p in REQUIRED_PATHS if not (ROOT / p).exists()]
+    if missing:
+        record("FAIL", "folder structure complete", "missing: " + ", ".join(missing))
+    else:
+        record("PASS", "folder structure complete", f"{len(REQUIRED_PATHS)} required files present")
+
+
 async def main() -> int:
     env = check_env_files()
     check_values(env)
+    check_structure()
     check_git()
     check_tools()
 
