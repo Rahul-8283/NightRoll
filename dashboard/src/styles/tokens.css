@@ -1,0 +1,68 @@
+/*
+ * NightRoll design tokens: "lights out".
+ * The hostel at night, seen from outside. Every room is a window.
+ * Lamp = present, moon = in review, ember = rejected, unlit = not yet marked.
+ * The app mirrors these values in app/src/theme/.
+ */
+:root {
+  /* Night: the surfaces, darkest to lightest */
+  --ink-0: #07080c;
+  --ink-1: #0b0d13;
+  --ink-2: #11141d;
+  --ink-3: #181c28;
+  --ink-4: #20253a;
+  --line: #262b3c;
+  --line-soft: #1a1e2b;
+
+  /* Paper: the text */
+  --paper: #efe9dd;
+  --paper-2: #adb2c1;
+  --paper-3: #7d8397;
+
+  /* Lamp: a lit window. Present, and the one primary action. */
+  --lamp: #f5b95c;
+  --lamp-bright: #ffd58e;
+  --lamp-deep: #d98f2b;
+  --lamp-wash: rgba(245, 185, 92, 0.1);
+  --lamp-glow: rgba(245, 185, 92, 0.34);
+
+  /* Moon: cold light. In review, scheduled, informational. */
+  --moon: #a9c1e8;
+  --moon-wash: rgba(169, 193, 232, 0.1);
+
+  /* Ember: rejected and destructive. */
+  --ember: #ee6c4d;
+  --ember-wash: rgba(238, 108, 77, 0.12);
+
+  /* Type */
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'Hanken Grotesk Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.5rem;
+  --text-3xl: 3.5rem;
+
+  /* Space */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 72px;
+
+  /* Shape: windows are architectural (tight corners), cards are softer */
+  --r-pane: 3px;
+  --r-window: 7px;
+  --r-control: 10px;
+  --r-card: 16px;
+
+  --rail-width: 248px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
