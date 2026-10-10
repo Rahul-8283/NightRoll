@@ -4,11 +4,11 @@ FastAPI service: window management, nonces, the six hard gates, scoring and revi
 
 ## Status
 
-Phase 0 creates only the environment file. There is no code yet, so the run command below will not work until Phase 2 adds `app/main.py`.
+The project is set up with uv and has a FastAPI entry point (`app/main.py`) with a health route. Config, database, Redis and the warden routes arrive in Phase 2.
 
 ## Requirements
 
-- Python 3.12
+- uv (`brew install uv`); it installs Python 3.12 for you
 - An Upstash Redis database. Put its `rediss://` URL in `backend/.env` as `REDIS_URL`.
 - A filled-in `backend/.env`
 - `backend/secrets/google-service-account.json` (git-ignored, from the team password manager)
@@ -18,16 +18,25 @@ Phase 0 creates only the environment file. There is no code yet, so the run comm
 ```bash
 cd backend
 cp .env.example .env                  # then fill in the values
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"               # Phase 2 adds pyproject.toml
+uv sync                               # creates .venv and installs everything in uv.lock
 ```
+
+uv reads the Python version from `.python-version` (3.12) and installs it if needed.
+
+Add a dependency with `uv add <package>` and a dev-only tool with `uv add --dev <package>`. Commit `pyproject.toml` and `uv.lock` together.
 
 ## Run
 
 ```bash
-uvicorn app.main:app --reload --port 8000     # API, from Phase 2
-python -m app.scheduler                       # window scheduler, from Phase 3
+uv run uvicorn app.main:app --reload --port 8000   # API
+curl http://localhost:8000/v1/health               # expect {"status":"ok"}
 ```
 
-Check: `curl http://localhost:8000/v1/health` (Phase 2).
+From Phase 3, also run the window scheduler in its own terminal: `uv run python -m app.scheduler`.
+
+## Lint
+
+```bash
+uv run ruff check .
+uv run ruff format .
+```

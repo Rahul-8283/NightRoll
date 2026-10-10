@@ -628,7 +628,8 @@ Install these once. The commands are for macOS with Homebrew; Windows and Linux 
 | Tool | Version | Needed for | Install |
 |---|---|---|---|
 | Git | any recent | Source control | `brew install git` |
-| Python | 3.12 | Backend, face worker | `brew install python@3.12` |
+| uv | current | Backend and face worker: Python versions, dependencies | `brew install uv` |
+| Python | 3.12 | Backend, face worker (uv installs it, so this is optional) | `brew install python@3.12` |
 | Node.js | 20 LTS | Dashboard, app tooling | `brew install node@20` |
 | JDK | 17 | Android build | `brew install openjdk@17` |
 | Android Studio | current stable | Android SDK, emulator | developer.android.com/studio |
@@ -667,7 +668,7 @@ Install these once. The commands are for macOS with Homebrew; Windows and Linux 
 |---|---|---|---|
 | Upstash Redis | hosted, TLS | set `REDIS_URL` in `backend/.env` | Phase 0 (now) |
 | Supabase | hosted | `supabase link --project-ref <ref>` | Phase 0 (now) |
-| Backend API | 8000 | `cd backend && uvicorn app.main:app --reload --port 8000` | Phase 2 |
+| Backend API | 8000 | `cd backend && uv run uvicorn app.main:app --reload --port 8000` | Health route now; full API in Phase 2 |
 | Window scheduler | none | `cd backend && python -m app.scheduler` | Phase 3 |
 | Face worker | 8100 | `cd face && uvicorn worker.main:app --port 8100` | Phase 5 |
 | Warden dashboard | 5173 | `cd dashboard && npm run dev` | Shell now; screens in Phase 10 |
@@ -685,17 +686,16 @@ docker run --rm redis:7 redis-cli --tls -u "<your REDIS_URL>" ping   # expect PO
 
 Use the same `rediss://` URL as in `backend/.env`. Do not commit it.
 
-**Backend API (from Phase 2)**
+**Backend API (set up now with uv)**
 
 ```bash
 cd backend
-python3.12 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-uvicorn app.main:app --reload --port 8000
-curl http://localhost:8000/v1/health
+uv sync
+uv run uvicorn app.main:app --reload --port 8000
+curl http://localhost:8000/v1/health    # expect {"status":"ok"}
 ```
 
-**Window scheduler (from Phase 3)** runs in its own terminal, with the same virtual environment: `python -m app.scheduler`.
+**Window scheduler (from Phase 3)** runs in its own terminal: `cd backend && uv run python -m app.scheduler`.
 
 **Face worker (from Phase 5)**
 
