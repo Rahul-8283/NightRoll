@@ -3,6 +3,7 @@ name = "nightroll-backend"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "apscheduler>=3.11.3",
     "asyncpg>=0.32.0",
     "cryptography>=50.0.2",
     "fastapi>=0.143.0",

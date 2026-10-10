@@ -9,4 +9,5 @@ class HealthOut(ApiModel):
     status: ServiceStatus
     db: ServiceStatus
     redis: ServiceStatus
+    scheduler: ServiceStatus
     version: str
