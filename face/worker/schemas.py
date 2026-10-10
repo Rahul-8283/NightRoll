@@ -42,6 +42,19 @@ class FrameIssue(BaseModel):
     detail: str
 
 
+class FrameResult(BaseModel):
+    """What the worker measured for one frame, in the order the frames were sent."""
+
+    index: int
+    usable: bool
+    issues: list[str]
+    similarity: float | None = Field(description="Cosine similarity to the enrolled embedding, if usable")
+    antispoof: float | None = Field(description="Real-face score 0 to 1, if usable and the model is loaded")
+    yaw: float | None = Field(description="Head turn in degrees, if a face was found")
+    pitch: float | None = None
+    roll: float | None = None
+
+
 class VerifyResponse(BaseModel):
     """Verification results consumed by backend scoring and fusion (Phase 9)."""
 
@@ -50,8 +63,10 @@ class VerifyResponse(BaseModel):
     median_similarity: float
     antispoof_median: float
     antispoof_scores: list[float]
+    antispoof_available: bool
     head_poses: list[HeadPose]
     frame_issues: list[FrameIssue]
+    frame_results: list[FrameResult]
     frames_path: str | None
     model_version: str
 

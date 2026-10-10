@@ -19,10 +19,11 @@ from worker.config import settings
 from worker.pipeline.antispoof import AntiSpoofClassifier, calculate_median_antispoof
 from worker.pipeline.detect import evaluate_frame
 from worker.pipeline.embed import aggregate_enrollment_embeddings, extract_unit_embedding
-from worker.pipeline.match import evaluate_similarities
+from worker.pipeline.match import compute_similarity, evaluate_similarities
 from worker.schemas import (
     EnrollmentResponse,
     FrameIssue,
+    FrameResult,
     HeadPose,
     HealthResponse,
     VerifyResponse,
@@ -255,6 +256,8 @@ async def verify_nightly_frames(
     antispoof_scores: list[float] = []
     head_poses: list[HeadPose] = []
     frame_issues: list[FrameIssue] = []
+    frame_results: list[FrameResult] = []
+    antispoof_loaded = antispoof_classifier is not None and antispoof_classifier.is_available
 
     # 2. Process frames
     for idx, (upload, expected_hash) in enumerate(zip(frames, expected_hashes, strict=True)):
@@ -272,6 +275,17 @@ async def verify_nightly_frames(
         # Quality & Detection (do not reject pose outright during verify, capture pose for liveness challenge)
         q_res = evaluate_frame(frame_index=idx, image_bytes=content, face_app=face_app, require_neutral_pose=False)
         head_poses.append(q_res.head_pose)
+        result = FrameResult(
+            index=idx,
+            usable=False,
+            issues=[issue.code for issue in q_res.issues],
+            similarity=None,
+            antispoof=None,
+            yaw=q_res.head_pose.yaw if q_res.face is not None else None,
+            pitch=q_res.head_pose.pitch if q_res.face is not None else None,
+            roll=q_res.head_pose.roll if q_res.face is not None else None,
+        )
+        frame_results.append(result)
 
         if not q_res.valid:
             frame_issues.extend(q_res.issues)
@@ -280,16 +294,20 @@ async def verify_nightly_frames(
         # Embedding extraction
         try:
             emb = extract_unit_embedding(q_res.face)
-            usable_embeddings.append(emb)
         except Exception as e:
             frame_issues.append(FrameIssue(frame_index=idx, code="BAD_EMBEDDING", detail=str(e)))
+            result.issues.append("BAD_EMBEDDING")
             continue
+        usable_embeddings.append(emb)
+        result.usable = True
+        result.similarity = compute_similarity(enrolled_embedding, emb)
 
         # Anti-spoof inference
-        if antispoof_classifier is not None and antispoof_classifier.is_available:
+        if antispoof_loaded:
             bbox = q_res.face.bbox if hasattr(q_res.face, "bbox") else [0, 0, 100, 100]
-            as_score = antispoof_classifier.score(q_res.img, bbox)
-            antispoof_scores.append(round(as_score, 4))
+            as_score = round(antispoof_classifier.score(q_res.img, bbox), 4)
+            antispoof_scores.append(as_score)
+            result.antispoof = as_score
         else:
             antispoof_scores.append(0.0)
 
@@ -306,8 +324,10 @@ async def verify_nightly_frames(
         median_similarity=median_sim,
         antispoof_median=median_antispoof,
         antispoof_scores=antispoof_scores,
+        antispoof_available=antispoof_loaded,
         head_poses=head_poses,
         frame_issues=frame_issues,
+        frame_results=frame_results,
         frames_path=frames_path,
         model_version=settings.MODEL_VERSION,
     )
