@@ -142,3 +142,54 @@ export type RoomFingerprint = {
   age_seconds: number
   reset_pending: boolean
 }
+
+export type ReviewItem = {
+  mark_id: string
+  window_id: string
+  student_id: string
+  student_name: string
+  roll_number: string
+  room_id: string
+  room_number: string
+  floor: number
+  marked_at: string
+  score: number | null
+  attempt: number
+  attempts_tonight: number
+  reasons: ReasonOut[]
+  scorers: ScorerOut[]
+  fingerprint_created_at: string | null
+  frames_available: boolean
+}
+
+export type AttemptRow = {
+  mark_id: string
+  verdict: Verdict
+  reasons: ReasonOut[]
+  marked_at: string
+  attempt: number
+}
+
+export type DecisionRow = {
+  decision: 'APPROVED' | 'DECLINED' | 'OVERRIDDEN' | 'MANUAL'
+  status: 'PRESENT' | 'ABSENT' | null
+  reviewed_by: string
+  note: string | null
+  reviewed_at: string
+}
+
+export type EffectiveStatus = 'PRESENT' | 'ABSENT' | 'PENDING' | 'NOT_MARKED' | 'OFF'
+
+export type MarkDetailFull = ReviewItem & {
+  verdict: Verdict
+  earlier_attempts: AttemptRow[]
+  decisions: DecisionRow[]
+  effective_status: EffectiveStatus
+}
+
+export type MarkDecision = {
+  mark_id: string
+  student_id: string
+  status: EffectiveStatus
+  decided_how: 'override' | 'manual' | 'automatic' | 'approved' | 'declined' | null
+}

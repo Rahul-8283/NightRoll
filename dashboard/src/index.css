@@ -1263,3 +1263,92 @@ a.window:hover {
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
+
+/* ---------- Review queue and shared rail count (Phase 11) ---------- */
+
+.rail__count {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--moon-wash);
+  border: 1px solid rgba(169, 193, 232, 0.3);
+  color: var(--moon);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.review-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.review-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-card);
+  background: var(--ink-2);
+  cursor: default;
+}
+
+.review-card.is-selected {
+  border-color: var(--moon);
+  box-shadow: 0 0 0 1px rgba(169, 193, 232, 0.4);
+}
+
+.review-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.review-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.review-card__why {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: var(--text-sm);
+}
+
+.review-card__why ul,
+.attempts {
+  margin: 0;
+  padding-left: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  font-size: var(--text-sm);
+}
+
+.attempts small {
+  display: block;
+}
+
+.confirm textarea {
+  width: 100%;
+  font: inherit;
+  padding: var(--s-3);
+  border-radius: var(--r-control);
+  border: 1px solid var(--line);
+  background: var(--ink-0);
+  color: var(--paper);
+  resize: vertical;
+}

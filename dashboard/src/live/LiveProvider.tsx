@@ -60,6 +60,9 @@ export function LiveProvider({ children }: { children: ReactNode }) {
           queryClient.setQueryData<TonightData | undefined>(['tonight'], (old) => applyRoomUpdate(old, message))
           setRoomPulses((pulses) => ({ ...pulses, [message.room_id]: Date.now() }))
           void queryClient.invalidateQueries({ queryKey: ['roomTonight', message.room_id] })
+          // A decision by any warden moves cards in and out of the review queue on every open dashboard.
+          void queryClient.invalidateQueries({ queryKey: ['reviews'] })
+          void queryClient.invalidateQueries({ queryKey: ['mark'] })
           return
         case 'window_state': {
           const current = queryClient.getQueryData<TonightData>(['tonight'])

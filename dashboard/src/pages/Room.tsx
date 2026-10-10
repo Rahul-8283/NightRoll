@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { useFingerprint, useRoomTonight } from '../api/queries'
-import type { MarkDetail, RoomStudentStatus, Verdict } from '../api/types'
+import type { RoomStudentStatus, Verdict } from '../api/types'
+import { ScoreBars } from '../components/ScoreBars'
 import { EmptyState } from '../components/ui/EmptyState'
 import { RoomWindow } from '../components/ui/RoomWindow'
 import { StatusPill } from '../components/ui/StatusPill'
@@ -10,14 +11,6 @@ import type { Status } from '../components/ui/status'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { apiFetch, ApiError } from '../lib/api'
 import { formatClock } from '../lib/format'
-
-const SCORER_LABEL: Record<string, string> = {
-  face: 'Face match',
-  liveness: 'Liveness',
-  fingerprint: 'Room Wi-Fi pattern',
-  own_ap: 'Own router signal',
-  ap_agreement: 'Access point agreement',
-}
 
 const VERDICT: Record<Verdict, { status: Status; label: string }> = {
   PRESENT: { status: 'present', label: 'Present' },
@@ -36,26 +29,6 @@ function studentStatus(student: RoomStudentStatus): { status: Status; label: str
 function paneFor(student: RoomStudentStatus): Status {
   if (!student.mark) return 'unlit'
   return studentStatus(student).status
-}
-
-function ScoreBars({ mark }: { mark: MarkDetail }) {
-  if (mark.scorers.length === 0) return <p className="muted">No scores were recorded for this attempt.</p>
-  return (
-    <div className="weights">
-      {mark.scorers.map((scorer) => (
-        <div key={scorer.name} className="weight">
-          <div className="weight__head">
-            <span>{SCORER_LABEL[scorer.name] ?? scorer.name}</span>
-            <span className="mono">{scorer.score.toFixed(2)}</span>
-          </div>
-          <div className="weight__bar" role="img" aria-label={`${SCORER_LABEL[scorer.name] ?? scorer.name} ${scorer.score.toFixed(2)} of 1`}>
-            <span style={{ width: `${Math.round(Math.min(1, Math.max(0, scorer.score)) * 100)}%` }} />
-          </div>
-          <small className="muted">{scorer.detail}</small>
-        </div>
-      ))}
-    </div>
-  )
 }
 
 function StudentRow({ student }: { student: RoomStudentStatus }) {
@@ -88,7 +61,7 @@ function StudentRow({ student }: { student: RoomStudentStatus }) {
               {student.mark.score !== null ? ` · trust ${student.mark.score.toFixed(2)}` : ''}
               {student.mark.reasons.length > 0 ? ` · ${student.mark.reasons.map((reason) => reason.message).join(' ')}` : ''}
             </p>
-            <ScoreBars mark={student.mark} />
+            <ScoreBars scorers={student.mark.scorers} />
           </>
         ) : (
           <p className="muted">No attempt tonight yet.</p>
