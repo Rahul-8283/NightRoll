@@ -22,8 +22,16 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        await db_pool.connect(settings)
-        await redis_client.connect(settings)
+        # A dependency that is down at boot must not take the whole API down with it;
+        # /v1/health has to stay reachable and report "degraded" instead of failing to start.
+        try:
+            await db_pool.connect(settings)
+        except Exception:
+            logger.exception("database pool failed to connect at startup")
+        try:
+            await redis_client.connect(settings)
+        except Exception:
+            logger.exception("redis client failed to connect at startup")
         log_event(
             logger,
             logging.INFO,
