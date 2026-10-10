@@ -31,6 +31,7 @@ class RoomCount(ApiModel):
     pending_review: int
     absent: int = 0
     rejected: int
+    health: list[str] = []
 
 
 class RecentMark(ApiModel):
@@ -66,6 +67,7 @@ class RoomUpdateEvent(ApiModel):
     total: int
     pending_review: int
     rejected: int
+    health: list[str] = []
     last: RecentMark | None
 
 
@@ -104,6 +106,7 @@ class RoomTonightOut(ApiModel):
     floor: int
     window: WindowBrief | None
     students: list[RoomStudentStatus]
+    health: list[str] = []
 
 
 class WindowHistoryOut(ApiModel):

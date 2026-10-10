@@ -121,3 +121,36 @@ async def enrolled_total(pool: asyncpg.Pool) -> int:
 
 async def closes_at_of(pool: asyncpg.Pool, window_id: UUID) -> datetime | None:
     return await pool.fetchval("select closes_at from attendance_windows where id = $1", window_id)
+
+
+async def room_health_rows(pool: asyncpg.Pool, window_id: UUID | None, room_id: UUID | None) -> list[asyncpg.Record]:
+    """Per room, the figures behind its health flags: the last 7 days' Wi-Fi trouble, and tonight's router sightings."""
+    return await pool.fetch(
+        """
+        select r.id as room_id,
+          (select count(*) from attendance_marks m join students s on s.id = m.student_id
+             where s.room_id = r.id and m.marked_at >= now() - interval '7 days'
+               and m.verdict in ('PRESENT', 'NEEDS_REVIEW', 'REJECTED')) as week_total,
+          (select count(*) from attendance_marks m join students s on s.id = m.student_id
+             where s.room_id = r.id and m.marked_at >= now() - interval '7 days'
+               and (m.verdict = 'NEEDS_REVIEW'
+                    or (m.verdict = 'REJECTED'
+                        and m.reasons && array['WIFI_PATTERN_MISMATCH', 'FINGERPRINT_MISSING',
+                                       'AP_UNAVAILABLE']::text[])))
+             as week_flagged,
+          (select count(*) from attendance_marks m join students s on s.id = m.student_id
+             where $1::uuid is not null and m.window_id = $1 and s.room_id = r.id and m.scores is not null
+               and m.verdict in ('PRESENT', 'NEEDS_REVIEW', 'REJECTED')) as tonight_scored,
+          (select count(*) from attendance_marks m join students s on s.id = m.student_id
+             where $1::uuid is not null and m.window_id = $1 and s.room_id = r.id and m.scores is not null
+               and m.verdict in ('PRESENT', 'NEEDS_REVIEW', 'REJECTED')
+               and exists (
+                 select 1 from jsonb_array_elements(m.scores->'scorers') e
+                 where e->>'name' = 'own_ap' and (e->>'score')::float > 0
+               )) as tonight_ap_seen
+        from rooms r
+        where ($2::uuid is null or r.id = $2)
+        """,
+        window_id,
+        room_id,
+    )

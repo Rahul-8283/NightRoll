@@ -41,6 +41,25 @@ def reason_out(code: str) -> ReasonOut:
         return ReasonOut(code=code, message=NOT_CONFIRMED)
 
 
+# Flags are computed from the marks themselves, so they cannot drift from what the students did.
+WIFI_FLAG_SHARE = 0.30
+WIFI_FLAG_MIN_MARKS = 5
+ROUTER_FLAG_MIN_MARKS = 2
+
+
+def health_flags(row) -> list[str]:
+    flags = []
+    if row["week_total"] >= WIFI_FLAG_MIN_MARKS and row["week_flagged"] / row["week_total"] > WIFI_FLAG_SHARE:
+        flags.append("rescan_wifi")
+    if row["tonight_scored"] >= ROUTER_FLAG_MIN_MARKS and row["tonight_ap_seen"] == 0:
+        flags.append("check_router")
+    return flags
+
+
+async def room_health(pool: asyncpg.Pool, window_id: UUID | None, room_id: UUID | None = None) -> dict[UUID, list[str]]:
+    return {row["room_id"]: health_flags(row) for row in await dash_q.room_health_rows(pool, window_id, room_id)}
+
+
 def _window(row) -> WindowBrief | None:
     if row is None:
         return None
@@ -69,6 +88,7 @@ async def tonight(pool: asyncpg.Pool) -> TonightOut:
     window = await _current_window(pool)
     window_id = window["id"] if window is not None else None
     counts = await dash_q.room_counts(pool, window_id)
+    health = await room_health(pool, window_id)
     rooms = [
         RoomCount(
             room_id=row["room_id"],
@@ -79,6 +99,7 @@ async def tonight(pool: asyncpg.Pool) -> TonightOut:
             pending_review=row["pending_review"],
             absent=row["absent"],
             rejected=row["rejected"],
+            health=health.get(row["room_id"], []),
         )
         for row in counts
     ]
@@ -116,12 +137,14 @@ async def room_update(pool: asyncpg.Pool, room_id: UUID, mark_id: UUID | None) -
         mark = await dash_q.mark_summary(pool, mark_id)
         if mark is not None:
             last = _recent(mark)
+    health = await room_health(pool, window["id"], room_id)
     return RoomUpdateEvent(
         room_id=room_id,
         present=row["present"],
         total=row["total"],
         pending_review=row["pending_review"],
         rejected=row["rejected"],
+        health=health.get(room_id, []),
         last=last,
     )
 
@@ -156,12 +179,14 @@ async def room_tonight(pool: asyncpg.Pool, room_id: UUID, room_row) -> RoomTonig
                 mark=mark,
             )
         )
+    health = await room_health(pool, window_id, room_id)
     return RoomTonightOut(
         room_id=room_id,
         number=room_row["number"],
         floor=room_row["floor"],
         window=_window(window),
         students=students,
+        health=health.get(room_id, []),
     )
 
 
