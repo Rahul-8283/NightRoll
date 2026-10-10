@@ -59,10 +59,7 @@ def verify_token(token: str, settings: Settings) -> dict:
         raise _unauthorized("Invalid token") from exc
 
 
-async def current_warden(request: Request, settings: Annotated[Settings, Depends(get_settings)]) -> Warden:
-    token = _extract_token(request)
-    claims = verify_token(token, settings)
-
+def warden_from_claims(claims: dict, settings: Settings) -> Warden:
     role = (claims.get("app_metadata") or {}).get("role")
     if role not in ("warden", "admin"):
         raise _forbidden("FORBIDDEN", "This account has no warden or admin role")
@@ -71,6 +68,16 @@ async def current_warden(request: Request, settings: Annotated[Settings, Depends
         raise _forbidden("MFA_REQUIRED", "Complete multi-factor authentication to continue")
 
     return Warden(user_id=claims["sub"], email=claims.get("email"), role=role)
+
+
+def authenticate_token(token: str, settings: Settings) -> tuple[Warden, dict]:
+    claims = verify_token(token, settings)
+    return warden_from_claims(claims, settings), claims
+
+
+async def current_warden(request: Request, settings: Annotated[Settings, Depends(get_settings)]) -> Warden:
+    warden, _ = authenticate_token(_extract_token(request), settings)
+    return warden
 
 
 async def require_admin(warden: Annotated[Warden, Depends(current_warden)]) -> Warden:

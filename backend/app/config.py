@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     WINDOW_DEFAULT_OPEN: str
     WINDOW_DEFAULT_CLOSE: str
 
+    # Warden dashboard origins allowed to call the API (comma separated)
+    DASHBOARD_ORIGINS: str = "http://localhost:5173"
+
     # Network gate
     NETWORK_VERIFY_MODE: str = "subnet"
     TRUSTED_PROXY_IPS: str = ""

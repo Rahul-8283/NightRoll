@@ -7,11 +7,13 @@ from fastapi import APIRouter, Depends, Query
 
 from app.config import Settings, get_settings
 from app.db.queries import enrollment as enrollment_q
+from app.db.queries import rooms as rooms_q
 from app.db.queries import students as students_q
-from app.deps import CurrentWarden, DbPool
+from app.deps import CurrentWarden, DbPool, RedisClient
 from app.errors import AppError
 from app.schemas.enrollment import StudentEnrollmentStatus, WithdrawStudentResponse
-from app.schemas.students import StudentOut
+from app.schemas.students import ChangeRoomRequest, ChangeRoomResponse, StudentOut
+from app.services import audit
 from app.services import enrollment as enrollment_svc
 
 router = APIRouter(prefix="/v1/students", tags=["students"])
@@ -23,8 +25,9 @@ async def list_students(
     _: CurrentWarden,
     room_id: UUID | None = None,
     floor: int | None = Query(default=None, ge=0),
+    q: str | None = Query(default=None, max_length=60),
 ) -> list[StudentOut]:
-    rows = await students_q.list_students(pool, room_id=room_id, floor=floor)
+    rows = await students_q.list_students(pool, room_id=room_id, floor=floor, search=q)
     return [StudentOut(**dict(row)) for row in rows]
 
 
@@ -56,15 +59,42 @@ async def get_student_enrollment(
     )
 
 
+@router.patch("/{student_id}/room", response_model=ChangeRoomResponse)
+async def change_student_room(
+    student_id: UUID,
+    body: ChangeRoomRequest,
+    pool: DbPool,
+    warden: CurrentWarden,
+) -> ChangeRoomResponse:
+    room = await rooms_q.get_room(pool, body.room_id)
+    if room is None:
+        raise AppError(code="NOT_FOUND", status_code=404, message="Room not found")
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            row = await students_q.set_student_room(conn, student_id, body.room_id)
+            if row is None:
+                raise AppError(code="NOT_FOUND", status_code=404, message="Student not found")
+            await audit.write(
+                conn,
+                actor=warden.user_id,
+                action="student.room_changed",
+                target_id=str(student_id),
+                payload={"room_id": str(body.room_id)},
+            )
+    return ChangeRoomResponse(student_id=student_id, room_id=body.room_id, room_number=room["number"])
+
+
 @router.post("/{student_id}/withdraw", response_model=WithdrawStudentResponse)
 async def withdraw_student(
     student_id: UUID,
     pool: DbPool,
+    redis: RedisClient,
     warden: CurrentWarden,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> WithdrawStudentResponse:
     await enrollment_svc.withdraw_student_consent(
         pool,
+        redis,
         settings,
         student_id=student_id,
         actor_id=warden.user_id,

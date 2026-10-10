@@ -1,83 +1,270 @@
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
-import { EmptyState, NotConnected } from '../components/ui/EmptyState'
+import { useFingerprint, useRoomTonight } from '../api/queries'
+import type { MarkDetail, RoomStudentStatus, Verdict } from '../api/types'
+import { EmptyState } from '../components/ui/EmptyState'
 import { RoomWindow } from '../components/ui/RoomWindow'
-import { SampleNote } from '../components/ui/SampleNote'
 import { StatusPill } from '../components/ui/StatusPill'
-import { config } from '../config'
-import { SAMPLE_ROOMS } from '../sample/hostel'
+import type { Status } from '../components/ui/status'
+import { ErrorBanner } from '../components/ErrorBanner'
+import { apiFetch, ApiError } from '../lib/api'
+import { formatClock } from '../lib/format'
+
+const SCORER_LABEL: Record<string, string> = {
+  face: 'Face match',
+  liveness: 'Liveness',
+  fingerprint: 'Room Wi-Fi pattern',
+  own_ap: 'Own router signal',
+  ap_agreement: 'Access point agreement',
+}
+
+const VERDICT: Record<Verdict, { status: Status; label: string }> = {
+  PRESENT: { status: 'present', label: 'Present' },
+  MANUAL: { status: 'present', label: 'Marked by warden' },
+  NEEDS_REVIEW: { status: 'review', label: 'In review' },
+  REJECTED: { status: 'rejected', label: 'Rejected' },
+  ABSENT: { status: 'unlit', label: 'Absent' },
+}
+
+function studentStatus(student: RoomStudentStatus): { status: Status; label: string } {
+  if (!student.enrolled) return { status: 'unlit', label: 'Not enrolled' }
+  if (!student.mark) return { status: 'unlit', label: 'Not yet marked' }
+  return VERDICT[student.mark.verdict]
+}
+
+function paneFor(student: RoomStudentStatus): Status {
+  if (!student.mark) return 'unlit'
+  return studentStatus(student).status
+}
+
+function ScoreBars({ mark }: { mark: MarkDetail }) {
+  if (mark.scorers.length === 0) return <p className="muted">No scores were recorded for this attempt.</p>
+  return (
+    <div className="weights">
+      {mark.scorers.map((scorer) => (
+        <div key={scorer.name} className="weight">
+          <div className="weight__head">
+            <span>{SCORER_LABEL[scorer.name] ?? scorer.name}</span>
+            <span className="mono">{scorer.score.toFixed(2)}</span>
+          </div>
+          <div className="weight__bar" role="img" aria-label={`${SCORER_LABEL[scorer.name] ?? scorer.name} ${scorer.score.toFixed(2)} of 1`}>
+            <span style={{ width: `${Math.round(Math.min(1, Math.max(0, scorer.score)) * 100)}%` }} />
+          </div>
+          <small className="muted">{scorer.detail}</small>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function StudentRow({ student }: { student: RoomStudentStatus }) {
+  const state = studentStatus(student)
+  return (
+    <details className="student">
+      <summary className="student__summary">
+        <div className="ledger__main">
+          <span>{student.name}</span>
+          <small className="mono">{student.roll_number}</small>
+        </div>
+        <span className="student__time mono muted">
+          {student.mark ? formatClock(student.mark.marked_at) : ''}
+        </span>
+        <StatusPill status={state.status} label={state.label} />
+      </summary>
+      <div className="student__body">
+        <div className="student__enrollment">
+          <span className={`pill ${student.face_enrolled ? 'pill--present' : 'pill--unlit'}`}>
+            Face {student.face_enrolled ? 'enrolled' : 'not enrolled'}
+          </span>
+          <span className={`pill ${student.device_enrolled ? 'pill--present' : 'pill--unlit'}`}>
+            Device {student.device_enrolled ? `enrolled${student.device_security_level ? ` · ${student.device_security_level}` : ''}` : 'not enrolled'}
+          </span>
+        </div>
+        {student.mark ? (
+          <>
+            <p className="muted">
+              Attempt {student.mark.attempt}
+              {student.mark.score !== null ? ` · trust ${student.mark.score.toFixed(2)}` : ''}
+              {student.mark.reasons.length > 0 ? ` · ${student.mark.reasons.map((reason) => reason.message).join(' ')}` : ''}
+            </p>
+            <ScoreBars mark={student.mark} />
+          </>
+        ) : (
+          <p className="muted">No attempt tonight yet.</p>
+        )}
+      </div>
+    </details>
+  )
+}
+
+function FingerprintCard({ roomId }: { roomId: string }) {
+  const query = useFingerprint(roomId)
+  const queryClient = useQueryClient()
+  const [confirming, setConfirming] = useState(false)
+  const reset = useMutation({
+    mutationFn: () => apiFetch<{ reset_pending: boolean }>(`/rooms/${roomId}/fingerprint/reset`, { method: 'POST' }),
+    onSuccess: () => {
+      setConfirming(false)
+      void queryClient.invalidateQueries({ queryKey: ['fingerprint', roomId] })
+    },
+  })
+
+  const notCaptured = query.error instanceof ApiError && query.error.status === 404
+  const fingerprint = query.data
+
+  return (
+    <section className="card">
+      <div className="card__head">
+        <h2 className="title">Wi-Fi fingerprint</h2>
+        {fingerprint && <span className="eyebrow">Version {fingerprint.version}</span>}
+      </div>
+
+      {query.isPending && <p className="muted">Loading fingerprint…</p>}
+      {query.isError && !notCaptured && (
+        <ErrorBanner error={query.error} onRetry={() => void query.refetch()} stale={false} />
+      )}
+      {notCaptured && (
+        <p className="muted">
+          No fingerprint yet. Captured scans from this room create one during enrollment.
+        </p>
+      )}
+
+      {fingerprint && (
+        <dl className="facts">
+          <div>
+            <dt>Captured</dt>
+            <dd>{new Date(fingerprint.created_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</dd>
+          </div>
+          <div>
+            <dt>Access points</dt>
+            <dd>{fingerprint.ap_count}</dd>
+          </div>
+        </dl>
+      )}
+
+      {(fingerprint?.reset_pending || reset.isSuccess) && (
+        <div className="banner banner--moon">
+          Reset requested. The next scans from this room replace the current fingerprint. Until then, the current one stays in use.
+        </div>
+      )}
+
+      {fingerprint && !confirming && (
+        <button className="btn btn--danger" type="button" onClick={() => setConfirming(true)}>
+          Reset room fingerprint
+        </button>
+      )}
+      {fingerprint && confirming && (
+        <div className="confirm">
+          <p>
+            Reset the Wi-Fi fingerprint for this room? The current one stays in use until new scans replace it.
+          </p>
+          {reset.isError && (
+            <p className="form-error" role="alert">
+              {reset.error instanceof ApiError ? reset.error.message : 'The reset did not go through. Try again.'}
+            </p>
+          )}
+          <div className="confirm__actions">
+            <button className="btn btn--danger" type="button" disabled={reset.isPending} onClick={() => reset.mutate()}>
+              {reset.isPending ? 'Resetting…' : 'Confirm reset'}
+            </button>
+            <button className="btn" type="button" disabled={reset.isPending} onClick={() => setConfirming(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
 
 export function Room() {
-  const { roomId } = useParams()
+  const { roomId = '' } = useParams()
+  const query = useRoomTonight(roomId)
+  const data = query.data
 
-  if (!config.sampleData) {
+  if (query.isError && query.error instanceof ApiError && query.error.status === 404) {
+    return (
+      <section className="empty">
+        <h2 className="title">Room not found</h2>
+        <p className="lede">
+          This room is not in the hostel list. <Link className="inline-link" to="/dashboard">Back to Tonight</Link>
+        </p>
+      </section>
+    )
+  }
+
+  if (!data) {
     return (
       <>
-        <header className="page__head">
-          <div>
-            <span className="eyebrow">Room</span>
-            <h1 className="display">Room {roomId}</h1>
-          </div>
-        </header>
-        <NotConnected what="The room page" />
+        <Link className="inline-link" to="/dashboard">← Tonight</Link>
+        {query.isError ? (
+          <ErrorBanner error={query.error} onRetry={() => void query.refetch()} stale={false} />
+        ) : (
+          <p className="muted">Loading room…</p>
+        )}
       </>
     )
   }
 
-  const room = SAMPLE_ROOMS.find((r) => r.number === roomId)
-  if (!room) {
-    return (
-      <EmptyState title="No such room">
-        <p>
-          Room {roomId} is not in the sample data. <Link to="/dashboard">Back to tonight</Link>
-        </p>
-      </EmptyState>
-    )
-  }
-
-  const present = room.students.filter((s) => s.status === 'present').length
+  const present = data.students.filter((s) => s.mark && (s.mark.verdict === 'PRESENT' || s.mark.verdict === 'MANUAL')).length
+  const enrolled = data.students.filter((s) => s.enrolled && s.active).length
 
   return (
     <>
-      <SampleNote />
       <header className="page__head">
         <div>
-          <span className="eyebrow">
-            <Link to="/dashboard">Tonight</Link> · Floor {room.floor}
-          </span>
-          <h1 className="display">
-            Room {room.number}, <em>{present}</em> of {room.students.length} in
-          </h1>
+          <Link className="inline-link" to="/dashboard">← Tonight</Link>
+          <span className="eyebrow">Floor {data.floor}</span>
+          <h1 className="display">Room {data.number}</h1>
         </div>
+        {data.window ? (
+          <StatusPill status={data.window.state === 'open' ? 'present' : 'unlit'} label={`Window ${data.window.state}`} />
+        ) : (
+          <StatusPill status="unlit" label="No window tonight" />
+        )}
       </header>
 
-      <div className="grid-2">
-        <section className="card">
-          <div className="card__head">
-            <h2 className="title">Who sleeps here</h2>
-            <span className="eyebrow">{room.students.length} beds</span>
-          </div>
-          <div className="ledger">
-            {room.students.map((student) => (
-              <div key={student.roll} className="ledger__row">
-                <div className="ledger__main">
-                  <span>{student.name}</span>
-                  <small>
-                    <span className="mono">{student.roll}</span>
-                    {student.note ? ` · ${student.note}` : ''}
-                  </small>
-                </div>
-                <StatusPill status={student.status} />
-              </div>
-            ))}
+      {query.isError && <ErrorBanner error={query.error} onRetry={() => void query.refetch()} stale />}
+
+      <div className={query.isError ? 'stack is-stale' : 'stack'}>
+        <section className="card room-head">
+          <RoomWindow
+            size="lg"
+            number={data.number}
+            panes={data.students.map(paneFor)}
+          />
+          <div className="room-head__text">
+            <p className="title">
+              {present} of {enrolled} {data.window?.state === 'closed' ? 'were in' : 'are in'}
+            </p>
+            <p className="muted">Each pane is one enrolled student. Lit means present.</p>
           </div>
         </section>
 
-        <aside className="card" style={{ display: 'grid', placeItems: 'center', gap: 'var(--s-4)' }}>
-          <RoomWindow number={room.number} panes={room.students.map((s) => s.status)} size="lg" />
-          <p className="muted" style={{ textAlign: 'center' }}>
-            One pane per bed, in roll-number order.
-          </p>
-        </aside>
+        <div className="grid-2">
+          <section className="card">
+            <div className="card__head">
+              <h2 className="title">Students</h2>
+              <span className="eyebrow">{data.students.length} in this room</span>
+            </div>
+            {data.students.length === 0 ? (
+              <EmptyState title="No students in this room">
+                <p>Move a student into this room from the Enrollment page.</p>
+              </EmptyState>
+            ) : (
+              <div className="ledger">
+                {data.students.map((student) => (
+                  <StudentRow key={student.student_id} student={student} />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <aside className="stack">
+            <FingerprintCard roomId={roomId} />
+          </aside>
+        </div>
       </div>
     </>
   )

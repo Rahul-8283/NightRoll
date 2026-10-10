@@ -14,18 +14,37 @@ export class ApiError extends Error {
   }
 }
 
-// Calls the NightRoll API with the warden's Supabase access token.
+// Calls the NightRoll API with the warden's Supabase access token. The dashboard never reads tables directly.
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { data } = await supabase.auth.getSession()
   const headers = new Headers(init.headers)
-  headers.set('Content-Type', 'application/json')
+  if (init.body !== undefined && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
   if (data.session) headers.set('Authorization', `Bearer ${data.session.access_token}`)
 
-  const response = await fetch(`${config.apiBaseUrl}${path}`, { ...init, headers })
+  let response: Response
+  try {
+    response = await fetch(`${config.apiBaseUrl}${path}`, { ...init, headers })
+  } catch {
+    throw new ApiError(0, 'NETWORK', 'Could not reach the NightRoll API')
+  }
   if (!response.ok) {
     const body = await response.json().catch(() => null)
     const error = body?.error
-    throw new ApiError(response.status, error?.code ?? 'UNKNOWN', error?.message ?? response.statusText, error?.request_id)
+    throw new ApiError(
+      response.status,
+      error?.code ?? 'UNKNOWN',
+      error?.message ?? response.statusText,
+      error?.request_id,
+    )
   }
-  return response.json() as Promise<T>
+  if (response.status === 204) return undefined as T
+  return (await response.json()) as T
+}
+
+export function postJson<T>(path: string, body: unknown): Promise<T> {
+  return apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body) })
+}
+
+export function patchJson<T>(path: string, body: unknown): Promise<T> {
+  return apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(body) })
 }

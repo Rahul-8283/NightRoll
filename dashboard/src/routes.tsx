@@ -1,7 +1,8 @@
 import { createBrowserRouter } from 'react-router'
+import { RequireWarden } from './auth/RequireWarden'
 import { Layout } from './components/Layout'
-import { Landing } from './pages/Landing.tsx'
 import { Enrollment } from './pages/Enrollment'
+import { Landing } from './pages/Landing'
 import { Login } from './pages/Login'
 import { NotFound } from './pages/NotFound'
 import { Room } from './pages/Room'
@@ -12,13 +13,18 @@ export const router = createBrowserRouter([
   { path: '/', element: <Landing /> },
   { path: '/login', element: <Login /> },
   {
-    path: '/dashboard',
-    element: <Layout />,
+    element: <RequireWarden />,
     children: [
-      { index: true, element: <Tonight /> },
-      { path: 'rooms/:roomId', element: <Room /> },
-      { path: 'windows', element: <Windows /> },
-      { path: 'enrollment', element: <Enrollment /> },
+      {
+        path: '/dashboard',
+        element: <Layout />,
+        children: [
+          { index: true, element: <Tonight /> },
+          { path: 'rooms/:roomId', element: <Room /> },
+          { path: 'windows', element: <Windows /> },
+          { path: 'enrollment', element: <Enrollment /> },
+        ],
+      },
     ],
   },
   { path: '*', element: <NotFound /> },

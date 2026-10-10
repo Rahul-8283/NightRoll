@@ -256,23 +256,6 @@ a {
   gap: var(--s-5);
 }
 
-/* ---------- Sample-data banner ---------- */
-
-.sample-note {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  align-self: flex-start;
-  padding: 6px 12px;
-  border: 1px dashed var(--line);
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--paper-3);
-}
-
 /* ---------- Tally: the four numbers for tonight ---------- */
 
 .tally {
@@ -795,4 +778,488 @@ a.window:hover {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ---------- Dashboard shell (Phase 10) ---------- */
+
+.rail__link.is-disabled {
+  color: var(--paper-3);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rail__link.is-disabled:hover {
+  color: var(--paper-3);
+  background: transparent;
+}
+
+.rail__foot span.mono {
+  display: block;
+  margin: 2px 0 var(--s-3);
+  overflow-wrap: anywhere;
+  font-size: var(--text-xs);
+}
+
+.btn--quiet-small {
+  padding: 7px 12px;
+  font-size: var(--text-sm);
+  background: transparent;
+  color: var(--paper-2);
+  border-color: var(--line);
+}
+
+.form-error {
+  color: var(--ember);
+  font-size: var(--text-sm);
+}
+
+.qr-frame {
+  align-self: center;
+  padding: var(--s-4);
+  border-radius: var(--r-card);
+  background: #ffffff;
+  line-height: 0;
+}
+
+.secret-key {
+  color: var(--lamp-bright);
+  letter-spacing: 0.12em;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Tonight: top bar, live status, banners, tile captions (Phase 10) ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--s-4);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.topbar__window {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.topbar__countdown {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--ink-2);
+  color: var(--paper-2);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.live__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--paper-3);
+}
+
+.live--live {
+  color: var(--lamp-bright);
+  background: var(--lamp-wash);
+  border-color: rgba(245, 185, 92, 0.25);
+}
+
+.live--live .live__dot {
+  background: var(--lamp);
+  box-shadow: 0 0 10px var(--lamp-glow);
+}
+
+.live--connecting,
+.live--reconnecting,
+.live--polling {
+  color: var(--moon);
+  background: var(--moon-wash);
+  border-color: rgba(169, 193, 232, 0.25);
+}
+
+.live--connecting .live__dot,
+.live--reconnecting .live__dot,
+.live--polling .live__dot {
+  background: var(--moon);
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-control);
+  border: 1px solid var(--line);
+  background: var(--ink-2);
+  color: var(--paper-2);
+  font-size: var(--text-sm);
+}
+
+.banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.banner--ember {
+  border-color: rgba(238, 108, 77, 0.35);
+  background: var(--ember-wash);
+  color: var(--paper);
+}
+
+.inline-link {
+  color: var(--lamp-bright);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.is-stale {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
+.tally--five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line-soft);
+}
+
+.tally--five .tally__cell {
+  border: 0;
+  background: var(--ink-2);
+}
+
+.tally__note {
+  font-size: var(--text-xs);
+  color: var(--paper-3);
+}
+
+.tally__value--mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  padding-top: 6px;
+}
+
+.facade__rooms {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}
+
+.window__frame {
+  position: relative;
+}
+
+.window__frame--problem {
+  border-color: var(--ember);
+}
+
+.window__caption {
+  max-width: 100%;
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  text-align: center;
+  color: var(--paper-2);
+}
+
+/* One ring that fades out when a room's count changes. Keyed by timestamp, so it replays on each change. */
+.window__pulse {
+  position: absolute;
+  inset: -5px;
+  border-radius: 12px;
+  border: 2px solid var(--lamp-bright);
+  box-shadow: 0 0 22px var(--lamp-glow);
+  pointer-events: none;
+  animation: pulse-ring 1600ms var(--ease) 1 both;
+}
+
+@keyframes pulse-ring {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+.activity__row {
+  align-items: center;
+}
+
+.activity__time {
+  flex: none;
+  min-width: 4.5em;
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 900px) {
+  .tally--five {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tally--five .tally__cell:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .topbar {
+    align-items: flex-start;
+  }
+}
+
+/* ---------- Room page (Phase 10) ---------- */
+
+.banner--moon {
+  border-color: rgba(169, 193, 232, 0.3);
+  background: var(--moon-wash);
+  color: var(--paper);
+}
+
+.room-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+}
+
+.room-head__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+  margin: 0 0 var(--s-4);
+}
+
+.facts dt {
+  font-size: var(--text-xs);
+  color: var(--paper-3);
+}
+
+.facts dd {
+  margin: 2px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.student {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.student:last-child {
+  border-bottom: 0;
+}
+
+.student__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-3) 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.student__summary::-webkit-details-marker {
+  display: none;
+}
+
+.student__summary .ledger__main {
+  min-width: 0;
+}
+
+.student__time {
+  font-size: var(--text-sm);
+  min-width: 4.5em;
+  text-align: right;
+}
+
+.student__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: 0 0 var(--s-4);
+}
+
+.student__enrollment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+  padding: var(--s-4);
+  border: 1px solid rgba(238, 108, 77, 0.3);
+  border-radius: var(--r-control);
+  background: var(--ember-wash);
+  font-size: var(--text-sm);
+}
+
+.confirm p {
+  margin: 0;
+}
+
+.confirm__actions {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .student__summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .student__summary .student__time {
+    display: none;
+  }
+}
+
+/* ---------- Windows page (Phase 10) ---------- */
+
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.admin-controls {
+  margin-top: var(--s-4);
+}
+
+.calendar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--s-1);
+}
+
+.calendar__weekday {
+  font-size: var(--text-xs);
+  color: var(--paper-3);
+  text-align: center;
+  padding-bottom: var(--s-1);
+}
+
+.calendar__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: var(--s-2) 2px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-control);
+  background: var(--ink-1);
+  color: var(--paper);
+  font: inherit;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar__day:hover {
+  border-color: var(--line);
+}
+
+.calendar__day.is-selected {
+  border-color: var(--lamp);
+  box-shadow: 0 0 0 1px var(--lamp) inset;
+}
+
+.calendar__day.is-off {
+  color: var(--paper-3);
+  border-style: dashed;
+}
+
+.calendar__state {
+  font-size: 10px;
+  line-height: 1.1;
+  color: var(--paper-2);
+  text-align: center;
+}
+
+.calendar__day:focus-visible {
+  outline: 2px solid var(--lamp);
+  outline-offset: 2px;
+}
+
+/* ---------- Enrollment page (Phase 10) ---------- */
+
+.result {
+  width: 100%;
+  border: 0;
+  border-radius: var(--r-control);
+  padding: var(--s-3);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.result:hover {
+  background: var(--ink-2);
+}
+
+.result.is-selected {
+  background: var(--ink-3);
+  box-shadow: inset 3px 0 0 var(--lamp);
+}
+
+.result:focus-visible {
+  outline: 2px solid var(--lamp);
+  outline-offset: 2px;
+}
+
+.field__spacer {
+  display: block;
+  height: 1.4em;
+}
+
+.code-display {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-5);
+  margin-bottom: var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--ink-0);
+  text-align: center;
+}
+
+.code-display__value {
+  font-size: var(--text-3xl);
+  letter-spacing: 0.18em;
+  color: var(--lamp-bright);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }

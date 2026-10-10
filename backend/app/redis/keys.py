@@ -35,3 +35,6 @@ def unattributed_counter_key(day: str) -> str:
 
 
 MARK_RECORDED_CHANNEL = "attendance:mark_recorded"
+
+WINDOW_STATE_CHANNEL = "attendance:window_state"
+ENROLLMENT_CHANNEL = "enrollment:updated"
