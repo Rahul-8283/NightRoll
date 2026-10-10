@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -38,6 +39,31 @@ worker_ready: bool = False
 cleanup_task: asyncio.Task[None] | None = None
 
 
+def load_face_app() -> Any:
+    """Load InsightFace from the files `scripts/download_models.py` verified, and nothing else.
+
+    InsightFace looks for `<root>/models/<name>`, so the root is the parent of FACE_MODEL_DIR. If the
+    folder is missing we fail loudly instead of letting InsightFace download an unverified copy.
+    """
+    from insightface.app import FaceAnalysis
+
+    model_dir = Path(settings.FACE_MODEL_DIR).resolve()
+    if model_dir.name != "models":
+        raise RuntimeError(f"FACE_MODEL_DIR must be a folder named 'models', got '{model_dir}'")
+    if not (model_dir / settings.FACE_MODEL_NAME).is_dir():
+        raise FileNotFoundError(
+            f"{model_dir / settings.FACE_MODEL_NAME} is missing. Run: python scripts/download_models.py"
+        )
+
+    face_app = FaceAnalysis(
+        name=settings.FACE_MODEL_NAME,
+        root=str(model_dir.parent),
+        providers=["CPUExecutionProvider"],
+    )
+    face_app.prepare(ctx_id=0, det_size=(640, 640))
+    return face_app
+
+
 async def cleanup_loop() -> None:
     """Hourly background loop for frame retention cleanup."""
     while True:
@@ -59,17 +85,10 @@ async def lifespan(app: FastAPI):
 
     # 1. Load InsightFace FaceAnalysis on CPU
     try:
-        from insightface.app import FaceAnalysis
-
-        face_app = FaceAnalysis(
-            name=settings.FACE_MODEL_NAME,
-            root=settings.FACE_MODEL_DIR,
-            providers=["CPUExecutionProvider"],
-        )
-        face_app.prepare(ctx_id=0, det_size=(640, 640))
+        face_app = load_face_app()
         logger.info(f"Loaded InsightFace model '{settings.FACE_MODEL_NAME}'")
     except Exception as e:
-        logger.warning(f"InsightFace initialization skipped or model absent: {e}")
+        logger.error(f"InsightFace did not load: {e}")
         face_app = None
 
     # 2. Load Anti-spoofing ONNX model
