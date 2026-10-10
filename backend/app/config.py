@@ -64,6 +64,23 @@ class Settings(BaseSettings):
     THRESHOLD_PRESENT: float
     THRESHOLD_REVIEW: float
 
+    # Scorer thresholds (provisional, tuned in Phase 13). Scorers read these; no number lives in scorer code.
+    FACE_SIM_LOW: float = 0.45
+    FACE_SIM_HIGH: float = 0.50
+    ANTISPOOF_MIN: float = 0.90
+    HEAD_TURN_MIN_DEG: float = 15.0
+    OWN_AP_RSSI_LOW: float = -75.0
+    OWN_AP_RSSI_HIGH: float = -55.0
+    FP_NEIGHBOUR_LOW: float = 0.3
+    FP_NEIGHBOUR_HIGH: float = 0.7
+    FP_UNKNOWN_FREE: int = 2
+    FP_UNKNOWN_STEP: float = 0.1
+    FP_UNKNOWN_CAP: float = 0.5
+    SCAN_STALE_MS: int = 30000
+    AP_AGREEMENT_FULL_DB: float = 10.0
+    AP_AGREEMENT_ZERO_DB: float = 25.0
+    FACE_WORKER_TIMEOUT_SECONDS: float = 5.0
+
     @model_validator(mode="after")
     def _check_business_rules(self) -> Settings:
         total_weight = (
@@ -81,6 +98,16 @@ class Settings(BaseSettings):
                 f"THRESHOLD_PRESENT ({self.THRESHOLD_PRESENT}) must be greater than "
                 f"THRESHOLD_REVIEW ({self.THRESHOLD_REVIEW})"
             )
+
+        ranges = [
+            ("FACE_SIM_LOW", self.FACE_SIM_LOW, "FACE_SIM_HIGH", self.FACE_SIM_HIGH),
+            ("OWN_AP_RSSI_LOW", self.OWN_AP_RSSI_LOW, "OWN_AP_RSSI_HIGH", self.OWN_AP_RSSI_HIGH),
+            ("FP_NEIGHBOUR_LOW", self.FP_NEIGHBOUR_LOW, "FP_NEIGHBOUR_HIGH", self.FP_NEIGHBOUR_HIGH),
+            ("AP_AGREEMENT_FULL_DB", self.AP_AGREEMENT_FULL_DB, "AP_AGREEMENT_ZERO_DB", self.AP_AGREEMENT_ZERO_DB),
+        ]
+        for low_name, low, high_name, high in ranges:
+            if low >= high:
+                raise ValueError(f"{low_name} ({low}) must be less than {high_name} ({high})")
 
         if not self.REDIS_URL.startswith("rediss://"):
             raise ValueError("REDIS_URL must use TLS (rediss://); a plain redis:// URL is refused")
