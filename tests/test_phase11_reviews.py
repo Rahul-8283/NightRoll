@@ -242,7 +242,9 @@ async def test_manual_mark_more_than_a_day_after_close_is_refused_for_a_warden_b
             allowed = await c.post("/v1/attendance/manual", json=body)
         assert allowed.status_code == 200
     finally:
-        await pool.execute("delete from reviews where mark_id in (select id from attendance_marks where window_id = $1)", old_window)
+        await pool.execute(
+            "delete from reviews where mark_id in (select id from attendance_marks where window_id = $1)", old_window
+        )
         await pool.execute("delete from attendance_marks where window_id = $1", old_window)
         await pool.execute("delete from attendance_windows where id = $1", old_window)
 
@@ -252,7 +254,24 @@ async def test_every_decision_writes_an_audit_row(world):
     mark = await _mark(world["pool"], world["window_id"], world["student"]["id"], "NEEDS_REVIEW")
     async with _client() as c:
         await c.post(f"/v1/attendance/marks/{mark}/review", json={"decision": "APPROVED"})
-    rows = await world["pool"].fetch(
-        "select action, payload from audit_log where target_id = $1", str(mark)
-    )
+    rows = await world["pool"].fetch("select action, payload from audit_log where target_id = $1", str(mark))
     assert [row["action"] for row in rows] == ["review.decided"]
+
+
+@pytest.mark.asyncio
+async def test_absentees_list_students_without_a_present_status_with_a_reason(world):
+    pool = world["pool"]
+    other = await pool.fetchrow(
+        "select id from students where active and enrolled_at is not null and id <> $1 limit 1", world["student"]["id"]
+    )
+    await pool.execute(
+        "update attendance_windows set state = 'closed', closes_at = now() - interval '1 minute' where id = $1",
+        world["window_id"],
+    )
+    await _mark(pool, world["window_id"], other["id"], "PRESENT")
+    async with _client() as c:
+        response = await c.get("/v1/attendance/absentees", params={"window_id": str(world["window_id"])})
+    assert response.status_code == 200
+    students = {row["student_id"]: row for row in response.json()["students"]}
+    assert str(other["id"]) not in students
+    assert students[str(world["student"]["id"])]["reason"] == "no_attempt"

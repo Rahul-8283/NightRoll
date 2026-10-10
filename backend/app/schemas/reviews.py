@@ -101,3 +101,26 @@ class FramesViewOut(ApiModel):
     mark_id: UUID
     expires_in_seconds: int
     links: list[FrameLinkOut]
+
+
+AbsenteeReason = Literal["declined", "rejected_only", "no_attempt", "no_present_mark", "not_marked"]
+
+
+class AbsenteeRow(ApiModel):
+    student_id: UUID
+    student_name: str
+    roll_number: str
+    room_number: str
+    floor: int
+    status: Literal["ABSENT", "NOT_MARKED"]
+    reason: AbsenteeReason
+    reason_text: str
+    device_enrolled: bool
+
+
+class AbsenteeListOut(ApiModel):
+    window_id: UUID | None
+    window_state: str | None
+    still_to_mark: int
+    absent: int
+    students: list[AbsenteeRow]

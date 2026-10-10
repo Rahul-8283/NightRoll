@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends
 from app.config import Settings, get_settings
 from app.deps import CurrentWarden, DbPool, RedisClient
 from app.schemas.reviews import (
+    AbsenteeListOut,
     FramesViewIn,
     FramesViewOut,
     ManualMarkIn,
@@ -20,6 +21,7 @@ from app.schemas.reviews import (
     ReviewDecisionIn,
     ReviewItem,
 )
+from app.services import absentees as absentees_svc
 from app.services import frames as frames_svc
 from app.services import review as review_svc
 
@@ -70,3 +72,19 @@ async def view_frames(
     """Signed links to a disputed mark's frames. Needs a written reason, which is audited before any link is made."""
     result = await frames_svc.view_frames(pool, settings, mark_id, body.reason, warden)
     return FramesViewOut(**result)
+
+
+@router.get("/v1/attendance/absentees", response_model=AbsenteeListOut)
+async def absentees(pool: DbPool, _: CurrentWarden, window_id: UUID | None = None) -> AbsenteeListOut:
+    """Students not present in tonight's window, or the one given. Grouped by floor on the page."""
+    from datetime import UTC, datetime
+
+    from app.db.queries import windows as windows_q
+
+    if window_id is None:
+        window = await windows_q.current(pool, datetime.now(UTC))
+    else:
+        window = await windows_q.get_by_id(pool, window_id)
+    target = window["id"] if window is not None else None
+    state = window["state"] if window is not None else None
+    return await absentees_svc.list_for_window(pool, target, state)

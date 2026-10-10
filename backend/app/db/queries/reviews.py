@@ -150,3 +150,25 @@ async def active_enrolled_student(pool: asyncpg.Pool, student_id: UUID) -> async
         "select id, name, roll_number, room_id from students where id = $1 and active and enrolled_at is not null",
         student_id,
     )
+
+
+async def absentee_rows(pool: asyncpg.Pool, window_id: UUID) -> list[asyncpg.Record]:
+    """Students not present in the window: absent, or still to mark while it is open. Grouped by floor in the page."""
+    return await pool.fetch(
+        """
+        select v.student_id, v.status, v.decided_how,
+               s.name as student_name, s.roll_number, r.number as room_number, r.floor,
+               exists (select 1 from devices d where d.student_id = s.id and d.active) as device_enrolled,
+               (select count(*) from attendance_marks m
+                  where m.window_id = v.window_id and m.student_id = v.student_id) as attempts,
+               (select count(*) from attendance_marks m
+                  where m.window_id = v.window_id and m.student_id = v.student_id
+                    and m.verdict = 'REJECTED') as rejected_attempts
+        from student_window_status v
+        join students s on s.id = v.student_id
+        join rooms r on r.id = s.room_id
+        where v.window_id = $1 and v.status in ('ABSENT', 'NOT_MARKED')
+        order by r.floor, r.number, s.roll_number
+        """,
+        window_id,
+    )
