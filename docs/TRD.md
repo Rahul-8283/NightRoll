@@ -326,6 +326,19 @@ CREATE TABLE devices (
   enrolled_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- A student has at most one active device at a time.
+CREATE UNIQUE INDEX one_active_device ON devices (student_id) WHERE active;
+
+-- One-time codes a warden issues so a student can enroll a device.
+-- The code itself is never stored, only its SHA-256 hash.
+CREATE TABLE enrollment_codes (
+  code_hash text PRIMARY KEY,
+  student_id uuid REFERENCES students(id),
+  created_by uuid,
+  expires_at timestamptz NOT NULL,
+  used_at timestamptz
+);
+
 CREATE TABLE room_fingerprints (
   id uuid PRIMARY KEY,
   room_id uuid NOT NULL REFERENCES rooms(id),
@@ -352,6 +365,8 @@ CREATE TABLE attendance_marks (
   score numeric(4,3),
   reasons text[] NOT NULL DEFAULT '{}',
   scores jsonb,
+  attempt int NOT NULL DEFAULT 1,
+  frames_path text,
   marked_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -378,7 +393,7 @@ CREATE TABLE audit_log (
 );
 ```
 
-`students.active` and `devices.active` allow revoking access without deleting history.
+`students.active` and `devices.active` allow revoking access without deleting history. `attendance_marks.attempt` keeps every retry inside a window as its own row, instead of overwriting the previous one. `enrollment_codes` has no foreign key to a warden table; `created_by` is the warden's Supabase user id, checked against Supabase Auth, not a local table.
 
 ### 7.2 Redis keys (Upstash)
 

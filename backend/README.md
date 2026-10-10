@@ -4,7 +4,11 @@ FastAPI service: window management, nonces, the six hard gates, scoring and revi
 
 ## Status
 
-The project is set up with uv and has a FastAPI entry point (`app/main.py`) with a health route. Config, database, Redis and the warden routes arrive in Phase 2.
+Phases 1-3 are done: settings, database and Redis connections, warden auth (Supabase JWT,
+role and MFA checks), the standard error shape, JSON request logging, the audit writer,
+room/student read endpoints, and the attendance window lifecycle with one-time nonces and
+a scheduler. The student-facing nonce endpoint uses a dev-only stub for identity until
+Phase 8 adds device-signature verification.
 
 ## Requirements
 

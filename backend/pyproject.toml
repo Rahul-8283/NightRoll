@@ -3,6 +3,7 @@ name = "nightroll-backend"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "apscheduler>=3.11.3",
     "asyncpg>=0.32.0",
     "cryptography>=50.0.2",
     "fastapi>=0.143.0",
@@ -17,3 +18,10 @@ dependencies = [
 dev = [
     "ruff>=0.17.0",
 ]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
