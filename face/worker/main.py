@@ -23,6 +23,9 @@ from worker.pipeline.match import compute_similarity, evaluate_similarities
 from worker.schemas import (
     EnrollmentResponse,
     FrameIssue,
+    FrameLink,
+    FrameLinksRequest,
+    FrameLinksResponse,
     FrameResult,
     HeadPose,
     HealthResponse,
@@ -343,3 +346,22 @@ async def delete_student_embedding(student_id: UUID) -> dict[str, Any]:
             detail=f"Failed to delete embedding for student {student_id}",
         )
     return {"deleted": True, "student_id": str(student_id)}
+
+
+FRAME_LINK_SECONDS = 60
+
+
+@app.post("/frames/links", response_model=FrameLinksResponse, dependencies=[Depends(verify_service_token)])
+async def frame_links(body: FrameLinksRequest) -> FrameLinksResponse:
+    """Signed links to one mark's retained frames, each valid for 60 seconds. Frames are never downloaded here."""
+    names = await storage.list_folder(body.folder)
+    if not names:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No frames are stored for this mark")
+    links: list[FrameLink] = []
+    for path in names:
+        url = await storage.sign_url(path, FRAME_LINK_SECONDS)
+        if url is None:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Could not sign a frame link")
+        links.append(FrameLink(name=path.rsplit("/", 1)[-1], url=url))
+    return FrameLinksResponse(expires_in_seconds=FRAME_LINK_SECONDS, links=links)
+

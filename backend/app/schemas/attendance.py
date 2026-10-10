@@ -13,3 +13,5 @@ class NonceStatusOut(ApiModel):
     closes_at: datetime | None = None
     nonce: str | None = None
     challenge: list[str] | None = None
+    outcome: str | None = None
+    decided_how: str | None = None

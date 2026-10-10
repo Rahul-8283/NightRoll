@@ -16,6 +16,8 @@ type Props = {
   problem?: boolean
   /** Changing this value replays the one-time pulse, so a tile that just changed catches the eye. */
   pulse?: number
+  /** A suggested action for a room that needs attention, shown under the caption. */
+  flag?: string
 }
 
 function describe(number: string, panes: Status[]): string {
@@ -28,7 +30,7 @@ function describe(number: string, panes: Status[]): string {
 }
 
 // A room drawn as a window. A lit pane is a student who is present.
-export function RoomWindow({ number, panes, to, size = 'sm', index = 0, caption, problem = false, pulse }: Props) {
+export function RoomWindow({ number, panes, to, size = 'sm', index = 0, caption, problem = false, pulse, flag }: Props) {
   const frameClass = ['window__frame', size === 'lg' && 'window__frame--lg', problem && 'window__frame--problem']
     .filter(Boolean)
     .join(' ')
@@ -43,6 +45,7 @@ export function RoomWindow({ number, panes, to, size = 'sm', index = 0, caption,
       </span>
       {size === 'sm' && <span className="window__number">{number}</span>}
       {caption && <span className="window__caption">{caption}</span>}
+      {flag && <span className="window__flag">{flag}</span>}
     </>
   )
 

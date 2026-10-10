@@ -27,6 +27,7 @@ export function applyRoomUpdate(data: TonightData | undefined, update: RoomUpdat
           total: update.total,
           pending_review: update.pending_review,
           rejected: update.rejected,
+          health: update.health,
         }
       : room,
   )

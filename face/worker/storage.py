@@ -80,6 +80,38 @@ class StorageClient:
 
         return f"{folder_path}/" if stored_all else None
 
+    async def list_folder(self, folder: str) -> list[str]:
+        """Names of the frame objects in one mark's folder, as full bucket paths."""
+        if not self.url or not self.key:
+            return []
+        endpoint = f"{self.url}/storage/v1/object/list/{self.bucket}"
+        body = {"prefix": folder, "limit": 100, "offset": 0}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                resp = await client.post(endpoint, headers=self._headers(), json=body)
+                if resp.status_code != 200:
+                    logger.error(f"Failed to list frames in {folder}: HTTP {resp.status_code}")
+                    return []
+                return [f"{folder}/{item['name']}" for item in resp.json() if item.get("name")]
+            except Exception as e:
+                logger.error(f"Error listing frames in {folder}: {e}")
+                return []
+
+    async def sign_url(self, path: str, expires_in: int) -> str | None:
+        """A signed link to one private object, valid for expires_in seconds."""
+        endpoint = f"{self.url}/storage/v1/object/sign/{self.bucket}/{path}"
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                resp = await client.post(endpoint, headers=self._headers(), json={"expiresIn": expires_in})
+                if resp.status_code != 200:
+                    logger.error(f"Failed to sign {path}: HTTP {resp.status_code}")
+                    return None
+                signed = resp.json().get("signedURL")
+                return f"{self.url}/storage/v1{signed}" if signed else None
+            except Exception as e:
+                logger.error(f"Error signing {path}: {e}")
+                return None
+
     # --- Database Operations (face_embeddings table only) ---
 
     async def save_embedding(

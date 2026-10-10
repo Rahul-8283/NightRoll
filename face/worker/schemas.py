@@ -88,3 +88,22 @@ class VerifyJSONRequest(BaseModel):
     mark_id: UUID
     frames: list[Base64Frame]
     frame_hashes: list[str]
+
+
+class FrameLinksRequest(BaseModel):
+    """One mark's frame folder, as stored by the backend: frames/{window_id}/{mark_id}."""
+
+    folder: str = Field(pattern=r"^frames/[0-9a-fA-F-]{36}/[0-9a-fA-F-]{36}$")
+
+
+class FrameLink(BaseModel):
+    name: str
+    url: str
+
+
+class FrameLinksResponse(BaseModel):
+    """Short-lived links to view a mark's frames. The worker signs them and never returns the bytes."""
+
+    expires_in_seconds: int
+    links: list[FrameLink]
+

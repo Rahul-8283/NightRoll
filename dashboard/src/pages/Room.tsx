@@ -2,22 +2,15 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { useFingerprint, useRoomTonight } from '../api/queries'
-import type { MarkDetail, RoomStudentStatus, Verdict } from '../api/types'
+import type { RoomStudentStatus, Verdict } from '../api/types'
+import { ScoreBars } from '../components/ScoreBars'
 import { EmptyState } from '../components/ui/EmptyState'
 import { RoomWindow } from '../components/ui/RoomWindow'
 import { StatusPill } from '../components/ui/StatusPill'
 import type { Status } from '../components/ui/status'
 import { ErrorBanner } from '../components/ErrorBanner'
-import { apiFetch, ApiError } from '../lib/api'
+import { apiFetch, ApiError, postJson } from '../lib/api'
 import { formatClock } from '../lib/format'
-
-const SCORER_LABEL: Record<string, string> = {
-  face: 'Face match',
-  liveness: 'Liveness',
-  fingerprint: 'Room Wi-Fi pattern',
-  own_ap: 'Own router signal',
-  ap_agreement: 'Access point agreement',
-}
 
 const VERDICT: Record<Verdict, { status: Status; label: string }> = {
   PRESENT: { status: 'present', label: 'Present' },
@@ -38,27 +31,59 @@ function paneFor(student: RoomStudentStatus): Status {
   return studentStatus(student).status
 }
 
-function ScoreBars({ mark }: { mark: MarkDetail }) {
-  if (mark.scorers.length === 0) return <p className="muted">No scores were recorded for this attempt.</p>
+// A warden's decision on one student, always with a written reason. Changes the status everywhere it is shown.
+function OverridePanel({ student, windowId }: { student: RoomStudentStatus; windowId: string | null }) {
+  const queryClient = useQueryClient()
+  const [note, setNote] = useState('')
+  const [status, setStatus] = useState<'PRESENT' | 'ABSENT'>('PRESENT')
+  const mark = student.mark
+  const save = useMutation({
+    mutationFn: () =>
+      mark
+        ? postJson(`/attendance/marks/${mark.mark_id}/override`, { status, note: note.trim() })
+        : postJson('/attendance/manual', { student_id: student.student_id, window_id: windowId, note: note.trim() }),
+    onSuccess: () => {
+      setNote('')
+      void queryClient.invalidateQueries({ queryKey: ['roomTonight'] })
+      void queryClient.invalidateQueries({ queryKey: ['tonight'] })
+      void queryClient.invalidateQueries({ queryKey: ['absentees'] })
+      void queryClient.invalidateQueries({ queryKey: ['reviews'] })
+    },
+  })
+
+  if (!student.enrolled || !windowId) return null
   return (
-    <div className="weights">
-      {mark.scorers.map((scorer) => (
-        <div key={scorer.name} className="weight">
-          <div className="weight__head">
-            <span>{SCORER_LABEL[scorer.name] ?? scorer.name}</span>
-            <span className="mono">{scorer.score.toFixed(2)}</span>
-          </div>
-          <div className="weight__bar" role="img" aria-label={`${SCORER_LABEL[scorer.name] ?? scorer.name} ${scorer.score.toFixed(2)} of 1`}>
-            <span style={{ width: `${Math.round(Math.min(1, Math.max(0, scorer.score)) * 100)}%` }} />
-          </div>
-          <small className="muted">{scorer.detail}</small>
+    <div className="override" onClick={(event) => event.stopPropagation()}>
+      <strong>{mark ? 'Change this status' : 'Record a manual mark'}</strong>
+      {mark && (
+        <div className="field">
+          <label htmlFor={`status-${student.student_id}`}>New status</label>
+          <select id={`status-${student.student_id}`} value={status} onChange={(e) => setStatus(e.target.value as 'PRESENT' | 'ABSENT')}>
+            <option value="PRESENT">Present</option>
+            <option value="ABSENT">Absent</option>
+          </select>
         </div>
-      ))}
+      )}
+      <div className="field">
+        <label htmlFor={`note-${student.student_id}`}>Written reason (at least 10 characters)</label>
+        <textarea id={`note-${student.student_id}`} rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+      </div>
+      {save.isError && (
+        <p className="form-error" role="alert">{save.error instanceof ApiError ? save.error.message : 'The change was not saved.'}</p>
+      )}
+      <button
+        className={mark && status === 'ABSENT' ? 'btn btn--danger' : 'btn btn--primary'}
+        type="button"
+        disabled={note.trim().length < 10 || save.isPending}
+        onClick={() => save.mutate()}
+      >
+        {save.isPending ? 'Saving…' : mark ? 'Save change' : 'Record present'}
+      </button>
     </div>
   )
 }
 
-function StudentRow({ student }: { student: RoomStudentStatus }) {
+function StudentRow({ student, windowId }: { student: RoomStudentStatus; windowId: string | null }) {
   const state = studentStatus(student)
   return (
     <details className="student">
@@ -73,6 +98,7 @@ function StudentRow({ student }: { student: RoomStudentStatus }) {
         <StatusPill status={state.status} label={state.label} />
       </summary>
       <div className="student__body">
+        <OverridePanel student={student} windowId={windowId} />
         <div className="student__enrollment">
           <span className={`pill ${student.face_enrolled ? 'pill--present' : 'pill--unlit'}`}>
             Face {student.face_enrolled ? 'enrolled' : 'not enrolled'}
@@ -88,7 +114,7 @@ function StudentRow({ student }: { student: RoomStudentStatus }) {
               {student.mark.score !== null ? ` · trust ${student.mark.score.toFixed(2)}` : ''}
               {student.mark.reasons.length > 0 ? ` · ${student.mark.reasons.map((reason) => reason.message).join(' ')}` : ''}
             </p>
-            <ScoreBars mark={student.mark} />
+            <ScoreBars scorers={student.mark.scorers} />
           </>
         ) : (
           <p className="muted">No attempt tonight yet.</p>
@@ -228,6 +254,26 @@ export function Room() {
       {query.isError && <ErrorBanner error={query.error} onRetry={() => void query.refetch()} stale />}
 
       <div className={query.isError ? 'stack is-stale' : 'stack'}>
+        {data.health.length > 0 && (
+          <div className="stack">
+            {data.health.includes('check_router') && (
+              <div className="banner banner--ember" role="status">
+                <div className="banner__text">
+                  <strong>Check the router</strong>
+                  <span className="muted">No student has seen this room’s own access point tonight. The router may be down or unplugged.</span>
+                </div>
+              </div>
+            )}
+            {data.health.includes('rescan_wifi') && (
+              <div className="banner banner--moon" role="status">
+                <div className="banner__text">
+                  <strong>Re-scan this room’s Wi-Fi</strong>
+                  <span className="muted">More than 30% of this room’s recent marks went to review or failed on Wi-Fi reasons. The room’s pattern may be stale.</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <section className="card room-head">
           <RoomWindow
             size="lg"
@@ -255,7 +301,7 @@ export function Room() {
             ) : (
               <div className="ledger">
                 {data.students.map((student) => (
-                  <StudentRow key={student.student_id} student={student} />
+                  <StudentRow key={student.student_id} student={student} windowId={data.window?.id ?? null} />
                 ))}
               </div>
             )}

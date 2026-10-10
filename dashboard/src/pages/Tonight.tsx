@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { useTonight } from '../api/queries'
-import type { RecentMark, RoomCount, TonightData, Verdict } from '../api/types'
+import type { HealthFlag, RecentMark, RoomCount, TonightData, Verdict } from '../api/types'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { RoomWindow } from '../components/ui/RoomWindow'
 import { StatusPill } from '../components/ui/StatusPill'
@@ -20,6 +20,12 @@ const TILE_LABEL: Record<TileState, string> = {
   all: 'All in',
   review: 'Needs review',
   problem: 'Rejected attempt',
+}
+
+// The suggested action for each health flag, in the words a warden acts on.
+const FLAG_ACTION: Record<HealthFlag, string> = {
+  rescan_wifi: 'Re-scan Wi-Fi',
+  check_router: 'Check router',
 }
 
 const VERDICT: Record<Verdict, { status: Status; label: string }> = {
@@ -214,6 +220,7 @@ export function Tonight() {
                               caption={`${room.present} / ${room.total} · ${TILE_LABEL[state]}`}
                               problem={state === 'problem'}
                               pulse={roomPulses[room.room_id]}
+                              flag={room.health.map((h) => FLAG_ACTION[h]).join(' · ') || undefined}
                             />
                           )
                         })}

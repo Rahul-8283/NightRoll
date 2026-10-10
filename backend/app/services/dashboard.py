@@ -33,12 +33,31 @@ RECENT_LIMIT = 20
 NOT_CONFIRMED = "Your attendance could not be confirmed from here."
 
 
-def _reason_out(code: str) -> ReasonOut:
+def reason_out(code: str) -> ReasonOut:
     # Old marks may carry a code that is no longer in the catalogue; never fail the page for it.
     try:
         return ReasonOut(code=code, message=reason(code).message)
     except KeyError:
         return ReasonOut(code=code, message=NOT_CONFIRMED)
+
+
+# Flags are computed from the marks themselves, so they cannot drift from what the students did.
+WIFI_FLAG_SHARE = 0.30
+WIFI_FLAG_MIN_MARKS = 5
+ROUTER_FLAG_MIN_MARKS = 2
+
+
+def health_flags(row) -> list[str]:
+    flags = []
+    if row["week_total"] >= WIFI_FLAG_MIN_MARKS and row["week_flagged"] / row["week_total"] > WIFI_FLAG_SHARE:
+        flags.append("rescan_wifi")
+    if row["tonight_scored"] >= ROUTER_FLAG_MIN_MARKS and row["tonight_ap_seen"] == 0:
+        flags.append("check_router")
+    return flags
+
+
+async def room_health(pool: asyncpg.Pool, window_id: UUID | None, room_id: UUID | None = None) -> dict[UUID, list[str]]:
+    return {row["room_id"]: health_flags(row) for row in await dash_q.room_health_rows(pool, window_id, room_id)}
 
 
 def _window(row) -> WindowBrief | None:
@@ -53,7 +72,7 @@ def _recent(row) -> RecentMark:
     return RecentMark(
         mark_id=row["mark_id"],
         verdict=row["verdict"],
-        reasons=[_reason_out(code) for code in row["reasons"] or []],
+        reasons=[reason_out(code) for code in row["reasons"] or []],
         marked_at=row["marked_at"],
         room_number=row["room_number"],
         student_name=row["student_name"],
@@ -69,6 +88,7 @@ async def tonight(pool: asyncpg.Pool) -> TonightOut:
     window = await _current_window(pool)
     window_id = window["id"] if window is not None else None
     counts = await dash_q.room_counts(pool, window_id)
+    health = await room_health(pool, window_id)
     rooms = [
         RoomCount(
             room_id=row["room_id"],
@@ -77,13 +97,16 @@ async def tonight(pool: asyncpg.Pool) -> TonightOut:
             present=row["present"],
             total=row["total"],
             pending_review=row["pending_review"],
+            absent=row["absent"],
             rejected=row["rejected"],
+            health=health.get(row["room_id"], []),
         )
         for row in counts
     ]
     enrolled = sum(room.total for room in rooms)
     present = sum(room.present for room in rooms)
     pending = sum(room.pending_review for room in rooms)
+    absent = sum(room.absent for room in rooms)
     recent = [_recent(row) for row in await dash_q.recent_marks(pool, window_id, RECENT_LIMIT)] if window_id else []
     return TonightOut(
         window=_window(window),
@@ -91,7 +114,8 @@ async def tonight(pool: asyncpg.Pool) -> TonightOut:
             enrolled=enrolled,
             present=present,
             pending_review=pending,
-            not_marked=max(0, enrolled - present - pending),
+            not_marked=max(0, enrolled - present - pending - absent),
+            absent=absent,
             rejected=sum(room.rejected for room in rooms),
         ),
         rooms=rooms,
@@ -113,12 +137,14 @@ async def room_update(pool: asyncpg.Pool, room_id: UUID, mark_id: UUID | None) -
         mark = await dash_q.mark_summary(pool, mark_id)
         if mark is not None:
             last = _recent(mark)
+    health = await room_health(pool, window["id"], room_id)
     return RoomUpdateEvent(
         room_id=room_id,
         present=row["present"],
         total=row["total"],
         pending_review=row["pending_review"],
         rejected=row["rejected"],
+        health=health.get(room_id, []),
         last=last,
     )
 
@@ -135,7 +161,7 @@ async def room_tonight(pool: asyncpg.Pool, room_id: UUID, room_row) -> RoomTonig
                 mark_id=row["mark_id"],
                 verdict=row["verdict"],
                 score=float(row["score"]) if row["score"] is not None else None,
-                reasons=[_reason_out(code) for code in row["reasons"] or []],
+                reasons=[reason_out(code) for code in row["reasons"] or []],
                 marked_at=row["marked_at"],
                 attempt=row["attempt"],
                 scorers=[ScorerOut(**item) for item in scores.get("scorers", [])],
@@ -153,12 +179,14 @@ async def room_tonight(pool: asyncpg.Pool, room_id: UUID, room_row) -> RoomTonig
                 mark=mark,
             )
         )
+    health = await room_health(pool, window_id, room_id)
     return RoomTonightOut(
         room_id=room_id,
         number=room_row["number"],
         floor=room_row["floor"],
         window=_window(window),
         students=students,
+        health=health.get(room_id, []),
     )
 
 

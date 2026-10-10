@@ -1263,3 +1263,185 @@ a.window:hover {
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
+
+/* ---------- Review queue and shared rail count (Phase 11) ---------- */
+
+.rail__count {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--moon-wash);
+  border: 1px solid rgba(169, 193, 232, 0.3);
+  color: var(--moon);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.review-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.review-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-card);
+  background: var(--ink-2);
+  cursor: default;
+}
+
+.review-card.is-selected {
+  border-color: var(--moon);
+  box-shadow: 0 0 0 1px rgba(169, 193, 232, 0.4);
+}
+
+.review-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.review-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.review-card__why {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: var(--text-sm);
+}
+
+.review-card__why ul,
+.attempts {
+  margin: 0;
+  padding-left: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  font-size: var(--text-sm);
+}
+
+.attempts small {
+  display: block;
+}
+
+.confirm textarea {
+  width: 100%;
+  font: inherit;
+  padding: var(--s-3);
+  border-radius: var(--r-control);
+  border: 1px solid var(--line);
+  background: var(--ink-0);
+  color: var(--paper);
+  resize: vertical;
+}
+
+.frames {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.frames__viewer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.frames__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--s-2);
+}
+
+.frames__grid img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: var(--r-control);
+  border: 1px solid var(--line);
+  background: var(--ink-0);
+}
+
+/* ---------- Absentee page (Phase 11) ---------- */
+
+.absentee {
+  align-items: center;
+}
+
+.absentee__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.absentee__manual {
+  width: 100%;
+  margin-top: var(--s-3);
+}
+
+.audit__row {
+  align-items: flex-start;
+}
+
+.audit__time {
+  flex: none;
+  min-width: 9.5em;
+  font-size: var(--text-sm);
+}
+
+.override {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-control);
+  font-size: var(--text-sm);
+}
+
+.override textarea {
+  width: 100%;
+  font: inherit;
+  padding: var(--s-3);
+  border-radius: var(--r-control);
+  border: 1px solid var(--line);
+  background: var(--ink-0);
+  color: var(--paper);
+  resize: vertical;
+}
+
+.override .btn {
+  align-self: flex-start;
+}
+
+.window__flag {
+  max-width: 100%;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(238, 108, 77, 0.35);
+  background: var(--ember-wash);
+  color: var(--ember);
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: center;
+}

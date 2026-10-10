@@ -54,13 +54,25 @@ function describe(status: AttendanceStatus | null): View_ {
         detail: 'Open NightRoll then to mark attendance.',
         canMark: false,
       };
-    case 'marked':
+    case 'marked': {
+      // A warden's decision reads differently from the phone's own mark, so the student knows who settled it.
+      const byWarden = status.decided_how === 'approved' || status.decided_how === 'manual' || status.decided_how === 'override';
       return {
         light: 'lit',
         glow: 'lamp',
         eyebrow: 'Done',
-        headline: 'Marked present',
+        headline: status.decided_how === 'approved' ? 'Approved by your warden' : byWarden ? 'Marked present by your warden' : 'Marked present',
         detail: 'Nothing more to do tonight.',
+        canMark: false,
+      };
+    }
+    case 'absent':
+      return {
+        light: 'dark',
+        glow: 'moon',
+        eyebrow: 'Not present',
+        headline: 'Marked absent by your warden',
+        detail: 'Please see the warden.',
         canMark: false,
       };
     case 'pending':

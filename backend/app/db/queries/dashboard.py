@@ -9,23 +9,19 @@ import asyncpg
 
 
 async def room_counts(pool: asyncpg.Pool, window_id: UUID | None) -> list[asyncpg.Record]:
-    """Per room: enrolled students, students present, students waiting for review, rejected attempts."""
+    """Per room: enrolled students, and each status from the student window view, plus rejected attempts."""
     return await pool.fetch(
         """
         select
           r.id as room_id, r.number, r.floor,
           (select count(*) from students s
              where s.room_id = r.id and s.active and s.enrolled_at is not null) as total,
-          (select count(distinct m.student_id) from attendance_marks m
-             join students s on s.id = m.student_id
-             where m.window_id = $1 and s.room_id = r.id and m.verdict in ('PRESENT', 'MANUAL')) as present,
-          (select count(distinct m.student_id) from attendance_marks m
-             join students s on s.id = m.student_id
-             where m.window_id = $1 and s.room_id = r.id and m.verdict = 'NEEDS_REVIEW'
-               and not exists (
-                 select 1 from attendance_marks p
-                 where p.window_id = $1 and p.student_id = m.student_id and p.verdict in ('PRESENT', 'MANUAL')
-               )) as pending_review,
+          (select count(*) from student_window_status v
+             where v.window_id = $1 and v.room_id = r.id and v.status = 'PRESENT') as present,
+          (select count(*) from student_window_status v
+             where v.window_id = $1 and v.room_id = r.id and v.status = 'PENDING') as pending_review,
+          (select count(*) from student_window_status v
+             where v.window_id = $1 and v.room_id = r.id and v.status = 'ABSENT') as absent,
           (select count(*) from attendance_marks m
              join students s on s.id = m.student_id
              where m.window_id = $1 and s.room_id = r.id and m.verdict = 'REJECTED') as rejected
@@ -100,8 +96,8 @@ async def window_history(pool: asyncpg.Pool, limit: int) -> list[asyncpg.Record]
     return await pool.fetch(
         """
         select w.id, w.night, w.opens_at, w.closes_at, w.state,
-          (select count(distinct m.student_id) from attendance_marks m
-             where m.window_id = w.id and m.verdict in ('PRESENT', 'MANUAL')) as present,
+          (select count(*) from student_window_status v
+             where v.window_id = w.id and v.status = 'PRESENT') as present,
           (select count(*) from students s
              where s.active and s.enrolled_at is not null) as enrolled
         from attendance_windows w
@@ -125,3 +121,36 @@ async def enrolled_total(pool: asyncpg.Pool) -> int:
 
 async def closes_at_of(pool: asyncpg.Pool, window_id: UUID) -> datetime | None:
     return await pool.fetchval("select closes_at from attendance_windows where id = $1", window_id)
+
+
+async def room_health_rows(pool: asyncpg.Pool, window_id: UUID | None, room_id: UUID | None) -> list[asyncpg.Record]:
+    """Per room, the figures behind its health flags: the last 7 days' Wi-Fi trouble, and tonight's router sightings."""
+    return await pool.fetch(
+        """
+        select r.id as room_id,
+          (select count(*) from attendance_marks m join students s on s.id = m.student_id
+             where s.room_id = r.id and m.marked_at >= now() - interval '7 days'
+               and m.verdict in ('PRESENT', 'NEEDS_REVIEW', 'REJECTED')) as week_total,
+          (select count(*) from attendance_marks m join students s on s.id = m.student_id
+             where s.room_id = r.id and m.marked_at >= now() - interval '7 days'
+               and (m.verdict = 'NEEDS_REVIEW'
+                    or (m.verdict = 'REJECTED'
+                        and m.reasons && array['WIFI_PATTERN_MISMATCH', 'FINGERPRINT_MISSING',
+                                       'AP_UNAVAILABLE']::text[])))
+             as week_flagged,
+          (select count(*) from attendance_marks m join students s on s.id = m.student_id
+             where $1::uuid is not null and m.window_id = $1 and s.room_id = r.id and m.scores is not null
+               and m.verdict in ('PRESENT', 'NEEDS_REVIEW', 'REJECTED')) as tonight_scored,
+          (select count(*) from attendance_marks m join students s on s.id = m.student_id
+             where $1::uuid is not null and m.window_id = $1 and s.room_id = r.id and m.scores is not null
+               and m.verdict in ('PRESENT', 'NEEDS_REVIEW', 'REJECTED')
+               and exists (
+                 select 1 from jsonb_array_elements(m.scores->'scorers') e
+                 where e->>'name' = 'own_ap' and (e->>'score')::float > 0
+               )) as tonight_ap_seen
+        from rooms r
+        where ($2::uuid is null or r.id = $2)
+        """,
+        window_id,
+        room_id,
+    )

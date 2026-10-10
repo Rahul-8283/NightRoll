@@ -21,8 +21,12 @@ export type RoomCount = {
   present: number
   total: number
   pending_review: number
+  absent: number
   rejected: number
+  health: HealthFlag[]
 }
+
+export type HealthFlag = 'rescan_wifi' | 'check_router'
 
 export type RecentMark = {
   mark_id: string
@@ -55,6 +59,7 @@ export type RoomUpdate = {
   total: number
   pending_review: number
   rejected: number
+  health: HealthFlag[]
   last: RecentMark | null
 }
 
@@ -88,6 +93,7 @@ export type RoomTonight = {
   floor: number
   window: WindowBrief | null
   students: RoomStudentStatus[]
+  health: HealthFlag[]
 }
 
 export type WindowHistory = {
@@ -141,4 +147,83 @@ export type RoomFingerprint = {
   created_at: string
   age_seconds: number
   reset_pending: boolean
+}
+
+export type ReviewItem = {
+  mark_id: string
+  window_id: string
+  student_id: string
+  student_name: string
+  roll_number: string
+  room_id: string
+  room_number: string
+  floor: number
+  marked_at: string
+  score: number | null
+  attempt: number
+  attempts_tonight: number
+  reasons: ReasonOut[]
+  scorers: ScorerOut[]
+  fingerprint_created_at: string | null
+  frames_available: boolean
+}
+
+export type AttemptRow = {
+  mark_id: string
+  verdict: Verdict
+  reasons: ReasonOut[]
+  marked_at: string
+  attempt: number
+}
+
+export type DecisionRow = {
+  decision: 'APPROVED' | 'DECLINED' | 'OVERRIDDEN' | 'MANUAL'
+  status: 'PRESENT' | 'ABSENT' | null
+  reviewed_by: string
+  note: string | null
+  reviewed_at: string
+}
+
+export type EffectiveStatus = 'PRESENT' | 'ABSENT' | 'PENDING' | 'NOT_MARKED' | 'OFF'
+
+export type MarkDetailFull = ReviewItem & {
+  verdict: Verdict
+  earlier_attempts: AttemptRow[]
+  decisions: DecisionRow[]
+  effective_status: EffectiveStatus
+}
+
+export type MarkDecision = {
+  mark_id: string
+  student_id: string
+  status: EffectiveStatus
+  decided_how: 'override' | 'manual' | 'automatic' | 'approved' | 'declined' | null
+}
+
+export type FrameLink = { name: string; url: string }
+
+export type FramesView = {
+  mark_id: string
+  expires_in_seconds: number
+  links: FrameLink[]
+}
+
+export type AbsenteeRow = {
+  student_id: string
+  student_name: string
+  roll_number: string
+  room_number: string
+  floor: number
+  status: 'ABSENT' | 'NOT_MARKED'
+  reason: 'declined' | 'rejected_only' | 'no_attempt' | 'no_present_mark' | 'not_marked'
+  reason_text: string
+  device_enrolled: boolean
+}
+
+export type AbsenteeList = {
+  window_id: string | null
+  window_state: WindowState | null
+  still_to_mark: number
+  absent: number
+  students: AbsenteeRow[]
 }

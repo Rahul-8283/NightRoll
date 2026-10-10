@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiFetch, ApiError } from '../lib/api'
-import type { RoomFingerprint, RoomTonight, TonightData } from './types'
+import type { AbsenteeList, MarkDetailFull, ReviewItem, RoomFingerprint, RoomTonight, TonightData } from './types'
 
 // The live provider writes into this key, so the page and the top bar always share one copy.
 export function useTonight() {
@@ -23,5 +23,28 @@ export function useFingerprint(roomId: string) {
     queryKey: ['fingerprint', roomId],
     queryFn: () => apiFetch<RoomFingerprint>(`/rooms/${roomId}/fingerprint`),
     retry: (failures, error) => !(error instanceof ApiError && error.status === 404) && failures < 2,
+  })
+}
+
+// Marks awaiting a decision in tonight's window, oldest first.
+export function useReviewQueue() {
+  return useQuery({
+    queryKey: ['reviews'],
+    queryFn: () => apiFetch<ReviewItem[]>('/reviews'),
+  })
+}
+
+export function useMarkDetail(markId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['mark', markId],
+    queryFn: () => apiFetch<MarkDetailFull>(`/attendance/marks/${markId}`),
+    enabled,
+  })
+}
+
+export function useAbsentees() {
+  return useQuery({
+    queryKey: ['absentees'],
+    queryFn: () => apiFetch<AbsenteeList>('/attendance/absentees'),
   })
 }
