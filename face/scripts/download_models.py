@@ -1,13 +1,16 @@
-"""Download and verify model weights for the NightRoll Face Worker.
+"""Download and verify the model files for the NightRoll Face Worker.
 
-Fetches:
-1. InsightFace 'buffalo_l' pack (detector, landmarks, ArcFace 512-d embedder)
-2. Silent-Face / MiniFASNet anti-spoofing ONNX model
+Fetches and checks:
+1. InsightFace `buffalo_l` (detector, landmarks, ArcFace 512-d embedder).
+2. The Silent-Face MiniFASNetV2 anti-spoof model. Upstream publishes PyTorch weights only, so the
+   ONNX file is produced once by `scripts/convert_antispoof.py`; this script then verifies it.
+
+Every file is compared with a SHA-256 recorded below. A mismatch is an error, never a warning.
 
 Usage:
-    python scripts/download_models.py
-    python scripts/download_models.py --verify-only
-    python scripts/download_models.py --create-stubs
+    python scripts/download_models.py                 download what is missing, then verify
+    python scripts/download_models.py --verify-only   verify only
+    python scripts/download_models.py --create-stubs  placeholder files for tests that never load a model
 """
 
 from __future__ import annotations
@@ -21,150 +24,134 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 MODELS_DIR = ROOT_DIR / "models"
-BUFFALO_DIR = MODELS_DIR / "buffalo_l"
 
-# Model metadata & download endpoints
 BUFFALO_L_URL = "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip"
-# Hosted ONNX release for Silent-Face anti-spoofing (MiniFASNetV2)
-ANTISPOOF_URL = "https://raw.githubusercontent.com/minivision-ai/Silent-Face-Anti-Spoofing/master/resources/anti_spoof_models/2.7_80x80_MiniFASNetV2.onnx"
+BUFFALO_L_ZIP_SHA256 = "80ffe37d8a5940d59a7384c201a2a38d4741f2f3c51eef46ebb28218a7b0ca2f"
 
-# Expected SHA-256 checksums (checked when files exist or after download)
-# Set to None if checksum is to be calculated and printed on first download
+# SHA-256 of every model file, relative to the models folder. Update only when a model is
+# deliberately upgraded, together with MODEL_VERSION (embeddings are tied to a model version).
 EXPECTED_SHA256 = {
-    "buffalo_l.zip": "7d95d038221684c30b200b3f88f11d1ef5e6659f81ca9734e9e0d164d14b1b36",
-    "antispoof.onnx": None,
+    "buffalo_l/det_10g.onnx": "5838f7fe053675b1c7a08b633df49e7af5495cee0493c7dcf6697200b85b5b91",
+    "buffalo_l/w600k_r50.onnx": "4c06341c33c2ca1f86781dab0e829f88ad5b64be9fba56e56bc9ebdefc619e43",
+    "buffalo_l/2d106det.onnx": "f001b856447c413801ef5c42091ed0cd516fcd21f2d6b79635b1e733a7109dbf",
+    "buffalo_l/1k3d68.onnx": "df5c06b8a0c12e422b2ed8947b8869faa4105387f199c477af038aa01f9a45cc",
+    "buffalo_l/genderage.onnx": "4fde69b1c810857b88c64a335084f1c3fe8f01246c9a191b48c7bb756d6652fb",
+    # Produced by convert_antispoof.py with torch 2.14.1 and onnx 1.23.2 from the upstream
+    # weights whose SHA-256 is a5eb02e1843f19b5386b953cc4c9f011c3f985d0ee2bb9819eea9a142099bec0.
+    "antispoof.onnx": "54ca9aab8e1402de8af805b48a1df266fc1a419cedffe679a3747d9d65d85541",
 }
 
 MODEL_VERSION = "buffalo_l-1"
 
 
-def compute_sha256(filepath: Path) -> str:
-    """Compute hex SHA-256 hash of a file."""
+def compute_sha256(path: Path) -> str:
     hasher = hashlib.sha256()
-    with open(filepath, "rb") as f:
+    with open(path, "rb") as f:
         while chunk := f.read(1024 * 1024):
             hasher.update(chunk)
     return hasher.hexdigest()
 
 
 def download_file(url: str, dest: Path) -> bool:
-    """Download a file with progress output."""
-    print(f"Downloading {url} -> {dest.name}...")
+    print(f"Downloading {url}")
+
+    def hook(block: int, size: int, total: int) -> None:
+        if total > 0:
+            sys.stdout.write(f"\r  {min(100, block * size * 100 // total)}%")
+            sys.stdout.flush()
+
     try:
-
-        def reporthook(block_num: int, block_size: int, total_size: int) -> None:
-            if total_size > 0:
-                percent = min(100, block_num * block_size * 100 // total_size)
-                sys.stdout.write(f"\r  [{dest.name}] {percent}% ({block_num * block_size // 1024} KB)")
-                sys.stdout.flush()
-
-        urllib.request.urlretrieve(url, dest, reporthook=reporthook)
+        urllib.request.urlretrieve(url, dest, reporthook=hook)
         sys.stdout.write("\n")
         return True
-    except Exception as e:
+    except Exception as exc:
         sys.stdout.write("\n")
-        print(f"ERROR: Failed to download {url}: {e}", file=sys.stderr)
+        print(f"ERROR: could not download {url}: {exc}", file=sys.stderr)
         return False
 
 
 def verify_models(models_dir: Path) -> bool:
-    """Verify presence and checksums of installed model files."""
-    buffalo_path = models_dir / "buffalo_l"
-    antispoof_path = models_dir / "antispoof.onnx"
+    """Compare every model file with its recorded SHA-256."""
+    print("\n--- Verifying model files ---")
+    ok = True
+    for rel, expected in EXPECTED_SHA256.items():
+        path = models_dir / rel
+        if not path.exists():
+            print(f"[-] missing   {rel}")
+            ok = False
+            continue
+        actual = compute_sha256(path)
+        if actual == expected:
+            print(f"[+] verified  {rel}")
+        else:
+            print(f"[-] CHECKSUM MISMATCH {rel}\n      expected {expected}\n      actual   {actual}")
+            ok = False
+    return ok
 
-    all_ok = True
-    print("\n--- Verifying Model Files ---")
 
-    if not buffalo_path.exists():
-        print(f"[-] Missing directory: {buffalo_path}")
-        all_ok = False
-    else:
-        buffalo_files = ["det_10g.onnx", "w600k_r50.onnx", "2d106det.onnx", "1k3d68.onnx"]
-        for bf in buffalo_files:
-            p = buffalo_path / bf
-            if p.exists():
-                h = compute_sha256(p)
-                print(f"[+] {bf} present ({p.stat().st_size // 1024} KB, sha256: {h[:12]}...)")
-            else:
-                print(f"[-] Missing buffalo_l component: {bf}")
-                all_ok = False
-
-    if antispoof_path.exists():
-        h = compute_sha256(antispoof_path)
-        print(f"[+] antispoof.onnx present ({antispoof_path.stat().st_size // 1024} KB, sha256: {h[:12]}...)")
-    else:
-        print(f"[-] Missing anti-spoof model: {antispoof_path}")
-        all_ok = False
-
-    return all_ok
+def download_buffalo(models_dir: Path) -> bool:
+    """Download buffalo_l.zip, check the archive hash, then extract it."""
+    zip_path = models_dir / "buffalo_l.zip"
+    if not download_file(BUFFALO_L_URL, zip_path):
+        return False
+    actual = compute_sha256(zip_path)
+    if actual != BUFFALO_L_ZIP_SHA256:
+        print(
+            f"ERROR: buffalo_l.zip checksum mismatch\n  expected {BUFFALO_L_ZIP_SHA256}\n  actual   {actual}",
+            file=sys.stderr,
+        )
+        zip_path.unlink(missing_ok=True)
+        return False
+    target = models_dir / "buffalo_l"
+    target.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path) as archive:
+        archive.extractall(target)
+    zip_path.unlink(missing_ok=True)
+    return True
 
 
 def create_stubs(models_dir: Path) -> None:
-    """Create lightweight dummy/mock files for local testing and CI without full weights."""
-    print("Creating mock model stubs for offline testing...")
-    buffalo_path = models_dir / "buffalo_l"
-    buffalo_path.mkdir(parents=True, exist_ok=True)
-
-    dummy_content = b"ONNX_MOCK_MODEL_TEST_STUB_ONLY"
-    for bf in ["det_10g.onnx", "w600k_r50.onnx", "2d106det.onnx", "1k3d68.onnx", "genderage.onnx"]:
-        (buffalo_path / bf).write_bytes(dummy_content)
-    (models_dir / "antispoof.onnx").write_bytes(dummy_content)
-    print(f"Created model stubs in {models_dir}")
+    """Placeholder files so tests that never load a model can run offline. They cannot be loaded."""
+    folder = models_dir / "buffalo_l"
+    folder.mkdir(parents=True, exist_ok=True)
+    for rel in EXPECTED_SHA256:
+        path = models_dir / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"STUB")
+    print(f"Created unloadable stubs in {models_dir}. Never use these to run the worker.")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Download and verify face worker models.")
-    parser.add_argument("--models-dir", type=Path, default=MODELS_DIR, help="Target models directory")
-    parser.add_argument("--verify-only", action="store_true", help="Only verify existing models")
-    parser.add_argument("--create-stubs", action="store_true", help="Create dummy stubs for offline testing")
-    parser.add_argument("--force", action="store_true", help="Force re-download even if files exist")
-
+    parser.add_argument("--models-dir", type=Path, default=MODELS_DIR)
+    parser.add_argument("--verify-only", action="store_true")
+    parser.add_argument("--create-stubs", action="store_true")
     args = parser.parse_args()
+
     models_dir: Path = args.models_dir
     models_dir.mkdir(parents=True, exist_ok=True)
 
     if args.create_stubs:
         create_stubs(models_dir)
         return 0
-
     if args.verify_only:
         return 0 if verify_models(models_dir) else 1
 
-    # Check if models already exist
-    buffalo_models = models_dir / "buffalo_l" / "w600k_r50.onnx"
-    antispoof_model = models_dir / "antispoof.onnx"
+    buffalo_files = [rel for rel in EXPECTED_SHA256 if rel.startswith("buffalo_l/")]
+    if not all((models_dir / rel).exists() for rel in buffalo_files):
+        if not download_buffalo(models_dir):
+            return 1
 
-    if buffalo_models.exists() and antispoof_model.exists() and not args.force:
-        print("Model files already present. Verifying integrity...")
-        if verify_models(models_dir):
-            print("Models intact. No download needed.")
-            return 0
-        print("Integrity check failed. Re-downloading...")
+    if not (models_dir / "antispoof.onnx").exists():
+        print(
+            "\nThe anti-spoof model is not published as ONNX, so convert it once:\n"
+            "  uv run --with torch==2.14.1 --with onnx==1.23.2 python scripts/convert_antispoof.py"
+        )
 
-    # Download buffalo_l
-    zip_dest = models_dir / "buffalo_l.zip"
-    if not (models_dir / "buffalo_l").exists() or args.force:
-        ok = download_file(BUFFALO_L_URL, zip_dest)
-        if ok and zip_dest.exists():
-            print(f"Extracting {zip_dest.name} -> {models_dir / 'buffalo_l'}...")
-            with zipfile.ZipFile(zip_dest, "r") as z:
-                z.extractall(models_dir / "buffalo_l")
-            zip_dest.unlink(missing_ok=True)
-        else:
-            print("Warning: Could not download buffalo_l directly from GitHub release.")
-            print("InsightFace will attempt automatic download on first initialization if needed.")
-
-    # Download anti-spoof model
-    if not antispoof_model.exists() or args.force:
-        download_file(ANTISPOOF_URL, antispoof_model)
-
-    print("\nVerification summary:")
     if verify_models(models_dir):
-        print(f"\nAll models ready! MODEL_VERSION={MODEL_VERSION}")
+        print(f"\nAll models ready. MODEL_VERSION={MODEL_VERSION}")
         return 0
-    else:
-        print("\nNote: Some models were not downloaded (may require manual placement or offline stubs for tests).")
-        return 0
+    return 1
 
 
 if __name__ == "__main__":
