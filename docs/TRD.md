@@ -60,7 +60,7 @@ flowchart LR
 
 | Component | Responsibility | Technology | Deployed as |
 |---|---|---|---|
-| Mobile app | Enrollment, liveness UI, face capture, WiFi scan, signing | React Native, VisionCamera, ML Kit, TFLite | Android APK, internal track |
+| Mobile app | Enrollment, liveness UI, face capture, WiFi scan, signing | Expo (React Native, TypeScript), Expo Modules in Kotlin, VisionCamera, ML Kit, TFLite | Development and production builds via EAS; Expo Go for screens only |
 | API service | Hard gates, orchestration, scoring, fusion, window and review logic | FastAPI on Python 3.12 | Container |
 | Face worker | Embedding extraction, anti-spoof scoring | InsightFace buffalo_l on ONNX Runtime, Silent-Face | Container, separate from API |
 | Scheduler | Opens and closes windows, issues nonces | Celery beat or APScheduler | Container |
@@ -423,6 +423,7 @@ Hosted on Upstash over TLS, so every connection uses a `rediss://` URL. Upstash 
 
 ### 9.1 Requirements
 
+- Built with Expo (React Native, TypeScript). Native code is Kotlin in Expo Modules. Phones run a development build or a production build made with EAS. Expo Go is only for screens without native code.
 - Android 9 (API 28) or higher. Android 12 or higher recommended for StrongBox.
 - Permissions: camera, location (required by Android for WiFi scans), internet.
 - Keys are generated in the Keystore, non-exportable, using StrongBox where available and the TEE otherwise.

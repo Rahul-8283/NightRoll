@@ -80,6 +80,7 @@ flowchart LR
 
 **Mobile app**
 
+![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)
 ![React Native](https://img.shields.io/badge/React%20Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Android](https://img.shields.io/badge/Android%20Keystore-3DDC84?style=for-the-badge&logo=android&logoColor=white)
@@ -116,7 +117,7 @@ flowchart LR
 
 | Layer | Choice | Why |
 |---|---|---|
-| App | React Native, VisionCamera, ML Kit | One codebase, fast camera pipeline, on-device face detection |
+| App | Expo (React Native), Kotlin Expo Modules, VisionCamera, ML Kit | Expo for builds and EAS cloud builds; a development build runs the native code; one codebase for screens |
 | On-device ML | TFLite MobileFaceNet | Quick pre-check so a bad capture fails before upload |
 | Device trust | Android Keystore / StrongBox, Play Integrity | Key never leaves the chip; blocks root, emulators, virtual cameras |
 | API | FastAPI | Async, typed, fast to build |
@@ -634,6 +635,7 @@ Install these once. The commands are for macOS with Homebrew; Windows and Linux 
 | JDK | 17 | Android build | `brew install openjdk@17` |
 | Android Studio | current stable | Android SDK, emulator | developer.android.com/studio |
 | Docker Desktop | current stable | Later services (Phase 12); not needed for Redis | docker.com, then start it |
+| EAS CLI | current | Development and production builds of the app | `npx eas-cli` (no install needed) |
 | Supabase CLI | current stable | Migrations, linking the project | `brew install supabase/tap/supabase` |
 
 ### First-time setup
@@ -672,7 +674,7 @@ Install these once. The commands are for macOS with Homebrew; Windows and Linux 
 | Window scheduler | none | `cd backend && python -m app.scheduler` | Phase 3 |
 | Face worker | 8100 | `cd face && uvicorn worker.main:app --port 8100` | Phase 5 |
 | Warden dashboard | 5173 | `cd dashboard && npm run dev` | Shell now; screens in Phase 10 |
-| Student app | Metro 8081 | `cd app && npx react-native run-android` | Phase 4 |
+| Student app | Metro 8081 | `cd app && npx expo start` | Phase 4 (Expo Go for screens; development build for the rest) |
 
 Start order once everything exists: face worker, backend API, scheduler, dashboard, then the phone app. Upstash Redis is always on.
 
@@ -720,12 +722,17 @@ The pages are placeholders until Phase 10. The dashboard shows which variables a
 
 **Student app (from Phase 4)**
 
+Expo Go shows the screens that don't use native code. Anything that uses the Keystore, Wi-Fi or Play Integrity needs a development build.
+
 ```bash
 cd app
 npm install
-npx react-native start                # terminal 1
-npx react-native run-android          # terminal 2, with the phone connected or an emulator running
+npx expo start                 # Metro, scan the QR code with Expo Go for screens
+npx eas-cli build --profile development --platform android   # once: a dev build to install on the phone
+npx expo start --dev-client    # then open the dev build on the phone
 ```
+
+The phone and the laptop must be on the same Wi-Fi. Set `EXPO_PUBLIC_API_BASE_URL` to the laptop's LAN address, not `10.0.2.2` (that address only works in the Android emulator).
 
 ### Stopping everything
 
@@ -735,7 +742,7 @@ Press `Ctrl+C` in each terminal. Upstash Redis keeps running in the cloud, so th
 
 ```text
 NightRoll/
-├── app/          React Native student app (Android)
+├── app/          Expo student app (Android, Kotlin Expo Modules)
 ├── backend/      FastAPI service: windows, nonces, gates, scoring, review
 ├── face/         Face worker: embeddings and anti-spoof (internal)
 ├── dashboard/    React warden dashboard
