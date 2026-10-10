@@ -1,4 +1,5 @@
 import { NativeModule, requireOptionalNativeModule } from 'expo';
+import { Platform } from 'react-native';
 import type { CurrentConnectionInfo, WifiScanResult } from './WifiScanner.types';
 
 declare class WifiScannerModule extends NativeModule<{}> {
@@ -7,4 +8,6 @@ declare class WifiScannerModule extends NativeModule<{}> {
   scan(): Promise<WifiScanResult>;
 }
 
-export default requireOptionalNativeModule<WifiScannerModule>('WifiScanner');
+export default Platform.OS === 'web'
+  ? null
+  : requireOptionalNativeModule<WifiScannerModule>('WifiScanner');

@@ -1,4 +1,5 @@
 import { requireNativeModule } from 'expo-modules-core';
+import { Platform } from 'react-native';
 
 import type { CompressedFrameResult, FaceDetectionResult } from './FaceDetector.types';
 
@@ -8,10 +9,12 @@ type FaceDetectorNativeType = {
 };
 
 let FaceDetectorNative: FaceDetectorNativeType | null = null;
-try {
-  FaceDetectorNative = requireNativeModule<FaceDetectorNativeType>('FaceDetector');
-} catch {
-  FaceDetectorNative = null;
+if (Platform.OS !== 'web') {
+  try {
+    FaceDetectorNative = requireNativeModule<FaceDetectorNativeType>('FaceDetector');
+  } catch {
+    FaceDetectorNative = null;
+  }
 }
 
 export default FaceDetectorNative;

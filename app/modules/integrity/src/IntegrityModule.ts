@@ -1,4 +1,5 @@
 import { requireNativeModule } from 'expo-modules-core';
+import { Platform } from 'react-native';
 
 import type { IntegrityResult } from './Integrity.types';
 
@@ -8,10 +9,12 @@ type IntegrityNativeType = {
 };
 
 let IntegrityNative: IntegrityNativeType | null = null;
-try {
-  IntegrityNative = requireNativeModule<IntegrityNativeType>('Integrity');
-} catch {
-  IntegrityNative = null;
+if (Platform.OS !== 'web') {
+  try {
+    IntegrityNative = requireNativeModule<IntegrityNativeType>('Integrity');
+  } catch {
+    IntegrityNative = null;
+  }
 }
 
 export default IntegrityNative;

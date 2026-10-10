@@ -1,4 +1,5 @@
 import { NativeModule, requireOptionalNativeModule } from 'expo';
+import { Platform } from 'react-native';
 
 declare class DeviceKeyModule extends NativeModule<{}> {
   generate(): Promise<string>;
@@ -9,5 +10,8 @@ declare class DeviceKeyModule extends NativeModule<{}> {
   securityLevel(): Promise<'strongbox' | 'tee' | 'software'>;
 }
 
-// null in Expo Go and on platforms without the native module; index.ts turns that into a clear error.
-export default requireOptionalNativeModule<DeviceKeyModule>('DeviceKey');
+// null in Expo Go, on web, and on platforms without the native module; index.ts turns that into a clear error.
+export default Platform.OS === 'web'
+  ? null
+  : requireOptionalNativeModule<DeviceKeyModule>('DeviceKey');
+
