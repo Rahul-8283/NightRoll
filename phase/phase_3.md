@@ -153,6 +153,7 @@ backend/app/redis/consume_nonce.lua
 | Server clock is wrong | Sync the host with network time. Log the offset at startup. |
 | Students forget to open the app at window time | Warden announces the time. Home shows the opening time once opened (Phase 4). Reminder method is an open question in the PRD. |
 | Scheduler stops unnoticed | `/v1/health` reports the scheduler's last heartbeat from Redis |
+| Upstash command quota runs out during a window | Nonce issue is one pipeline per window, and the scheduler polls every 15 s. Count commands in the Phase 13 load test and check the plan limits before the pilot. |
 | Stub endpoints get exposed | Guard them with `APP_ENV=local` until Phase 8 replaces the stub |
 
 ## Hand-off to Phase 4

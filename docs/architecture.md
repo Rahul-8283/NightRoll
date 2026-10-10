@@ -91,7 +91,7 @@ flowchart TB
         Sched["Scheduler<br/>window and nonces"]
         Face["Face worker<br/>InsightFace, anti-spoof"]
         Adapter["Network adapter<br/>optional"]
-        Redis[("Redis<br/>nonces, window state")]
+        Redis[("Upstash Redis<br/>nonces, window state")]
         PG[("Supabase PostgreSQL + pgvector<br/>records, embeddings")]
         Frames[("Supabase Storage<br/>private bucket, 24-hour retention")]
         Dash["Warden dashboard<br/>React, static"]
@@ -130,7 +130,7 @@ flowchart TB
 | Supabase PostgreSQL | Relational records and pgvector embeddings; hosted by Supabase | API, face worker | All durable records |
 | Supabase Auth | Warden and admin login, MFA, JWT issuance | Dashboard, API | Warden and admin accounts |
 | Supabase Storage | Private bucket for short-lived frames | Face worker | Frames, deleted after 24 hours |
-| Redis | Nonces, window state, rate limits, live snapshot | API, scheduler | Short-lived state only |
+| Upstash Redis | Nonces, window state, rate limits, live snapshot | API, scheduler | Hosted by Upstash over TLS; short-lived state only |
 
 ### 4.2 Why these boundaries
 
@@ -214,7 +214,7 @@ sequenceDiagram
     participant W as Warden dashboard
     participant API as API service
     participant S as Scheduler
-    participant R as Redis
+    participant R as Upstash Redis
     participant DB as PostgreSQL
     participant A as Student app
 
@@ -261,7 +261,7 @@ sequenceDiagram
     participant Ks as Keystore
     participant AP as Room access point
     participant API as API service
-    participant R as Redis
+    participant R as Upstash Redis
     participant Face as Face worker
     participant PI as Play Integrity
     participant DB as PostgreSQL
@@ -315,7 +315,7 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant S as Scheduler
-    participant R as Redis
+    participant R as Upstash Redis
     participant DB as PostgreSQL
     participant API as API service
     participant Dash as Dashboard
@@ -372,7 +372,7 @@ flowchart LR
     subgraph T2["Trusted"]
         API["API service"]
         FaceW["Face worker"]
-        Data[("Database and Redis")]
+        Data[("Database and Upstash Redis")]
         Dash["Warden session"]
     end
 
@@ -431,7 +431,7 @@ flowchart TB
             F["face-worker"]
             S["scheduler"]
             P[("Supabase<br/>hosted PostgreSQL")]
-            R[("redis")]
+            R[("Upstash Redis<br/>hosted")]
             N --> A
             A --> P
             A --> R
@@ -497,7 +497,7 @@ Nothing in the design requires a rewrite to scale. Each container can move to it
 | ADR-11 | React Native for the app | Flutter; native Kotlin | One codebase; team familiarity; camera and ML libraries available |
 | ADR-12 | Android first, iOS deferred | Both platforms at once | iOS cannot perform full WiFi scans, which the design depends on |
 | ADR-13 | Supabase for database, auth, and frame storage | Self-hosted PostgreSQL, a separate auth provider, and S3-compatible storage | One managed platform with pgvector, MFA-capable auth, and private buckets; less to operate in a hackathon and pilot |
-| ADR-14 | Redis kept for nonces and window state | Supabase-only (Postgres with short TTL tables) | Atomic consume and TTL expiry are a natural fit for Redis; keeps the nonce path independent of database load |
+| ADR-14 | Upstash Redis (hosted) kept for nonces and window state | Supabase-only (Postgres with short TTL tables) | Atomic consume and TTL expiry are a natural fit for Redis; keeps the nonce path independent of database load |
 | ADR-15 | No push notifications; students open the app at window time | FCM push at window open; background polling | Push adds a Google dependency and a token per student. Background polling drains batteries and is unreliable on many Android phones. A student who opens the app at 10 PM is the simplest reliable path for this hostel. |
 
 ---

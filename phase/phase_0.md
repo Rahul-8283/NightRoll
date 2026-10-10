@@ -16,7 +16,7 @@ Every teammate can clone the repo, fill in one env file per service, start the l
 - The repo has its final folder structure, with a placeholder in each service folder.
 - `.gitignore` and a `.env.example` per service are committed. No real secret is in git.
 - Supabase and Google Cloud projects exist, and every credential is shared with the team outside git.
-- Redis runs locally through Docker Compose.
+- Redis is hosted on Upstash (TLS). The team shares one development database and uses a separate one for tests.
 - Two test Android phones and two routers are ready for the demo network.
 - Four risk spikes are done and their results are written down.
 
@@ -31,7 +31,8 @@ Every teammate can clone the repo, fill in one env file per service, start the l
 | 1.3 | Create a Google Cloud project named `nightroll`. Record the Android package name `com.zerolatency.nightroll` for the Play Integrity setup. | Project ID and number noted |
 | 1.4 | In the linked Google Cloud project, enable the Play Integrity API | API enabled, project number noted |
 | 1.5 | Give all four teammates write access to the GitHub repo | Everyone can push to `base` |
-| 1.6 | Ask the campus network admin the three network questions (section 10) | Written answer, or a date for one |
+| 1.6 | Create an Upstash Redis database for development (TLS on, region closest to the hostel). Copy its `rediss://` URL. | URL in the team password manager |
+| 1.7 | Ask the campus network admin the three network questions (section 10) | Written answer, or a date for one |
 
 The package name is fixed here. Changing it later breaks Play Integrity.
 
@@ -45,7 +46,7 @@ Everyone installs the same versions so builds match.
 | Node.js | 20 LTS | App, dashboard |
 | JDK | 17 | Android build |
 | Android Studio | Current stable, with SDK Platform 34 or newer | App build and emulator |
-| Docker Desktop | Current stable | Redis, later the full stack |
+| Docker Desktop | Current stable | Later services (Phase 12) |
 | Supabase CLI | Current stable | Migrations |
 | Git | Any recent | Version control |
 
@@ -169,8 +170,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_JWT_SECRET=
 DATABASE_URL=
 
-# Redis
-REDIS_URL=redis://localhost:6379/0
+# Redis (Upstash, TLS)
+REDIS_URL=rediss://default:<password>@<endpoint>.upstash.io:6379
 
 # Face worker
 FACE_WORKER_URL=http://localhost:8100
@@ -254,20 +255,20 @@ Rules:
 
 Share credentials through the team password manager or an encrypted note. Do not paste them in the group chat.
 
-## 7. Local services
+## 7. Redis (Upstash)
 
-Add `infra/docker-compose.yml` with Redis only. More services join in Phase 12.
+Redis is hosted, so there is no Redis container to run. Each teammate pastes the same development `rediss://` URL into `backend/.env`.
 
-```yaml
-services:
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-    command: ["redis-server", "--appendonly", "no"]
+Check it from any machine with Docker:
+
+```bash
+docker run --rm redis:7 redis-cli --tls -u "<REDIS_URL>" ping   # expect PONG
 ```
 
-Check: `docker compose -f infra/docker-compose.yml up -d` and then `redis-cli ping` returns `PONG`.
+Rules:
+- Use `rediss://` (TLS). A plain `redis://` URL is refused by the Phase 2 startup check.
+- Development and tests use different Upstash databases. Tests never touch the development data.
+- The URL contains a password. It is treated like any other secret.
 
 ## 8. Supabase project setup
 
@@ -352,7 +353,7 @@ If a spike fails, stop and decide the workaround before Phase 1 starts. Likely w
 - [ ] `.gitignore` and all four `.env.example` files are committed.
 - [ ] `git log -p` shows no secret, key or credential file in history.
 - [ ] Every teammate has a filled `.env` for the service they own.
-- [ ] Redis answers `PONG` on every teammate's machine.
+- [ ] `PONG` comes back from the Upstash URL on every teammate's machine.
 - [ ] The Supabase project has the `vector` extension, the `frames` bucket, sign-ups off, and one test warden.
 - [ ] The Google service account file is in place locally and ignored by git.
 - [ ] All five spikes have a written result.

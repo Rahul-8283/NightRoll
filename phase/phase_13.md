@@ -63,7 +63,7 @@ Any failure here is fixed before anything else in this phase.
 | # | Task |
 |---|---|
 | 2.1.1 | Add `pytest` to `backend/` and `face/`, and a test runner to `dashboard/` and `app/` |
-| 2.1.2 | Integration tests use a local Supabase stack from the Supabase CLI and a throwaway Redis, never the shared development project |
+| 2.1.2 | Integration tests use a local Supabase stack from the Supabase CLI and a separate Upstash test database, never the development one |
 | 2.1.3 | Record a set of real submissions from the test phones as fixtures: genuine, wrong room, wrong device, tampered. Strip the frames and keep the hashes. |
 | 2.1.4 | Add a GitHub Actions workflow that runs lint and the unit tests on every push |
 
@@ -89,7 +89,7 @@ Any failure here is fixed before anything else in this phase.
 
 | Flow | Checks |
 |---|---|
-| Enroll, open, mark, close | The whole path against real Redis and a local database, with the face worker replaced by a stand-in returning fixed scores |
+| Enroll, open, mark, close | The whole path against the Upstash test database and a local Supabase stack, with the face worker replaced by a stand-in returning fixed scores |
 | Retry | Rejected, then fresh nonce, then present; fourth attempt refused |
 | Idempotency | The same envelope twice gives one row and identical responses |
 | Review | Approve, decline, override, manual, each with its audit row |
@@ -206,7 +206,7 @@ The replay needs submissions that pass the gates. Use a test-only mode, availabl
 | # | Break this | Expected |
 |---|---|---|
 | 6.1 | Stop the face worker mid-window | Verify returns 503, app shows fallback, dashboard alert appears |
-| 6.2 | Stop Redis | Verify returns 503, nothing is accepted |
+| 6.2 | Point `REDIS_URL` at a wrong host, or revoke the test database password | Verify returns 503, nothing is accepted |
 | 6.3 | Cut the laptop's internet | Database and integrity calls fail safely; nothing is marked present by default |
 | 6.4 | Unplug a room's router | Students in that room get the fallback; room flagged |
 | 6.5 | Restart the API mid-window | Dashboards reconnect; no marks lost |

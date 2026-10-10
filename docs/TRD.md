@@ -43,7 +43,7 @@ flowchart LR
     S["Student Android app"] -- "HTTPS, signed payload" --> AP["Room access point"]
     AP --> GW["NightRoll API<br/>campus LAN"]
     GW --> DB[("Supabase PostgreSQL + pgvector")]
-    GW --> RD[("Redis")]
+    GW --> RD[("Upstash Redis")]
     GW --> FW["Face worker"]
     GW --> PI["Google Play Integrity API"]
     W["Warden dashboard"] <-- "WebSocket" --> GW
@@ -69,7 +69,7 @@ flowchart LR
 | Database | Relational data and vector search | Supabase PostgreSQL with pgvector | Hosted, managed by Supabase |
 | Auth | Warden and admin login, MFA, JWT issuance | Supabase Auth | Hosted, managed by Supabase |
 | Frame storage | Private bucket for short-lived frames | Supabase Storage | Hosted, managed by Supabase |
-| Cache and nonce store | Nonces, window state, rate limits | Redis 7 | Container |
+| Cache and nonce store | Nonces, window state, rate limits | Upstash Redis (hosted, TLS) | Managed by Upstash |
 
 ### 4.2 Component interactions
 
@@ -380,7 +380,9 @@ CREATE TABLE audit_log (
 
 `students.active` and `devices.active` allow revoking access without deleting history.
 
-### 7.2 Redis keys
+### 7.2 Redis keys (Upstash)
+
+Hosted on Upstash over TLS, so every connection uses a `rediss://` URL. Upstash supports TTLs and Lua scripts, which the nonce logic relies on. The keys are short-lived; the table lists them.
 
 | Key | Value | TTL |
 |---|---|---|
@@ -483,13 +485,13 @@ CREATE TABLE audit_log (
 ```mermaid
 flowchart TB
     subgraph LAN["Campus LAN"]
-        subgraph Host["Single host, Docker Compose, with hosted Supabase"]
+        subgraph Host["Single host, Docker Compose, with hosted Supabase and Upstash"]
             NGX["Reverse proxy<br/>TLS termination"]
             API["API service"]
             FW["Face worker"]
             SCH["Scheduler"]
             PG[("Supabase PostgreSQL + pgvector")]
-            RD[("Redis")]
+            RD[("Upstash Redis")]
             FS[("Encrypted frame volume")]
             NGX --> API
             API --> PG
@@ -512,7 +514,6 @@ flowchart TB
 | api | python:3.12-slim | 8000 (internal) | 2 vCPU, 2 GB |
 | face-worker | python:3.12 with ONNX Runtime | internal | 4 vCPU, 4 GB |
 | scheduler | api image | none | 0.25 vCPU, 256 MB |
-| redis | redis:7 | internal | 0.5 vCPU, 512 MB |
 
 Sizing assumes 1,000 students marking in a 30-minute window: about 0.6 verifications per second at peak, with face work dominating CPU.
 

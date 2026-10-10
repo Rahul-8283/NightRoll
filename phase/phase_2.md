@@ -75,7 +75,7 @@ backend/
 | # | Task |
 |---|---|
 | 3.1 | Open an `asyncpg` pool at startup and close it at shutdown, using FastAPI's lifespan |
-| 3.2 | Open one async Redis client the same way |
+| 3.2 | Open one async Redis client from `REDIS_URL`. The URL is `rediss://` (TLS). Set a connection timeout and a small retry limit. Refuse to start if the URL is not `rediss://`. |
 | 3.3 | Write SQL by hand in `db/queries/`, with parameters. No string-built SQL anywhere. |
 | 3.4 | If Supabase's pooled connection is used in transaction mode, turn off prepared statement caching in `asyncpg` |
 

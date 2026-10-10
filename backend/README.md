@@ -9,7 +9,7 @@ Phase 0 creates only the environment file. There is no code yet, so the run comm
 ## Requirements
 
 - Python 3.12
-- Redis running locally (see the main README)
+- An Upstash Redis database. Put its `rediss://` URL in `backend/.env` as `REDIS_URL`.
 - A filled-in `backend/.env`
 - `backend/secrets/google-service-account.json` (git-ignored, from the team password manager)
 

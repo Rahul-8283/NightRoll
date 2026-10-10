@@ -1,10 +1,6 @@
-# Local services for NightRoll. Phase 0 starts Redis only.
-# Later phases add api, scheduler, face-worker, nginx (Phase 12).
+# Local services for NightRoll.
+# Redis is hosted on Upstash, so there is no Redis container here.
+# Phase 12 adds api, scheduler, face-worker and nginx.
 # Run from the repo root:  docker compose -f infra/docker-compose.yml up -d
 
-services:
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-    command: ["redis-server", "--appendonly", "no"]
+services: {}

@@ -36,11 +36,11 @@ Turn a set of services that work on developers' machines into one system that st
 | 1.1 | `backend/Dockerfile`: slim Python base, pinned dependencies, runs as a non-root user |
 | 1.2 | `face/Dockerfile`: same approach. Models are mounted or downloaded at build with checksum verification, not committed. |
 | 1.3 | `dashboard/Dockerfile`: build the static files, serve them from nginx |
-| 1.4 | Extend `infra/docker-compose.yml` with `nginx`, `api`, `scheduler`, `face-worker` and `redis` |
+| 1.4 | Extend `infra/docker-compose.yml` with `nginx`, `api`, `scheduler` and `face-worker`. Redis stays on Upstash. |
 | 1.5 | Add a `.dockerignore` to each service so env files, secrets and local data never enter an image |
-| 1.6 | Health checks on every service. `api` waits for `redis` and `face-worker` to be healthy. |
+| 1.6 | Health checks on every service. `api` waits for `face-worker` to be healthy. |
 | 1.7 | Restart policy `unless-stopped` |
-| 1.8 | Only nginx publishes ports. Redis, the face worker and the API are reachable inside the Compose network only. |
+| 1.8 | Only nginx publishes ports. The face worker and the API are reachable inside the Compose network only. Redis is hosted on Upstash and needs no port. |
 | 1.9 | Env files are passed at run time. No secret is baked into an image. |
 
 Supabase is hosted, so there is no database container. The host needs outbound internet access to Supabase and Google.

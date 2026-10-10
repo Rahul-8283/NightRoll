@@ -91,7 +91,7 @@ flowchart LR
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![Upstash Redis](https://img.shields.io/badge/Upstash%20Redis-00E9A3?style=for-the-badge&logo=upstash&logoColor=white)
 ![Celery](https://img.shields.io/badge/Celery-37814A?style=for-the-badge&logo=celery&logoColor=white)
 ![WebSocket](https://img.shields.io/badge/WebSocket-010101?style=for-the-badge)
 
@@ -120,7 +120,7 @@ flowchart LR
 | On-device ML | TFLite MobileFaceNet | Quick pre-check so a bad capture fails before upload |
 | Device trust | Android Keystore / StrongBox, Play Integrity | Key never leaves the chip; blocks root, emulators, virtual cameras |
 | API | FastAPI | Async, typed, fast to build |
-| State | Redis | Nonces and window state with native TTL |
+| State | Upstash Redis (hosted, TLS) | Nonces and window state with native TTL, no local server to run |
 | Face | InsightFace `buffalo_l` on ONNX Runtime | Strong open ArcFace embeddings, runs on CPU |
 | Database | Supabase (PostgreSQL with pgvector) | Relational data and 512-dimension embeddings in one managed database |
 | Auth | Supabase Auth | Warden and admin login with MFA; student devices are bound by Keystore keys, not passwords |
@@ -166,7 +166,7 @@ flowchart LR
         B3["Scored checks"]
         B4["Fusion engine"]
         B5[("Supabase PostgreSQL + pgvector")]
-        B6[("Redis")]
+        B6[("Upstash Redis")]
         B7["Network adapter"]
         B0 --> B1 --> B2 --> B3 --> B4
         B0 <--> B6
@@ -208,7 +208,7 @@ flowchart TB
     FV --> FE
     WV --> FE
 
-    WS["Window service"] --> RD[("Redis<br/>nonces, window state")]
+    WS["Window service"] --> RD[("Upstash Redis<br/>nonces, window state")]
     CV --> RD
     FV --> PG[("Supabase PostgreSQL + pgvector<br/>students, rooms, embeddings, logs")]
     WV --> PG
@@ -261,7 +261,7 @@ sequenceDiagram
     actor W as Warden
     participant D as Dashboard
     participant S as Backend
-    participant R as Redis
+    participant R as Upstash Redis
     participant A as NightRoll app
     actor U as Student
     participant AP as Room AP
@@ -519,7 +519,7 @@ erDiagram
     }
 ```
 
-Nonces live in Redis with a TTL that ends when the window closes. They are shown here for the relationships only.
+Nonces live in Upstash Redis with a TTL that ends when the window closes. They are shown here for the relationships only.
 
 ---
 
@@ -540,7 +540,7 @@ flowchart TB
         subgraph Host["NightRoll host"]
             API["FastAPI service"]
             WK["Face worker"]
-            RDS[("Redis")]
+            RDS[("Upstash Redis")]
             PGS[("Supabase PostgreSQL + pgvector")]
             WEB["Dashboard"]
             API --> RDS
@@ -632,10 +632,8 @@ Install these once. The commands are for macOS with Homebrew; Windows and Linux 
 | Node.js | 20 LTS | Dashboard, app tooling | `brew install node@20` |
 | JDK | 17 | Android build | `brew install openjdk@17` |
 | Android Studio | current stable | Android SDK, emulator | developer.android.com/studio |
-| Docker Desktop | current stable | Redis (and later the full stack) | docker.com, then start it |
+| Docker Desktop | current stable | Later services (Phase 12); not needed for Redis | docker.com, then start it |
 | Supabase CLI | current stable | Migrations, linking the project | `brew install supabase/tap/supabase` |
-
-Optional: `brew install redis` gives you `redis-cli` on the host. Without it, use `docker compose exec` as shown below.
 
 ### First-time setup
 
@@ -659,7 +657,7 @@ Optional: `brew install redis` gives you `redis-cli` on the host. Without it, us
 
 3. Put the Google service account file at `backend/secrets/google-service-account.json` (from the team password manager).
 
-4. Start Docker Desktop, then start Redis (see below).
+4. Paste your Upstash `rediss://` URL into `backend/.env` as `REDIS_URL`, then check it (see below).
 
 5. Link Supabase: follow [supabase/README.md](supabase/README.md).
 
@@ -667,7 +665,7 @@ Optional: `brew install redis` gives you `redis-cli` on the host. Without it, us
 
 | Service | Port | Start with | Available from |
 |---|---|---|---|
-| Redis | 6379 | `docker compose -f infra/docker-compose.yml up -d redis` | Phase 0 (now) |
+| Upstash Redis | hosted, TLS | set `REDIS_URL` in `backend/.env` | Phase 0 (now) |
 | Supabase | hosted | `supabase link --project-ref <ref>` | Phase 0 (now) |
 | Backend API | 8000 | `cd backend && uvicorn app.main:app --reload --port 8000` | Phase 2 |
 | Window scheduler | none | `cd backend && python -m app.scheduler` | Phase 3 |
@@ -675,15 +673,17 @@ Optional: `brew install redis` gives you `redis-cli` on the host. Without it, us
 | Warden dashboard | 5173 | `cd dashboard && npm run dev` | Phase 10 |
 | Student app | Metro 8081 | `cd app && npx react-native run-android` | Phase 4 |
 
-Start order once everything exists: Redis, face worker, backend API, scheduler, dashboard, then the phone app.
+Start order once everything exists: face worker, backend API, scheduler, dashboard, then the phone app. Upstash Redis is always on.
 
-**Redis (works now)**
+**Redis (works now, hosted on Upstash)**
+
+Redis runs in the cloud, so there is no server to start. Check the connection with the Redis client in a container, so nothing needs installing on the laptop:
 
 ```bash
-docker compose -f infra/docker-compose.yml up -d redis
-docker compose -f infra/docker-compose.yml exec redis redis-cli ping   # expect PONG
-docker compose -f infra/docker-compose.yml down                        # stop when finished
+docker run --rm redis:7 redis-cli --tls -u "<your REDIS_URL>" ping   # expect PONG
 ```
+
+Use the same `rediss://` URL as in `backend/.env`. Do not commit it.
 
 **Backend API (from Phase 2)**
 
@@ -726,7 +726,7 @@ npx react-native run-android          # terminal 2, with the phone connected or 
 
 ### Stopping everything
 
-Press `Ctrl+C` in each terminal, then `docker compose -f infra/docker-compose.yml down` for Redis.
+Press `Ctrl+C` in each terminal. Upstash Redis keeps running in the cloud, so there is nothing to stop for it.
 
 ## Repository layout
 
@@ -746,7 +746,7 @@ NightRoll/
 
 ## Project status
 
-The design is settled (see `docs/` and `phase/`). Phase 0, base setup, is in progress: folders, env examples, Redis and the setup steps are in place. No feature code exists yet.
+The design is settled (see `docs/` and `phase/`). Phase 0, base setup, is in progress: folders, env examples, the Upstash Redis setup and the setup steps are in place. No feature code exists yet.
 
 ## License
 
