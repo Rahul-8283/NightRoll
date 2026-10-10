@@ -3,6 +3,7 @@
 @import '@fontsource-variable/hanken-grotesk/index.css';
 @import '@fontsource-variable/jetbrains-mono/index.css';
 @import './styles/tokens.css';
+@import './styles/landing.css';
 
 /* ---------- Base ---------- */
 

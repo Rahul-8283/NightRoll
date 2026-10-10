@@ -70,7 +70,7 @@ export function Tonight() {
                         key={room.number}
                         number={room.number}
                         panes={room.students.map((s) => s.status)}
-                        to={`/rooms/${room.number}`}
+                        to={`/dashboard/rooms/${room.number}`}
                         index={index}
                       />
                     ))}

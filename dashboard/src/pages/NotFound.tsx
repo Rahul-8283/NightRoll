@@ -6,7 +6,7 @@ export function NotFound() {
     <EmptyState title="Nothing on this floor">
       <p>
         That page does not exist.{' '}
-        <Link to="/" style={{ color: 'var(--lamp)' }}>
+        <Link to="/dashboard" style={{ color: 'var(--lamp)' }}>
           Back to tonight
         </Link>
       </p>

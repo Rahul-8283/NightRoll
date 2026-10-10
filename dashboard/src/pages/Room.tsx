@@ -28,7 +28,7 @@ export function Room() {
     return (
       <EmptyState title="No such room">
         <p>
-          Room {roomId} is not in the sample data. <Link to="/">Back to tonight</Link>
+          Room {roomId} is not in the sample data. <Link to="/dashboard">Back to tonight</Link>
         </p>
       </EmptyState>
     )
@@ -42,7 +42,7 @@ export function Room() {
       <header className="page__head">
         <div>
           <span className="eyebrow">
-            <Link to="/">Tonight</Link> · Floor {room.floor}
+            <Link to="/dashboard">Tonight</Link> · Floor {room.floor}
           </span>
           <h1 className="display">
             Room {room.number}, <em>{present}</em> of {room.students.length} in
