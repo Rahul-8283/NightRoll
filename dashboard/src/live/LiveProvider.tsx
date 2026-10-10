@@ -110,6 +110,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
         }
         if (event.code === CLOSE_UNAUTHORIZED) {
           // A fresh token is needed before the socket can authenticate again. If refresh fails, the auth guard takes over.
+          setStatus('reconnecting')
           void supabase.auth.refreshSession().then(({ error }) => {
             if (error) {
               stopped = true
