@@ -45,17 +45,32 @@ def _extract_token(request: Request) -> str:
     return header.split(" ", 1)[1].strip()
 
 
+_jwks_clients: dict[str, jwt.PyJWKClient] = {}
+
+
+def _jwks_client(settings: Settings) -> jwt.PyJWKClient:
+    """One cached client per project. The public keys are fetched once and reused, never on every request."""
+    url = f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/.well-known/jwks.json"
+    if url not in _jwks_clients:
+        _jwks_clients[url] = jwt.PyJWKClient(url, cache_keys=True, lifespan=3600)
+    return _jwks_clients[url]
+
+
 def verify_token(token: str, settings: Settings) -> dict:
+    """Check a Supabase access token. New projects sign with an asymmetric key (ES256/RS256), checked against
+    the project's public keys. Older projects sign with the shared JWT secret (HS256)."""
     try:
-        return jwt.decode(
-            token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience=AUDIENCE,
-        )
+        algorithm = jwt.get_unverified_header(token).get("alg")
+        if algorithm == "HS256":
+            key, algorithms = settings.SUPABASE_JWT_SECRET, ["HS256"]
+        elif algorithm in ("ES256", "RS256"):
+            key, algorithms = _jwks_client(settings).get_signing_key_from_jwt(token).key, [algorithm]
+        else:
+            raise _unauthorized("Invalid token")
+        return jwt.decode(token, key, algorithms=algorithms, audience=AUDIENCE)
     except jwt.ExpiredSignatureError as exc:
         raise _unauthorized("Token has expired") from exc
-    except jwt.InvalidTokenError as exc:
+    except (jwt.InvalidTokenError, jwt.PyJWKClientError) as exc:
         raise _unauthorized("Invalid token") from exc
 
 
