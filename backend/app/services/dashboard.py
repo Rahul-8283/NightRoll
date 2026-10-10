@@ -147,6 +147,9 @@ async def room_tonight(pool: asyncpg.Pool, room_id: UUID, room_row) -> RoomTonig
                 name=row["name"],
                 active=row["active"],
                 enrolled=row["enrolled"],
+                face_enrolled=row["face_enrolled"],
+                device_enrolled=row["device_enrolled"],
+                device_security_level=row["device_security_level"],
                 mark=mark,
             )
         )

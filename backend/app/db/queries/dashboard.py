@@ -73,6 +73,13 @@ async def room_students_with_marks(pool: asyncpg.Pool, room_id: UUID, window_id:
         """
         select s.id as student_id, s.roll_number, s.name, s.active,
                (s.enrolled_at is not null) as enrolled,
+               (exists (select 1 from face_embeddings fe where fe.student_id = s.id)) as face_enrolled,
+               (exists (select 1 from devices d where d.student_id = s.id and d.active = true)) as device_enrolled,
+               (
+                 select d.key_alias from devices d
+                 where d.student_id = s.id and d.active = true
+                 order by d.enrolled_at desc limit 1
+               ) as device_security_level,
                m.id as mark_id, m.verdict, m.reasons, m.score, m.marked_at, m.attempt, m.scores
         from students s
         left join lateral (

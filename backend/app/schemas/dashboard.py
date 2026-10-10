@@ -90,6 +90,9 @@ class RoomStudentStatus(ApiModel):
     name: str
     active: bool
     enrolled: bool
+    face_enrolled: bool
+    device_enrolled: bool
+    device_security_level: str | None = None
     mark: MarkDetail | None
 
 
