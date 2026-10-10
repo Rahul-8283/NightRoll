@@ -96,8 +96,8 @@ flowchart TB
         Face["Face worker<br/>InsightFace, anti-spoof"]
         Adapter["Network adapter<br/>optional"]
         Redis[("Redis<br/>nonces, window state")]
-        PG[("PostgreSQL + pgvector<br/>records, embeddings")]
-        Frames[("Encrypted frame store<br/>24-hour retention")]
+        PG[("Supabase PostgreSQL + pgvector<br/>records, embeddings")]
+        Frames[("Supabase Storage<br/>private bucket, 24-hour retention")]
         Dash["Warden dashboard<br/>React, static"]
     end
 
@@ -129,12 +129,14 @@ flowchart TB
 |---|---|---|---|
 | NightRoll app | Enrollment, challenge, capture, WiFi scan, signing | API (via AP), FCM, Keystore | Key alias only |
 | Reverse proxy | TLS termination, routing, rate limits at the edge | API, dashboard | None |
-| API service | Gates, scoring orchestration, fusion, window and review logic, WebSocket hub | Redis, PostgreSQL, face worker, Play Integrity, network adapter | Attendance records, via PostgreSQL |
+| API service | Gates, scoring orchestration, fusion, window and review logic, WebSocket hub | Redis, Supabase PostgreSQL, Supabase Auth, face worker, Play Integrity, network adapter | Attendance records, via Supabase PostgreSQL |
 | Scheduler | Opens and closes windows, issues nonces, triggers push, records absentees | Redis, API, FCM | Window state, via Redis |
-| Face worker | Embedding and anti-spoof on frames | PostgreSQL (embeddings only), frame store | Frame store |
+| Face worker | Embedding and anti-spoof on frames | Supabase PostgreSQL (embeddings only), Supabase Storage | Frames, deleted after 24 hours |
 | Network adapter | Reads client-to-AP association from controller or RADIUS | Controller or RADIUS, API | None |
 | Dashboard | Room tiles, review queue, exports | API over HTTPS and WebSocket | None |
-| PostgreSQL | Relational records and vectors | API, face worker | All durable records |
+| Supabase PostgreSQL | Relational records and pgvector embeddings; hosted by Supabase | API, face worker | All durable records |
+| Supabase Auth | Warden and admin login, MFA, JWT issuance | Dashboard, API | Warden and admin accounts |
+| Supabase Storage | Private bucket for short-lived frames | Face worker | Frames, deleted after 24 hours |
 | Redis | Nonces, window state, rate limits, live snapshot | API, scheduler | Short-lived state only |
 
 ### 4.2 Why these boundaries
@@ -345,7 +347,7 @@ sequenceDiagram
 | Nonces | Redis | Until window closes | Fast, atomic consume, expires on its own |
 | Window state | Redis and PostgreSQL | Window record kept; state expires | Redis for live checks; PostgreSQL for history |
 | Students, rooms, devices | PostgreSQL | Long-lived | Relational integrity |
-| Embeddings | PostgreSQL (pgvector) | Until student leaves | Vector search close to the record |
+| Embeddings | Supabase PostgreSQL (pgvector) | Until student leaves | Vector search close to the record |
 | Marks, reviews, audit | PostgreSQL | Per hostel policy | Durable and queryable |
 | Frames | Encrypted file store | 24 hours | Kept only for audit of disputed marks |
 | Device private key | Android Keystore | Life of the device | Never leaves hardware |
@@ -400,7 +402,7 @@ flowchart LR
 | Phone to API | Device-bound signature; Play Integrity bound to the request hash; nonce |
 | Network to API | Source IP must match room subnet; TLS |
 | API to Google services | Service credentials; response verification |
-| Warden to API | Password plus TOTP; session expiry |
+| Warden to API | Supabase Auth with TOTP MFA; JWT expiry and refresh rotation |
 | API to face worker | Internal network only; service token |
 | Face worker to data | Limited to embeddings and frames; no attendance access |
 | Any component to logs | No embeddings, frames, tokens, or unhashed student IDs |
@@ -437,7 +439,7 @@ flowchart TB
             A["api"]
             F["face-worker"]
             S["scheduler"]
-            P[("postgres")]
+            P[("Supabase<br/>hosted PostgreSQL")]
             R[("redis")]
             N --> A
             A --> P
@@ -465,7 +467,7 @@ Same containers on one laptop. Two routers provide two separate subnets. Phones 
 |---|---|---|
 | Pilot | Single host | Default |
 | Growth | Separate face worker host | Face latency above target |
-| Multi-hostel | Managed PostgreSQL and Redis; load-balanced API | More than one hostel or hard uptime needs |
+| Multi-hostel | Supabase plan upgrade, managed Redis, load-balanced API | More than one hostel or hard uptime needs |
 | Multi-campus | Per-campus deployment with shared code | Institutional roll-out |
 
 Nothing in the design requires a rewrite to scale. Each container can move to its own host.
@@ -497,12 +499,14 @@ Nothing in the design requires a rewrite to scale. Each container can move to it
 | ADR-4 | Nonce per student per window in Redis | Stateless timestamp | Single-use is enforced atomically; no replay within the window |
 | ADR-5 | Subnet check first, controller or RADIUS later | Require controller access up front | Works without the network admin's cooperation; upgrades cleanly |
 | ADR-6 | Face worker as a separate service with limited access | Face code inside the API | Isolates biometric data; scales independently |
-| ADR-7 | Embeddings in pgvector, not a separate vector database | Dedicated vector store | One fewer system to run; data volume is small |
+| ADR-7 | Embeddings in pgvector on Supabase, not a separate vector database | Dedicated vector store | One fewer system to run; data volume is small |
 | ADR-8 | WiFi fingerprint as a scored factor, not a gate | Hard gate on fingerprint | Fingerprints vary night to night; a gate would reject too many real students |
 | ADR-9 | Fail closed on security gates | Fail open for availability | A wrong acceptance is worse than a rejection in this setting |
 | ADR-10 | Single host for pilot | Cloud Kubernetes | Hostel scale does not justify it; easier for the team to operate |
 | ADR-11 | React Native for the app | Flutter; native Kotlin | One codebase; team familiarity; camera and ML libraries available |
 | ADR-12 | Android first, iOS deferred | Both platforms at once | iOS cannot perform full WiFi scans, which the design depends on |
+| ADR-13 | Supabase for database, auth, and frame storage | Self-hosted PostgreSQL, a separate auth provider, and S3-compatible storage | One managed platform with pgvector, MFA-capable auth, and private buckets; less to operate in a hackathon and pilot |
+| ADR-14 | Redis kept for nonces and window state | Supabase-only (Postgres with short TTL tables) | Atomic consume and TTL expiry are a natural fit for Redis; keeps the nonce path independent of database load |
 
 ---
 
@@ -514,7 +518,7 @@ Nothing in the design requires a rewrite to scale. Each container can move to it
 | Anti-spoof model too slow on pilot hardware | Risk | Latency target missed | Benchmark early on the target server |
 | Play Integrity rejects some phones | Risk | Students locked out | Check device list; fallback in place |
 | Single host failure during window | Risk | Attendance stops for the night | Fallback scanner; documented restore |
-| Frame storage allowed under college policy | Question | Affects where frames live | Confirm with hostel administration |
+| Hosted Supabase acceptable under college data policy, or must frames stay on campus | Question | Affects where frames and data live | Confirm with college IT and hostel administration |
 | Hosting location for the server | Question | Affects deployment and access | Confirm with college IT |
 | Controller API or RADIUS format | Question | Affects adapter work | Obtain sample logs or API docs |
 

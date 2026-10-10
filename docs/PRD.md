@@ -207,6 +207,7 @@ Weights and thresholds must be tuned from measurements taken in the hostel befor
 - Hostel administration approval for the pilot.
 - Campus network admin cooperation to provide room-to-subnet mapping, and ideally controller or RADIUS access.
 - Google Firebase (push) and Play Integrity API access.
+- A Supabase project for database, authentication, and frame storage, with pilot data kept under the college data policy.
 - Students' Android phones with location and camera permissions.
 
 ---

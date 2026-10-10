@@ -42,7 +42,7 @@ Values marked **provisional** are starting points to be confirmed by measurement
 flowchart LR
     S["Student Android app"] -- "HTTPS, signed payload" --> AP["Room access point"]
     AP --> GW["NightRoll API<br/>campus LAN"]
-    GW --> DB[("PostgreSQL + pgvector")]
+    GW --> DB[("Supabase PostgreSQL + pgvector")]
     GW --> RD[("Redis")]
     GW --> FW["Face worker"]
     GW -- "push" --> FCM["Firebase Cloud Messaging"]
@@ -68,7 +68,9 @@ flowchart LR
 | Scheduler | Opens and closes windows, issues nonces, sends push | Celery beat or APScheduler | Container |
 | Network adapter | Reads client-to-AP association from controller or RADIUS | Python module behind an interface | Container, optional |
 | Dashboard | Room tiles, review queue, exports | React, WebSocket | Static build behind the gateway |
-| Database | Relational data and vector search | PostgreSQL 16 with pgvector | Container with volume |
+| Database | Relational data and vector search | Supabase PostgreSQL with pgvector | Hosted, managed by Supabase |
+| Auth | Warden and admin login, MFA, JWT issuance | Supabase Auth | Hosted, managed by Supabase |
+| Frame storage | Private bucket for short-lived frames | Supabase Storage | Hosted, managed by Supabase |
 | Cache and nonce store | Nonces, window state, rate limits | Redis 7 | Container |
 
 ### 4.2 Component interactions
@@ -117,7 +119,7 @@ flowchart TB
 
 ### 5.1 Public API
 
-Base path `/v1`, JSON over HTTPS. Enrollment and verification are called by the student app, authenticated by device signature. All other endpoints require a warden session token.
+Base path `/v1`, JSON over HTTPS. Enrollment and verification are called by the student app, authenticated by device signature. All other endpoints require a Supabase Auth access token (JWT) for a warden or admin account.
 
 | Method | Path | Caller | Purpose |
 |---|---|---|---|
@@ -178,7 +180,7 @@ Reason codes come from a fixed set (section 6.4). Messages are for display only.
 |---|---|---|
 | 200 | Hard gate rejects the mark | Body has verdict REJECTED and a reason, so the app can show it |
 | 400 | Schema validation fails | Field-level errors |
-| 401 | Missing or invalid session token | Generic message |
+| 401 | Missing or invalid access token | Generic message |
 | 403 | Device not enrolled, or student not in window | Generic message |
 | 409 | Nonce already used, or a PRESENT mark exists for this window | Returns the existing mark ID |
 | 429 | Rate limit exceeded | `Retry-After` header |
@@ -387,10 +389,10 @@ CREATE TABLE audit_log (
 
 ### 7.3 Frame storage
 
-- Frames are written to an encrypted volume (or S3-compatible storage) under `frames/{window_id}/{mark_id}/`.
+- Frames are written to a private Supabase Storage bucket named `frames`, under `frames/{window_id}/{mark_id}/`. Supabase encrypts objects at rest. Bucket policies deny all public access.
 - A cleanup job deletes frames older than 24 hours.
 - No API returns frames.
-- Only the face worker's service account can read the frame store.
+- Only the face worker, using a server-side service credential, can read or write the bucket. No student or warden role has bucket access.
 
 ### 7.4 Retention
 
@@ -439,7 +441,7 @@ CREATE TABLE audit_log (
 ## 10. Warden dashboard
 
 - React single-page app, served by the gateway.
-- Login: password plus TOTP. Sessions expire after 12 hours.
+- Login: Supabase Auth with email and password, plus TOTP MFA. Sessions are JWTs; access tokens expire after 1 hour and refresh tokens rotate on use.
 - Live updates over WebSocket, with 5-second polling as a fallback.
 - Views: floor heatmap (one tile per room), review queue with scores and reasons, absentee list, fingerprint status per room, audit log, CSV export.
 - Each override writes an audit row before the UI updates.
@@ -452,15 +454,15 @@ CREATE TABLE audit_log (
 |---|---|
 | Transport | TLS 1.2 or higher; HSTS on the dashboard |
 | Student authentication | Device-bound ECDSA signature on every mark |
-| Warden authentication | Password plus TOTP |
+| Warden authentication | Supabase Auth, email and password with TOTP MFA |
 | Authorisation | Roles `warden`, `admin`, `system`. Only `warden` can override or review. |
-| Secrets | Environment or secret manager only. Never committed to git. |
+| Secrets | Environment or secret manager only. Supabase service role key never reaches the app or dashboard. Never committed to git. |
 | Input validation | Strict schema validation; unknown fields rejected |
-| Rate limiting | One verification per student per 60 seconds; 5 login attempts per 15 minutes |
+| Rate limiting | One verification per student per 60 seconds; Supabase Auth login limits configured to 5 attempts per 15 minutes |
 | Logging | No embeddings, frames, tokens, or full signatures. Student IDs hashed in application logs. |
 | Dependencies | Pinned versions; dependency scanning in CI |
 | Backups | Daily encrypted database backups; one restore test before pilot |
-| Least privilege | Face worker has no access to attendance tables. API has no direct access to frame storage. |
+| Least privilege | Face worker has no access to attendance tables. API has no access to frame storage. Row-level security on every table. Service role key is server-side only. |
 
 ---
 
@@ -479,12 +481,12 @@ CREATE TABLE audit_log (
 ```mermaid
 flowchart TB
     subgraph LAN["Campus LAN"]
-        subgraph Host["Single host, Docker Compose"]
+        subgraph Host["Single host, Docker Compose, with hosted Supabase"]
             NGX["Reverse proxy<br/>TLS termination"]
             API["API service"]
             FW["Face worker"]
             SCH["Scheduler"]
-            PG[("PostgreSQL + pgvector")]
+            PG[("Supabase PostgreSQL + pgvector")]
             RD[("Redis")]
             FS[("Encrypted frame volume")]
             NGX --> API
@@ -508,7 +510,6 @@ flowchart TB
 | api | python:3.12-slim | 8000 (internal) | 2 vCPU, 2 GB |
 | face-worker | python:3.12 with ONNX Runtime | internal | 4 vCPU, 4 GB |
 | scheduler | api image | none | 0.25 vCPU, 256 MB |
-| postgres | pgvector/pgvector:pg16 | internal | 2 vCPU, 4 GB |
 | redis | redis:7 | internal | 0.5 vCPU, 512 MB |
 
 Sizing assumes 1,000 students marking in a 30-minute window: about 0.6 verifications per second at peak, with face work dominating CPU.
@@ -617,7 +618,7 @@ The system fails closed for security gates. It never accepts a mark it could not
 2. Which band do the hostel's access points use for each room?
 3. Is a single campus server acceptable for hosting, or must it sit in a managed environment?
 4. Who holds FCM and Play Integrity credentials, and how are they rotated?
-5. Are frames stored on local disk acceptable under the college's data policy, or is object storage required?
+5. Is hosted Supabase (database, auth, storage) acceptable under the college data policy, or must frames and embeddings stay on campus?
 6. Does Silent-Face anti-spoof run acceptably on pilot hardware within the latency target?
 
 ---
