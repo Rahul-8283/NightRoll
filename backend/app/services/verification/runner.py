@@ -11,6 +11,7 @@ import time
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
+from uuid import UUID
 
 import asyncpg
 from redis.asyncio import Redis
@@ -32,6 +33,7 @@ class Submission:
     integrity_token: str
     integrity_error: str | None
     frames: list[bytes]
+    claimed_student_id: UUID | None = None
     payload: SubmissionPayload | None = None
     payload_hash: str = ""
     device_key: bytes | None = None
