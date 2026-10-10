@@ -124,3 +124,17 @@ class AbsenteeListOut(ApiModel):
     still_to_mark: int
     absent: int
     students: list[AbsenteeRow]
+
+
+class AuditRowOut(ApiModel):
+    id: int
+    created_at: datetime
+    actor: str
+    action: str
+    target_id: UUID | None
+    payload: dict | None
+
+
+class AuditPageOut(ApiModel):
+    items: list[AuditRowOut]
+    next_before: int | None

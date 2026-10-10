@@ -14,6 +14,7 @@ from app.schemas.enrollment import (
     EnrollmentCodeResponse,
     EnrollmentSuccessResponse,
 )
+from app.services import audit
 from app.services import enrollment as enrollment_svc
 
 router = APIRouter(prefix="/v1", tags=["enrollment"])
@@ -38,6 +39,15 @@ async def create_enrollment_code(
         student_id=payload.student_id,
         warden_id=warden_uuid,
     )
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await audit.write(
+                conn,
+                actor=warden.email or warden.user_id,
+                action="enrollment.code_created",
+                target_id=str(payload.student_id),
+                payload={"expires_at": expires_at.isoformat()},
+            )
     return EnrollmentCodeResponse(
         code=code,
         student_id=payload.student_id,
