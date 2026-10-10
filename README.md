@@ -32,7 +32,8 @@ Prove the **right person**, in the **right room**, on the **right device**, insi
 - [Privacy](#privacy)
 - [Demo plan](#demo-plan)
 - [Roadmap](#roadmap)
-- [Planned repository layout](#planned-repository-layout)
+- [Getting started](#getting-started)
+- [Repository layout](#repository-layout)
 - [Project status](#project-status)
 - [License](#license)
 
@@ -618,23 +619,134 @@ flowchart LR
     M1 --> M2 --> M3
 ```
 
-## Planned repository layout
+## Getting started
+
+### Prerequisites
+
+Install these once. The commands are for macOS with Homebrew; Windows and Linux users can use the official installers.
+
+| Tool | Version | Needed for | Install |
+|---|---|---|---|
+| Git | any recent | Source control | `brew install git` |
+| Python | 3.12 | Backend, face worker | `brew install python@3.12` |
+| Node.js | 20 LTS | Dashboard, app tooling | `brew install node@20` |
+| JDK | 17 | Android build | `brew install openjdk@17` |
+| Android Studio | current stable | Android SDK, emulator | developer.android.com/studio |
+| Docker Desktop | current stable | Redis (and later the full stack) | docker.com, then start it |
+| Supabase CLI | current stable | Migrations, linking the project | `brew install supabase/tap/supabase` |
+
+Optional: `brew install redis` gives you `redis-cli` on the host. Without it, use `docker compose exec` as shown below.
+
+### First-time setup
+
+1. Clone the repo and switch to the branch you are working on:
+
+   ```bash
+   git clone https://github.com/Rahul-8283/NightRoll.git
+   cd NightRoll
+   git checkout base
+   ```
+
+2. Create your local env files from the examples. Ask the team for the real values; never commit them.
+
+   ```bash
+   cp backend/.env.example backend/.env
+   cp face/.env.example face/.env
+   cp dashboard/.env.example dashboard/.env
+   cp app/.env.example app/.env
+   cp config/rooms.example.json config/rooms.local.json
+   ```
+
+3. Put the Google service account file at `backend/secrets/google-service-account.json` (from the team password manager).
+
+4. Start Docker Desktop, then start Redis (see below).
+
+5. Link Supabase: follow [supabase/README.md](supabase/README.md).
+
+### Running each service
+
+| Service | Port | Start with | Available from |
+|---|---|---|---|
+| Redis | 6379 | `docker compose -f infra/docker-compose.yml up -d redis` | Phase 0 (now) |
+| Supabase | hosted | `supabase link --project-ref <ref>` | Phase 0 (now) |
+| Backend API | 8000 | `cd backend && uvicorn app.main:app --reload --port 8000` | Phase 2 |
+| Window scheduler | none | `cd backend && python -m app.scheduler` | Phase 3 |
+| Face worker | 8100 | `cd face && uvicorn worker.main:app --port 8100` | Phase 5 |
+| Warden dashboard | 5173 | `cd dashboard && npm run dev` | Phase 10 |
+| Student app | Metro 8081 | `cd app && npx react-native run-android` | Phase 4 |
+
+Start order once everything exists: Redis, face worker, backend API, scheduler, dashboard, then the phone app.
+
+**Redis (works now)**
+
+```bash
+docker compose -f infra/docker-compose.yml up -d redis
+docker compose -f infra/docker-compose.yml exec redis redis-cli ping   # expect PONG
+docker compose -f infra/docker-compose.yml down                        # stop when finished
+```
+
+**Backend API (from Phase 2)**
+
+```bash
+cd backend
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+uvicorn app.main:app --reload --port 8000
+curl http://localhost:8000/v1/health
+```
+
+**Window scheduler (from Phase 3)** runs in its own terminal, with the same virtual environment: `python -m app.scheduler`.
+
+**Face worker (from Phase 5)**
+
+```bash
+cd face
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+python scripts/download_models.py
+uvicorn worker.main:app --port 8100
+```
+
+**Warden dashboard (from Phase 10)**
+
+```bash
+cd dashboard
+npm install
+npm run dev        # open http://localhost:5173
+```
+
+**Student app (from Phase 4)**
+
+```bash
+cd app
+npm install
+npx react-native start                # terminal 1
+npx react-native run-android          # terminal 2, with the phone connected or an emulator running
+```
+
+### Stopping everything
+
+Press `Ctrl+C` in each terminal, then `docker compose -f infra/docker-compose.yml down` for Redis.
+
+## Repository layout
 
 ```text
 NightRoll/
-├── app/          React Native app: capture, liveness, WiFi scan, signer
-├── backend/      FastAPI service: gates, verifiers, fusion, window service
-├── face/         Face worker: InsightFace embeddings and anti-spoof
+├── app/          React Native student app (Android)
+├── backend/      FastAPI service: windows, nonces, gates, scoring, review
+├── face/         Face worker: embeddings and anti-spoof (internal)
 ├── dashboard/    React warden dashboard
-├── infra/        Docker Compose, database migrations
-└── docs/         Design notes and walk-test results
+├── supabase/     Supabase CLI project and SQL migrations
+├── infra/        Docker Compose and deployment files
+├── config/       Room map example (real map stays local, git-ignored)
+├── scripts/      One-off tools and Phase 0 risk spikes
+├── docs/         PRD, TRD, architecture
+└── phase/        Build plan, one file per phase
 ```
 
 ## Project status
 
-NightRoll is at the design stage. The architecture above is settled enough to build against; the code is not written yet, so there are no setup instructions here. They will be added alongside the first working build.
-
-Two things are still open and are marked as provisional above: the trust score weights and cutoffs, and which network signal the hostel can provide (per-room subnets, a controller API, or RADIUS accounting).
+The design is settled (see `docs/` and `phase/`). Phase 0, base setup, is in progress: folders, env examples, Redis and the setup steps are in place. No feature code exists yet.
 
 ## License
 

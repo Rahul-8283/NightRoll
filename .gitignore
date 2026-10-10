@@ -7,9 +7,8 @@
 *.jks
 *.keystore
 !debug.keystore
-google-services.json
 *service-account*.json
-*firebase-adminsdk*.json
+backend/secrets/
 
 # Real hostel data
 config/rooms.local.json
