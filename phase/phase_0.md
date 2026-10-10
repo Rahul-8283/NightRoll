@@ -1,0 +1,385 @@
+# Phase 0: Base Setup
+
+| | |
+|---|---|
+| **Type** | Setup (no feature code) |
+| **Depends on** | Nothing |
+| **Unlocks** | Every other phase |
+| **Leads** | Whole team |
+
+## Goal
+
+Every teammate can clone the repo, fill in one env file per service, start the local services, and reach every external account the project needs. No feature is built here. The phase ends when nothing outside the code can block Phase 1.
+
+## Outcome
+
+- The repo has its final folder structure, with a placeholder in each service folder.
+- `.gitignore` and a `.env.example` per service are committed. No real secret is in git.
+- Supabase, Firebase and Google Cloud projects exist, and every credential is shared with the team outside git.
+- Redis runs locally through Docker Compose.
+- Two test Android phones and two routers are ready for the demo network.
+- Four risk spikes are done and their results are written down.
+
+---
+
+## 1. Accounts and access
+
+| # | Task | Result |
+|---|---|---|
+| 1.1 | Create one team Google account (or pick one owner account) for Firebase and Google Cloud | Shared login in the team password manager |
+| 1.2 | Create a Supabase organisation and a project named `nightroll-dev` | Project URL and keys |
+| 1.3 | Create a Firebase project named `nightroll` and add an Android app with the package name `com.zerolatency.nightroll` | `google-services.json` |
+| 1.4 | In the linked Google Cloud project, enable the Play Integrity API | API enabled, project number noted |
+| 1.5 | Give all four teammates write access to the GitHub repo | Everyone can push to `base` |
+| 1.6 | Ask the campus network admin the three network questions (section 11) | Written answer, or a date for one |
+
+The package name is fixed here. Changing it later breaks Firebase and Play Integrity.
+
+## 2. Tooling versions
+
+Everyone installs the same versions so builds match.
+
+| Tool | Version | Used for |
+|---|---|---|
+| Python | 3.12 | Backend, face worker |
+| Node.js | 20 LTS | App, dashboard |
+| JDK | 17 | Android build |
+| Android Studio | Current stable, with SDK Platform 34 or newer | App build and emulator |
+| Docker Desktop | Current stable | Redis, later the full stack |
+| Supabase CLI | Current stable | Migrations |
+| Git | Any recent | Version control |
+
+The app uses the React Native CLI, not Expo Go, because it needs custom native modules for the Keystore, WiFi scans and Play Integrity.
+
+## 3. Folder structure
+
+Create these folders. Each gets a short `README.md` saying what goes there, so git keeps the folder.
+
+```text
+NightRoll/
+├── app/                  React Native Android app
+├── backend/              FastAPI service: gates, scoring, windows, reviews
+│   └── app/
+├── face/                 Face worker: embeddings and anti-spoof
+│   └── models/           Model files (gitignored)
+├── dashboard/            React warden dashboard
+├── supabase/             Supabase CLI project
+│   └── migrations/       SQL migrations
+├── infra/                Docker Compose, nginx config, deploy scripts
+├── config/               Non-secret config and example room map
+├── scripts/              One-off scripts and Phase 0 spikes
+│   └── spikes/
+├── docs/                 PRD, TRD, architecture
+├── phase/                Phase plans (this folder)
+├── .gitignore
+├── CLAUDE.md
+├── LICENSE
+└── README.md
+```
+
+`supabase/` sits at the repo root because the Supabase CLI expects it there.
+
+## 4. `.gitignore`
+
+Commit this file at the repo root before any service code exists.
+
+```gitignore
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.jks
+*.keystore
+!debug.keystore
+google-services.json
+*service-account*.json
+*firebase-adminsdk*.json
+
+# Real hostel data
+config/rooms.local.json
+config/*.local.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+npm-debug.log*
+yarn-error.log*
+
+# React Native and Android
+app/android/.gradle/
+app/android/app/build/
+app/android/build/
+app/android/local.properties
+app/android/.cxx/
+*.apk
+*.aab
+*.hprof
+.metro-health-check*
+
+# Models and biometric data
+face/models/*
+!face/models/README.md
+*.onnx
+*.tflite
+frames/
+captures/
+
+# Supabase CLI
+supabase/.temp/
+supabase/.branches/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+```
+
+Before the first push after this change, run `git status` and confirm no env file, key or JSON credential is listed.
+
+## 5. Env files
+
+One `.env.example` per service, committed with empty or dummy values. Each teammate copies it to `.env` and fills it in. Real values never go in git.
+
+### `backend/.env.example`
+
+```dotenv
+# Runtime
+APP_ENV=local
+API_HOST=0.0.0.0
+API_PORT=8000
+LOG_LEVEL=info
+TIMEZONE=Asia/Kolkata
+
+# Supabase (server side only)
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_JWT_SECRET=
+DATABASE_URL=
+
+# Redis
+REDIS_URL=redis://localhost:6379/0
+
+# Face worker
+FACE_WORKER_URL=http://localhost:8100
+FACE_WORKER_TOKEN=
+
+# Firebase Cloud Messaging
+FIREBASE_PROJECT_ID=
+GOOGLE_APPLICATION_CREDENTIALS=./secrets/firebase-service-account.json
+
+# Play Integrity
+PLAY_INTEGRITY_PACKAGE_NAME=com.zerolatency.nightroll
+PLAY_INTEGRITY_ENFORCE=false
+
+# Attendance window defaults
+WINDOW_DEFAULT_OPEN=22:00
+WINDOW_DEFAULT_CLOSE=22:30
+
+# Network gate: subnet | controller | radius | off
+NETWORK_VERIFY_MODE=subnet
+TRUSTED_PROXY_IPS=127.0.0.1
+
+# Trust score (provisional, tuned in Phase 13)
+WEIGHT_FACE=0.30
+WEIGHT_FINGERPRINT=0.30
+WEIGHT_LIVENESS=0.20
+WEIGHT_OWN_AP=0.15
+WEIGHT_AP_AGREEMENT=0.05
+THRESHOLD_PRESENT=0.80
+THRESHOLD_REVIEW=0.60
+```
+
+### `face/.env.example`
+
+```dotenv
+FACE_HOST=0.0.0.0
+FACE_PORT=8100
+FACE_WORKER_TOKEN=
+FACE_MODEL_NAME=buffalo_l
+FACE_MODEL_DIR=./models
+ANTISPOOF_MODEL_PATH=./models/antispoof.onnx
+
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+FRAMES_BUCKET=frames
+FRAME_RETENTION_HOURS=24
+```
+
+### `dashboard/.env.example`
+
+```dotenv
+VITE_API_BASE_URL=http://localhost:8000/v1
+VITE_WS_URL=ws://localhost:8000/v1/ws/rooms
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+```
+
+### `app/.env.example`
+
+```dotenv
+API_BASE_URL=http://10.0.2.2:8000/v1
+GOOGLE_CLOUD_PROJECT_NUMBER=
+```
+
+Rules:
+- The Supabase **service role key** appears only in `backend/.env` and `face/.env`. It never goes in the app or the dashboard.
+- The dashboard gets only the **anon key**. The app gets no Supabase key at all; it talks only to the NightRoll API.
+- `PLAY_INTEGRITY_ENFORCE=false` is for local work on emulators only. The demo and pilot run with `true`.
+
+## 6. Credentials checklist
+
+| Credential | Where to get it | Where it lives | In git? |
+|---|---|---|---|
+| Supabase project URL | Supabase dashboard, Project Settings, API | `backend/.env`, `face/.env`, `dashboard/.env` | No |
+| Supabase anon key | Same page | `dashboard/.env` | No |
+| Supabase service role key | Same page | `backend/.env`, `face/.env` | No |
+| Supabase JWT secret | Project Settings, API, JWT settings | `backend/.env` | No |
+| Database connection string | Project Settings, Database (use the pooled connection) | `backend/.env` | No |
+| Firebase service account JSON | Firebase console, Project Settings, Service accounts | `backend/secrets/` | No |
+| `google-services.json` | Firebase console, Android app | `app/android/app/` | No |
+| Google Cloud project number | Google Cloud console, project dashboard | `app/.env` | No |
+| Face worker token | Generate locally: `openssl rand -hex 32` | `backend/.env`, `face/.env` | No |
+| Android release keystore | Generate once with `keytool`, one copy with the app lead | Password manager | No |
+
+Share credentials through the team password manager or an encrypted note. Do not paste them in the group chat.
+
+## 7. Local services
+
+Add `infra/docker-compose.yml` with Redis only. More services join in Phase 12.
+
+```yaml
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "no"]
+```
+
+Check: `docker compose -f infra/docker-compose.yml up -d` and then `redis-cli ping` returns `PONG`.
+
+## 8. Supabase project setup
+
+| # | Task |
+|---|---|
+| 8.1 | Run `supabase init` at the repo root and `supabase link` to `nightroll-dev` |
+| 8.2 | Enable the `vector` extension (Database, Extensions) |
+| 8.3 | Create a private Storage bucket named `frames`. Public access off. |
+| 8.4 | In Auth settings, turn off public sign-ups. Warden accounts are created by an admin only. |
+| 8.5 | Turn on TOTP multi-factor authentication |
+| 8.6 | Create one test warden account for development |
+
+Tables and policies are Phase 1. This phase only prepares the project.
+
+## 9. Firebase setup
+
+| # | Task |
+|---|---|
+| 9.1 | Download `google-services.json` to `app/android/app/` and confirm it is ignored by git |
+| 9.2 | Download the service account JSON to `backend/secrets/` and confirm it is ignored by git |
+| 9.3 | Confirm Cloud Messaging is enabled for the project |
+
+## 10. Play Integrity setup
+
+| # | Task |
+|---|---|
+| 10.1 | Enable the Play Integrity API in the Google Cloud project linked to Firebase |
+| 10.2 | Give the backend's service account permission to call the API's token decode method |
+| 10.3 | Note the Cloud project number for the app |
+
+Whether full verdicts work for an app that is installed directly on a phone, without going through the Play Store, is checked in spike 12.2.
+
+## 11. Demo network kit and network questions
+
+**Kit**
+- Two Wi-Fi routers, labelled Room 101 and Room 102, both plugged into the network the laptop is on.
+- Two Android phones (Android 9 or newer), one per "student". One spare if possible.
+- One laptop that runs the backend and stays on the upstream network.
+
+Record each router's SSID, BSSIDs for both bands, and the address the laptop sees its traffic coming from. Put real values in `config/rooms.local.json` (ignored by git). Commit `config/rooms.example.json` with made-up values showing the shape:
+
+```json
+{
+  "rooms": [
+    {
+      "number": "101",
+      "floor": 1,
+      "subnet": "192.168.101.0/24",
+      "access_points": [
+        {"bssid": "aa:bb:cc:00:01:01", "band": "2.4GHz"},
+        {"bssid": "aa:bb:cc:00:01:05", "band": "5GHz"}
+      ]
+    }
+  ]
+}
+```
+
+**Questions for the campus network admin**
+1. Does each room, or each floor, have its own subnet or VLAN?
+2. Does the Wi-Fi controller have an API that reports which access point a device is on?
+3. Does hostel Wi-Fi use per-student login, and can we read the RADIUS accounting log?
+
+The answers decide what the network gate can prove in production. The demo does not depend on them.
+
+## 12. Risk spikes
+
+Each spike is a throwaway script or app in `scripts/spikes/`. The aim is a yes or no, not clean code. Write the result in `scripts/spikes/RESULTS.md`.
+
+| # | Spike | Question | Pass looks like |
+|---|---|---|---|
+| 12.1 | Keystore signing | Can a test phone create a non-exportable P-256 key and sign bytes that Python verifies? | Python verifies a signature made on the phone |
+| 12.2 | Play Integrity | Does a directly installed build get a token the backend can decode, and what verdict fields come back? | Decoded verdict printed on the laptop |
+| 12.3 | Face latency | How long does `buffalo_l` take per frame on the demo laptop's CPU? | Under about 300 ms per frame; record the number |
+| 12.4 | FCM delivery | Does a data message sent from Python reach a locked test phone? | Notification appears within a few seconds |
+| 12.5 | Wi-Fi scan | Does a test phone return BSSIDs and signal strength for nearby networks? | List of networks with RSSI printed |
+| 12.6 | Source address | Does the laptop see a different source address for each router? | Two different addresses logged |
+
+If a spike fails, stop and decide the workaround before Phase 1 starts. Likely workarounds: run Play Integrity in a warn-only mode for the demo, or run anti-spoof on one frame instead of all.
+
+## 13. Repo conventions
+
+- Work on `base`. Follow the git workflow in `CLAUDE.md`: conventional commits, short messages, every commit pushed.
+- One phase file is the unit of work. A phase is finished when its exit criteria are all true.
+- Config that changes behaviour (weights, thresholds, window times) goes in env, never in code.
+
+---
+
+## Exit criteria
+
+- [ ] A fresh clone has the full folder structure.
+- [ ] `.gitignore` and all four `.env.example` files are committed.
+- [ ] `git log -p` shows no secret, key or credential file in history.
+- [ ] Every teammate has a filled `.env` for the service they own.
+- [ ] Redis answers `PONG` on every teammate's machine.
+- [ ] The Supabase project has the `vector` extension, the `frames` bucket, sign-ups off, and one test warden.
+- [ ] `google-services.json` and the Firebase service account file are in place locally and ignored by git.
+- [ ] All six spikes have a written result.
+- [ ] The network admin has been asked the three questions.
+
+## Risks
+
+| Risk | What to do |
+|---|---|
+| A secret gets committed | Rotate that key at once, then remove the file. Rewriting history is not enough on its own. |
+| Play Integrity does not give a usable verdict for a directly installed app | Demo with enforcement in warn-only mode and say so on stage |
+| Face model too slow on the demo laptop | Score fewer frames, or borrow a faster machine for the demo |
+| Routers hide phones behind one address | Use each router's upstream address as the room identity for the demo |
+
+## Hand-off to Phase 1
+
+Phase 1 needs the linked Supabase project, the `vector` extension, and the example room map.
