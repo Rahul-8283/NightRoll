@@ -35,10 +35,14 @@ def fuse(results: dict[str, ScorerResult], settings: Settings) -> Verdict:
     if results["liveness"].score == 0.0:
         return Verdict("REJECTED", score, ("LIVENESS_FAILED",), "liveness floor")
 
-    if score >= settings.THRESHOLD_PRESENT:
-        return Verdict("PRESENT", score, (), "present cutoff")
-
     reasons = tuple(result.reason for result in results.values() if result.reason)
+
+    # A room with no learned Wi-Fi pattern cannot be confirmed by the Wi-Fi signals, so it goes to review
+    # rather than being presented as confirmed (Phase 9 task 4.1).
+    if score >= settings.THRESHOLD_PRESENT and "FINGERPRINT_MISSING" not in reasons:
+        return Verdict("PRESENT", score, (), "present cutoff")
+    if score >= settings.THRESHOLD_PRESENT:
+        return Verdict("NEEDS_REVIEW", score, reasons, "no room fingerprint, review cap")
     if score >= settings.THRESHOLD_REVIEW:
         return Verdict("NEEDS_REVIEW", score, reasons, "review cutoff")
 
