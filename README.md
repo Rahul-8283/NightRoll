@@ -6,7 +6,7 @@
 
 Prove the **right person**, in the **right room**, on the **right device**, inside the **warden's window** — with no new hardware.
 
-![Status](https://img.shields.io/badge/status-in%20development-B86E00?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-design%20stage-B86E00?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/platform-Android%20first-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge)
 ![Hackathon](https://img.shields.io/badge/built%20for-Genesis%20Hackathon-141B2E?style=for-the-badge)
@@ -78,102 +78,61 @@ flowchart LR
 
 ## Tech stack
 
-Everything below is in the repository today. Items marked **planned** are not built yet.
-
-**Mobile app (`app/`)**
+**Mobile app**
 
 ![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)
 ![React Native](https://img.shields.io/badge/React%20Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Android](https://img.shields.io/badge/Android%20Keystore-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![ML Kit](https://img.shields.io/badge/ML%20Kit-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![TensorFlow Lite](https://img.shields.io/badge/TensorFlow%20Lite-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)
 ![Play Integrity](https://img.shields.io/badge/Play%20Integrity-414141?style=for-the-badge&logo=googleplay&logoColor=white)
 
-| Layer | Technology | Used for |
-|---|---|---|
-| Framework | Expo SDK 57, React Native 0.86, TypeScript, expo-router | Screens and file-based navigation; EAS builds (development and production profiles) |
-| Native code | Kotlin Expo Modules in `app/modules/` | `device-key` (Keystore key), `environment` (VPN, proxy, mock location), `wifi-scanner`, `integrity` (Play Integrity token), `face-detector` (ML Kit) |
-| Device trust | Android Keystore (StrongBox or TEE), Google Play Integrity API | Non-exportable P-256 signing key; integrity token bound to each payload's hash |
-| On-device face checks | ML Kit Face Detection | Face present and steady, and the blink, turn and smile challenge |
-| Camera | react-native-vision-camera 5 (on Nitro Modules) | Front-camera frames for enrollment and marking |
-| Local storage | expo-secure-store (identity), AsyncStorage (last status) | Student identity stays in secure storage; non-sensitive status is kept for offline use |
-| Hashing | expo-crypto | SHA-256 of frames and of the signed payload |
-| UI | react-native-reanimated, expo-linear-gradient, expo-font with `@expo-google-fonts` (Fraunces, Hanken Grotesk, JetBrains Mono) | The night theme and the room-window animation |
-| Tooling | ESLint (`expo lint`), Prettier, TypeScript | Lint, format and type checks |
+**Backend**
 
-**Backend API (`backend/`)**
-
-![Python](https://img.shields.io/badge/Python%203.12-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![Upstash Redis](https://img.shields.io/badge/Upstash%20Redis-00E9A3?style=for-the-badge&logo=upstash&logoColor=white)
+![Celery](https://img.shields.io/badge/Celery-37814A?style=for-the-badge&logo=celery&logoColor=white)
+![WebSocket](https://img.shields.io/badge/WebSocket-010101?style=for-the-badge)
+
+**Face and liveness**
+
+![InsightFace](https://img.shields.io/badge/InsightFace%20ArcFace-1F6FEB?style=for-the-badge)
+![ONNX](https://img.shields.io/badge/ONNX%20Runtime-005CED?style=for-the-badge&logo=onnx&logoColor=white)
+![Anti-spoof](https://img.shields.io/badge/Silent--Face%20Anti--Spoofing-6E40C9?style=for-the-badge)
+
+**Data**
+
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![pgvector](https://img.shields.io/badge/pgvector-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![Supabase Auth](https://img.shields.io/badge/Supabase%20Auth-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Supabase Storage](https://img.shields.io/badge/Supabase%20Storage-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 
-| Layer | Technology | Used for |
+**Dashboard and delivery**
+
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+
+| Layer | Choice | Why |
 |---|---|---|
-| Language and tooling | Python 3.12, managed with uv, ruff | Lockfile installs; lint and format |
-| API | FastAPI, uvicorn, Pydantic, pydantic-settings | Typed routes; unknown fields rejected; settings checked at startup (refuses unsafe values outside local) |
-| Database access | asyncpg with hand-written, parameterised SQL | No ORM; statement cache off so the pooled connection works |
-| Live state | redis-py (asyncio) to Upstash Redis over TLS, Lua scripts | Nonces (single atomic consume), window state, idempotent results, rate limits |
-| Scheduler | APScheduler, in its own process (`python -m app.scheduler`) | Opens and closes windows on the server clock; safe to restart |
-| Device auth | cryptography (ECDSA P-256), hashlib | Signed student requests and payload signatures |
-| Warden auth | PyJWT | Verifies Supabase sign-in tokens, role and MFA; signs the Google service-account assertion |
-| Outbound calls | httpx | Google Play Integrity decode and token exchange; face worker |
-| Errors and logs | One error shape everywhere, JSON logs with redaction, request IDs | No secrets, tokens or biometrics in logs |
-| Tests | pytest, pytest-asyncio | Verification suite against the live database and Redis, Google mocked |
+| App | Expo (React Native), Kotlin Expo Modules, VisionCamera, ML Kit | Expo for builds and EAS cloud builds; a development build runs the native code; one codebase for screens |
+| On-device ML | TFLite MobileFaceNet | Quick pre-check so a bad capture fails before upload |
+| Device trust | Android Keystore / StrongBox, Play Integrity | Key never leaves the chip; blocks root, emulators, virtual cameras |
+| API | FastAPI | Async, typed, fast to build |
+| State | Upstash Redis (hosted, TLS) | Nonces and window state with native TTL, no local server to run |
+| Face | InsightFace `buffalo_l` on ONNX Runtime | Strong open ArcFace embeddings, runs on CPU |
+| Database | Supabase (PostgreSQL with pgvector) | Relational data and 512-dimension embeddings in one managed database |
+| Auth | Supabase Auth | Warden and admin login with MFA; student devices are bound by Keystore keys, not passwords |
+| Frame storage | Supabase Storage (private bucket) | Encrypted, short-lived frames with a 24-hour deletion job |
+| Network verify | Subnet check, then controller API or RADIUS accounting | Starts simple, upgrades without app changes |
+| Dashboard | React over WebSocket | Room tiles update live |
+| Window status | Pulled from the API when the app opens | No push service; students open the app at window time |
 
-**Face worker (`face/`, internal)**
-
-| Layer | Technology | Used for |
-|---|---|---|
-| API | FastAPI, uvicorn | Internal endpoints behind a service token |
-| Face model | InsightFace `buffalo_l`: SCRFD detection (`det_10g`), landmarks, ArcFace 512-d embeddings (`w600k_r50`) | Detection, alignment and embeddings |
-| Inference | ONNX Runtime (CPU), OpenCV (headless), NumPy | Runs the models without a GPU |
-| Anti-spoof | Silent-Face MiniFASNetV2, converted to ONNX | Real face versus printed photo or screen |
-| Storage | Supabase Storage REST API (via httpx) | Private frames bucket, deleted after 24 hours |
-| Model integrity | SHA-256 checksums (`scripts/download_models.py`) | Refuses model files that do not match |
-
-**Data and identity**
-
-| Technology | Used for |
-|---|---|
-| Supabase PostgreSQL with pgvector | Students, rooms, access points, devices, 512-d embeddings (`extensions.vector`), attendance marks, audit log. Row-level security on every table, with no public policies |
-| Supabase Auth | Warden and admin sign-in with a TOTP second factor; the role lives in `app_metadata` |
-| Supabase Storage | Private `frames` bucket, never public |
-| Supabase CLI | Versioned migrations in `supabase/migrations/`, applied with `supabase db push` |
-| Upstash Redis | Nonces, window state, submission results, rate limits and the scheduler heartbeat |
-
-**Warden dashboard (`dashboard/`)**
-
-![React](https://img.shields.io/badge/React%2019-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-
-| Layer | Technology | Used for |
-|---|---|---|
-| UI and build | React 19, TypeScript, Vite 8 | Dashboard and landing page |
-| Routing | react-router 8 | Landing, sign-in and dashboard routes |
-| Data layer | TanStack Query | Set up for the live API (wired in Phase 10) |
-| Sign-in | @supabase/supabase-js | Warden sign-in only; attendance data always goes through the API |
-| Scrolling | Lenis | Smooth scrolling on the landing page |
-| Fonts | `@fontsource-variable` (Fraunces, Hanken Grotesk, JetBrains Mono) | Self-hosted, no external font requests |
-| Lint | oxlint | Lint |
-| Live updates | WebSocket (**planned**, Phase 10) | Live room tiles |
-
-**Infrastructure and external services**
-
-| Technology | Used for |
-|---|---|
-| Google Play Integrity API | Checks the app and device on every mark |
-| Docker Compose (`infra/`) | Placeholder now; Phase 12 adds the API, scheduler, face worker and nginx |
-| nginx (**planned**, Phase 12) | TLS and reverse proxy |
-| GitHub | Source control; one conventional commit per piece of work |
-
-**Not used:** TensorFlow Lite (ML Kit is used on the phone instead), Celery (the scheduler is APScheduler), and any push service (students open the app themselves).
+---
 
 ## System architecture
-
-![NightRoll architecture](Images/architecture.png)
 
 Four zones: the phone gathers evidence, the hostel network vouches for location, the backend decides, and the outputs inform the student and the warden.
 
@@ -241,8 +200,8 @@ flowchart TB
     ORC --> CV["Crypto verifier<br/>signature, nonce freshness"]
     ORC --> IV["Integrity verifier<br/>Play Integrity decode"]
     ORC --> NV["Network verifier<br/>subnet, controller, RADIUS"]
-    ORC --> FV["Face verifier<br/>ArcFace, anti-spoof (Phase 9)"]
-    ORC --> WV["Fingerprint verifier<br/>room WiFi pattern (Phase 9)"]
+    ORC --> FV["Face verifier<br/>ArcFace, anti-spoof"]
+    ORC --> WV["Fingerprint verifier<br/>room WiFi pattern"]
 
     CV --> FE["Fusion engine"]
     IV --> FE
@@ -255,62 +214,45 @@ flowchart TB
     FV --> PG[("Supabase PostgreSQL + pgvector<br/>students, rooms, embeddings, logs")]
     WV --> PG
     FE --> PG
-    FE --> RT["WebSocket hub (Phase 10)"] --> DB["Warden dashboard"]
+    FE --> RT["WebSocket hub"] --> DB["Warden dashboard"]
 ```
 
 ---
 
 ## Verification pipeline
 
-Every submission goes through the same steps in order. The first failure decides the outcome, and no face is compared before the gates pass.
+Hard gates run first. Any single failure rejects the mark before a face is ever compared. Only marks that pass every gate are scored.
 
 ```mermaid
 flowchart TD
-    S(["Signed submission arrives"]) --> G1{"1. Device signature,<br/>payload schema, frame hashes"}
-    G1 -- no --> U["Unattributed: logged and counted,<br/>no mark recorded"]
-    G1 -- yes --> ID{"Already decided?"}
-    ID -- yes --> SR["Return the stored result"]
-    ID -- no --> RL{"Another new submission<br/>within 20 s?"}
-    RL -- yes --> X429["429: wait and retry"]
-    RL -- no --> G2{"2. Open window,<br/>server clock"}
-    G2 -- no --> R["REJECTED"]
-    G2 -- yes --> G3{"3. Nonce fresh and<br/>challenge matches"}
+    S(["Signed payload arrives"]) --> G1{"Inside window?<br/>server clock"}
+    G1 -- no --> R["REJECTED"]
+    G1 -- yes --> G2{"Signature valid<br/>and nonce unused?"}
+    G2 -- no --> R
+    G2 -- yes --> G3{"Play Integrity pass?"}
     G3 -- no --> R
-    G3 -- yes --> G4{"4. Play Integrity<br/>token genuine"}
-    G4 -- "Google unavailable" --> X503["503: never a pass"]
+    G3 -- yes --> G4{"No VPN, proxy<br/>or mock location?"}
     G4 -- no --> R
-    G4 -- yes --> G5{"5. No VPN, proxy or<br/>mock location; on Wi-Fi"}
+    G4 -- yes --> G5{"Source IP in<br/>room subnet?"}
     G5 -- no --> R
-    G5 -- yes --> G6{"6. Source IP in the room's<br/>subnet, room's own router"}
-    G6 -- no --> R
-    G6 -- yes --> SC["Scoring (Phase 9):<br/>face, liveness, fingerprint, signal"]
+    G5 -- yes --> SC["Score: face, liveness,<br/>room fingerprint, RSSI"]
     SC --> F{"Trust score"}
     F -- "0.80 or above" --> P["PRESENT"]
     F -- "0.60 to 0.80" --> V["NEEDS REVIEW"]
     F -- "below 0.60" --> R
-    R --> RT{"Attempts left this window?"}
-    RT -- yes --> NN["Fresh nonce; student retries"]
-    RT -- no --> FB["Ground-floor scanner"]
+    V --> W["Warden review queue"]
+    R --> FB["Fallback: ground-floor scanner"]
 ```
 
-| # | Gate | Defeats |
-|---|---|---|
-| 1 | Device signature over the raw payload bytes, then schema, version and frame hashes | A friend's phone, editing after signing, swapped photos |
-| 2 | Open window and server clock. The phone's clock is recorded, never trusted | Changing the phone's time, marking outside the window |
-| 3 | Fresh, single-use nonce, with the challenge checked before it is used | Replaying an old request, a recorded video of the challenge |
-| 4 | Play Integrity: right app, bound to this payload, device integrity met | Rooted phones, emulators, repackaged apps |
-| 5 | No VPN, proxy or mock location; connected to Wi-Fi | Tunnelling and fake locations |
-| 6 | Source IP inside the room's subnet, and the router is one of the room's | Marking from another room or from outside the hostel |
+| Gate | Defeats |
+|---|---|
+| Server-clock window | Changing the phone's time |
+| Signature and fresh nonce | A friend's phone, replayed requests |
+| Play Integrity | Rooted devices, emulators, virtual cameras |
+| No VPN, proxy or mock location | Tunnelling in from outside |
+| Room subnet source IP | Any request from off the hostel network |
 
-Rules that apply across the gates:
-
-- A repeat of an identical submission gets the same stored result, and no second mark is written.
-- A student has three attempts per window. After a rejection the server issues a fresh nonce; after the third, the student is sent to the ground-floor scanner.
-- Google being unreachable returns a 503. A mark never passes because a check could not run.
-- A forwarded-for address is believed only when the connection comes from a listed trusted proxy.
-
-> [!NOTE]
-> Scoring is Phase 9. Until it lands, a submission that passes all six gates is recorded as **NEEDS REVIEW** with the reason `SCORING_PENDING`.
+---
 
 ## One night, end to end
 
@@ -503,90 +445,84 @@ flowchart LR
 
 ## Data model
 
-The tables below are the ones created by the migrations in `supabase/migrations/`. Nonces and challenges are not stored in Postgres; they live in Upstash Redis with a TTL that ends when the window closes.
-
 ```mermaid
 erDiagram
-    ROOM ||--o{ STUDENT : "lives in"
-    ROOM ||--o{ ACCESS_POINT : "served by"
-    ROOM ||--o{ ROOM_FINGERPRINT : "versioned"
-    STUDENT ||--o{ DEVICE : "registers"
-    STUDENT ||--o| FACE_EMBEDDING : "has"
-    STUDENT ||--o{ ENROLLMENT_CODE : "receives"
-    ATTENDANCE_WINDOW ||--o{ ATTENDANCE_MARK : "contains"
-    STUDENT ||--o{ ATTENDANCE_MARK : "makes"
-    ATTENDANCE_MARK ||--o| REVIEW : "may have"
+    STUDENT ||--o| DEVICE : registers
+    STUDENT ||--|| FACE_EMBEDDING : has
+    STUDENT }o--|| ROOM : lives_in
+    ROOM ||--o{ ACCESS_POINT : served_by
+    ROOM ||--o| ROOM_FINGERPRINT : has
+    ATTENDANCE_WINDOW ||--o{ NONCE : issues
+    STUDENT ||--o{ NONCE : receives
+    STUDENT ||--o{ ATTENDANCE_MARK : makes
+    ATTENDANCE_WINDOW ||--o{ ATTENDANCE_MARK : contains
+    ATTENDANCE_MARK ||--o| REVIEW : may_need
 
-    ROOM {
-        uuid id PK
-        text number
-        int floor
-        cidr subnet
-        bool fingerprint_reset_pending
-    }
-    ACCESS_POINT {
-        macaddr bssid PK
-        uuid room_id FK
-        text band
-    }
     STUDENT {
         uuid id PK
-        text roll_number
+        string roll_number
+        string name
         uuid room_id FK
-        timestamptz consent_at
-        text consent_version
-        timestamptz enrolled_at
-        bool active
+        timestamp consent_at
     }
     DEVICE {
         uuid id PK
         uuid student_id FK
-        bytea public_key
-        text key_alias
-        bool active
+        text public_key
+        timestamp enrolled_at
     }
     FACE_EMBEDDING {
         uuid student_id PK
         vector embedding
-        text model_version
+    }
+    ROOM {
+        uuid id PK
+        string number
+        int floor
+        string subnet
+    }
+    ACCESS_POINT {
+        string bssid PK
+        uuid room_id FK
+        string band
     }
     ROOM_FINGERPRINT {
-        uuid id PK
-        uuid room_id FK
-        int version
-        jsonb pattern
-    }
-    ENROLLMENT_CODE {
-        text code_hash PK
-        uuid student_id FK
-        timestamptz expires_at
-        timestamptz used_at
+        uuid room_id PK
+        json pattern
+        timestamp updated_at
     }
     ATTENDANCE_WINDOW {
         uuid id PK
         date night
-        timestamptz opens_at
-        timestamptz closes_at
-        text state
+        timestamp opens_at
+        timestamp closes_at
+    }
+    NONCE {
+        string value PK
+        uuid student_id FK
+        uuid window_id FK
+        boolean used
     }
     ATTENDANCE_MARK {
         uuid id PK
-        uuid window_id FK
         uuid student_id FK
-        text verdict
-        text_array reasons
-        jsonb scores
-        int attempt
-        text frames_path
+        uuid window_id FK
+        float trust_score
+        string verdict
+        string reason
+        timestamp marked_at
     }
     REVIEW {
         uuid mark_id PK
-        text decision
-        text reviewed_by
+        string decision
+        string reviewed_by
+        timestamp reviewed_at
     }
 ```
 
-The `audit_log` table is append-only and is not drawn above: every action writes a row to it in the same transaction as the action itself.
+Nonces live in Upstash Redis with a TTL that ends when the window closes. They are shown here for the relationships only.
+
+---
 
 ## Deployment
 
@@ -693,27 +629,26 @@ Install these once. The commands are for macOS with Homebrew; Windows and Linux 
 | Tool | Version | Needed for | Install |
 |---|---|---|---|
 | Git | any recent | Source control | `brew install git` |
-| uv | current | Backend and face worker: installs Python 3.12 and the dependencies | `brew install uv` |
-| Node.js | 20 LTS (see `app/.nvmrc`) | Dashboard and app | `brew install node@20` |
-| JDK | 17 | Android native builds | `brew install openjdk@17` |
-| Android Studio | current stable | Android SDK and emulator | developer.android.com/studio |
-| Supabase CLI | current stable | Migrations and linking the project | `brew install supabase/tap/supabase` |
-| Expo Go | current | Viewing app screens on a phone | Play Store |
-| Docker Desktop | current stable | Optional now; needed from Phase 12 | docker.com |
-
-EAS (`npx eas-cli`) runs without installing anything globally.
+| uv | current | Backend and face worker: Python versions, dependencies | `brew install uv` |
+| Python | 3.12 | Backend, face worker (uv installs it, so this is optional) | `brew install python@3.12` |
+| Node.js | 20 LTS | Dashboard, app tooling | `brew install node@20` |
+| JDK | 17 | Android build | `brew install openjdk@17` |
+| Android Studio | current stable | Android SDK, emulator | developer.android.com/studio |
+| Docker Desktop | current stable | Later services (Phase 12); not needed for Redis | docker.com, then start it |
+| EAS CLI | current | Development and production builds of the app | `npx eas-cli` (no install needed) |
+| Supabase CLI | current stable | Migrations, linking the project | `brew install supabase/tap/supabase` |
 
 ### First-time setup
 
-1. Clone the repository and check out the branch you are working on:
+1. Clone the repo and switch to the branch you are working on:
 
    ```bash
    git clone https://github.com/Rahul-8283/NightRoll.git
    cd NightRoll
-   git checkout <branch>
+   git checkout base
    ```
 
-2. Create the local environment files from the examples. Ask the team for the real values, and never commit them:
+2. Create your local env files from the examples. Ask the team for the real values; never commit them.
 
    ```bash
    cp backend/.env.example backend/.env
@@ -723,121 +658,110 @@ EAS (`npx eas-cli`) runs without installing anything globally.
    cp config/rooms.example.json config/rooms.local.json
    ```
 
-3. Put the Google service account file at `backend/secrets/google-service-account.json`. It comes from the team password manager and is git-ignored.
+3. Put the Google service account file at `backend/secrets/google-service-account.json` (from the team password manager).
 
-4. Paste the Upstash `rediss://` URL into `backend/.env` as `REDIS_URL`. Check it with the command under **Running each service**.
+4. Paste your Upstash `rediss://` URL into `backend/.env` as `REDIS_URL`, then check it (see below).
 
-5. Link Supabase and apply the migrations. Follow [supabase/README.md](supabase/README.md), then run `supabase db push` from the repository root.
-
-6. Load the demo rooms, students and a warden account:
-
-   ```bash
-   cd backend
-   uv run python ../scripts/seed.py
-   uv run python ../scripts/create_warden.py --email warden@example.com --role warden
-   ```
-
-   The script asks for the password; it is never printed or passed on the command line.
+5. Link Supabase: follow [supabase/README.md](supabase/README.md).
 
 ### Running each service
 
-| Service | Port | Start with | Status |
+| Service | Port | Start with | Available from |
 |---|---|---|---|
-| Upstash Redis | hosted, TLS | Nothing to start; check with the command below | Hosted |
-| Supabase | hosted | Nothing to start | Hosted |
-| Backend API | 8000 | `cd backend && uv run uvicorn app.main:app --reload --port 8000` | Health, rooms, students, windows, enrollment, nonce and verify endpoints |
-| Window scheduler | none | `cd backend && uv run python -m app.scheduler` | Opens and closes windows on the server clock |
-| Face worker | 8100 | `cd face && uv sync && uv run python scripts/download_models.py && uv run uvicorn worker.main:app --port 8100` | Embeddings, anti-spoof, frame storage |
-| Warden dashboard | 5173 | `cd dashboard && npm install && npm run dev` | Landing and pages; they show sample data while `VITE_SAMPLE_DATA=true` |
-| Student app | Metro 8081 | `cd app && npm install && npx expo start` | Screens run in Expo Go; native features need a development build |
+| Upstash Redis | hosted, TLS | set `REDIS_URL` in `backend/.env` | Phase 0 (now) |
+| Supabase | hosted | `supabase link --project-ref <ref>` | Phase 0 (now) |
+| Backend API | 8000 | `cd backend && uv run uvicorn app.main:app --reload --port 8000` | Health route now; full API in Phase 2 |
+| Window scheduler | none | `cd backend && python -m app.scheduler` | Phase 3 |
+| Face worker | 8100 | `cd face && uvicorn worker.main:app --port 8100` | Phase 5 |
+| Warden dashboard | 5173 | `cd dashboard && npm run dev` | Shell now; screens in Phase 10 |
+| Student app | Metro 8081 | `cd app && npx expo start` | Shell now; features in Phases 4 to 7 (Expo Go for screens; development build for the rest) |
 
-Start order once everything is set up: face worker, backend API, scheduler, dashboard, then the phone app.
+Start order once everything exists: face worker, backend API, scheduler, dashboard, then the phone app. Upstash Redis is always on.
 
-**Check Redis**
+**Redis (works now, hosted on Upstash)**
+
+Redis runs in the cloud, so there is no server to start. Check the connection with the Redis client in a container, so nothing needs installing on the laptop:
 
 ```bash
 docker run --rm redis:7 redis-cli --tls -u "<your REDIS_URL>" ping   # expect PONG
 ```
 
-**Check the backend**
+Use the same `rediss://` URL as in `backend/.env`. Do not commit it.
 
-```bash
-curl http://localhost:8000/v1/health    # expect {"status":"ok", ...}
-```
-
-**Run the tests**
+**Backend API (set up now with uv)**
 
 ```bash
 cd backend
-uv run pytest ../tests -q
+uv sync
+uv run uvicorn app.main:app --reload --port 8000
+curl http://localhost:8000/v1/health    # expect {"status":"ok"}
 ```
 
-The tests use the live database and Redis, so the services above must be configured first.
+**Window scheduler (from Phase 3)** runs in its own terminal: `cd backend && uv run python -m app.scheduler`.
 
-**Student app on a phone**
-
-The phone and the laptop must be on the same Wi-Fi. Set `EXPO_PUBLIC_API_BASE_URL` in `app/.env` to the laptop's LAN address, not `10.0.2.2`, which only works in the Android emulator.
-
-```bash
-cd app
-npx expo start                                               # screens: scan with Expo Go
-npx eas-cli build --profile development --platform android   # once: a development build for the phone
-npx expo start --dev-client                                  # then open the development build
-```
-
-**Anti-spoof model (only if `face/models/antispoof.onnx` is missing)**
+**Face worker (from Phase 5)**
 
 ```bash
 cd face
-uv run --with torch==2.14.1 --with onnx==1.23.2 python scripts/convert_antispoof.py
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+python scripts/download_models.py
+uvicorn worker.main:app --port 8100
 ```
+
+**Warden dashboard (shell available now)**
+
+```bash
+cd dashboard
+cp .env.example .env     # fill in the Supabase URL and anon key
+npm install
+npm run dev              # open http://localhost:5173
+```
+
+The pages are placeholders until Phase 10. The dashboard shows which variables are missing if `.env` is incomplete.
+
+**Student app (from Phase 4)**
+
+Expo Go shows the screens that don't use native code. Anything that uses the Keystore, Wi-Fi or Play Integrity needs a development build.
+
+```bash
+cd app
+npm install
+npx expo start                 # Metro, scan the QR code with Expo Go for screens
+npx eas-cli build --profile development --platform android   # once: a dev build to install on the phone
+npx expo start --dev-client    # then open the dev build on the phone
+```
+
+The phone and the laptop must be on the same Wi-Fi. Set `EXPO_PUBLIC_API_BASE_URL` to the laptop's LAN address, not `10.0.2.2` (that address only works in the Android emulator).
 
 ### Stopping everything
 
-Press `Ctrl+C` in each terminal. Upstash and Supabase run in the cloud, so there is nothing to stop for them.
+Press `Ctrl+C` in each terminal. Upstash Redis keeps running in the cloud, so there is nothing to stop for it.
 
 ## Repository layout
 
 ```text
 NightRoll/
-├── app/          Expo student app; Kotlin native modules in app/modules/
-├── backend/      FastAPI service: auth, windows, nonces, enrollment, verification gates
-├── face/         Face worker (internal): embeddings, anti-spoof, frame storage
+├── app/          Expo student app (Android, Kotlin Expo Modules)
+├── backend/      FastAPI service: windows, nonces, gates, scoring, review
+├── face/         Face worker: embeddings and anti-spoof (internal)
 ├── dashboard/    React warden dashboard
-├── supabase/     Migrations and the Supabase CLI project
-├── infra/        Docker Compose (Phase 12 adds the services)
-├── config/       Room map example; the real map stays local and git-ignored
-├── scripts/      Seed data, warden account, Phase 0 risk spikes
-├── tests/        Cross-service test suites
-├── docs/         PRD, TRD and architecture
-├── phase/        Build plan, one file per phase
-└── Images/       Architecture diagram
+├── supabase/     Supabase CLI project and SQL migrations
+├── infra/        Docker Compose and deployment files
+├── config/       Room map example (real map stays local, git-ignored)
+├── scripts/      One-off tools and Phase 0 risk spikes
+├── docs/         PRD, TRD, architecture
+└── phase/        Build plan, one file per phase
 ```
 
 ## Project status
 
-Built in the repository so far:
-
-| Phase | Scope | Status |
-|---|---|---|
-| 0 | Base setup, environment files, folder structure | Done |
-| 1 | Data layer: migrations, row-level security, private frames bucket, seed data, warden account | Done |
-| 2 | Backend core: settings, connections, warden sign-in, error shape, logs, audit, room and student endpoints | Done |
-| 3 | Attendance windows, one-time nonces, scheduler, absentee recording | Done |
-| 4 | App foundation, Keystore device key, signed requests, Home screen | Done |
-| 5 | Face worker: embeddings, anti-spoof, quality checks, frame storage and cleanup | Done |
-| 6 | Enrollment: codes, consent, face and device enrolment, room fingerprint, withdrawal | Done; the phone flow needs a run on a test phone |
-| 7 | Nightly capture: guard checks, liveness, frames, Wi-Fi scan, signed payload | Done; needs a development build on a phone to verify |
-| 8 | Verification API and six hard gates, idempotency, rate limit, attempt recording | Implemented; test suite passing against live services; not yet merged |
-| 9 | Scoring, fingerprint matching, verdicts | Not started |
-| 10 | Warden dashboard with live updates | Not started; landing page and sample-data screens are in progress |
-| 11 to 13 | Review and override, hardening and deployment, testing and rehearsal | Not started |
-
-**Not yet verified on hardware:** the Keystore key on a real phone, the camera and liveness flow, the Wi-Fi scan, Play Integrity with the real service account, and the anti-spoof model against printed photos and screens. Face thresholds are provisional until they are tuned on the hostel's own enrolment data.
+The design is settled (see `docs/` and `phase/`). Phase 0, base setup, is in progress: folders, env examples, the Upstash Redis setup and the setup steps are in place. No feature code exists yet.
 
 ## License
 
 Released under the [Apache License 2.0](LICENSE).
+
 ## Team
 
 **Team Zero_Latency**
