@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from 'react-router'
 import { MissingConfig } from './components/MissingConfig'
 import { missingConfig } from './config'
+import { AuthProvider } from './auth/AuthProvider'
 import { router } from './routes'
 import './index.css'
 
@@ -12,7 +13,13 @@ const queryClient = new QueryClient()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      {missingConfig.length > 0 ? <MissingConfig /> : <RouterProvider router={router} />}
+      {missingConfig.length > 0 ? (
+        <MissingConfig />
+      ) : (
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      )}
     </QueryClientProvider>
   </StrictMode>,
 )

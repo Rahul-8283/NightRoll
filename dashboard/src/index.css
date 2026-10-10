@@ -796,3 +796,50 @@ a.window:hover {
     transition: none !important;
   }
 }
+
+/* ---------- Dashboard shell (Phase 10) ---------- */
+
+.rail__link.is-disabled {
+  color: var(--paper-3);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rail__link.is-disabled:hover {
+  color: var(--paper-3);
+  background: transparent;
+}
+
+.rail__foot span.mono {
+  display: block;
+  margin: 2px 0 var(--s-3);
+  overflow-wrap: anywhere;
+  font-size: var(--text-xs);
+}
+
+.btn--quiet-small {
+  padding: 7px 12px;
+  font-size: var(--text-sm);
+  background: transparent;
+  color: var(--paper-2);
+  border-color: var(--line);
+}
+
+.form-error {
+  color: var(--ember);
+  font-size: var(--text-sm);
+}
+
+.qr-frame {
+  align-self: center;
+  padding: var(--s-4);
+  border-radius: var(--r-card);
+  background: #ffffff;
+  line-height: 0;
+}
+
+.secret-key {
+  color: var(--lamp-bright);
+  letter-spacing: 0.12em;
+  overflow-wrap: anywhere;
+}
