@@ -256,23 +256,6 @@ a {
   gap: var(--s-5);
 }
 
-/* ---------- Sample-data banner ---------- */
-
-.sample-note {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  align-self: flex-start;
-  padding: 6px 12px;
-  border: 1px dashed var(--line);
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--paper-3);
-}
-
 /* ---------- Tally: the four numbers for tonight ---------- */
 
 .tally {

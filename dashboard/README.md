@@ -1,6 +1,6 @@
 # Warden dashboard
 
-React web app for wardens and admins. Today it is a working shell: routes, layout, API client and Supabase client are in place. The screens are placeholders until Phase 10 builds them.
+React web app for wardens and admins. Wardens sign in with a password and an authenticator code, then watch the hostel fill in live: Tonight, Room, Windows and Enrollment.
 
 ## Stack
 
@@ -19,11 +19,11 @@ React web app for wardens and admins. Today it is a working shell: routes, layou
 |---|---|
 | Project scaffold, build, lint | Done |
 | Routes and layout | Done |
-| Design system and page designs | Done, shown with sample data until Phase 10 |
+| Design system and page designs | Done |
 | API client and config check | Done |
-| Login with MFA | Phase 10 |
-| Tonight, room, windows and enrollment wired to live data | Phase 10 |
-| Live updates over WebSocket | Phase 10 |
+| Login with MFA | Done |
+| Tonight, room, windows and enrollment wired to live data | Done |
+| Live updates over WebSocket, with polling fallback | Done |
 
 ## Requirements
 
@@ -43,12 +43,11 @@ Required variables (see `.env.example`):
 | Variable | Purpose |
 |---|---|
 | `VITE_API_BASE_URL` | NightRoll API base, for example `http://localhost:8000/v1` |
-| `VITE_WS_URL` | Live-update socket, used from Phase 10 |
+| `VITE_WS_URL` | Live-update socket |
 | `VITE_SUPABASE_URL` | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase public anon key |
-| `VITE_SAMPLE_DATA` | `true` shows the pages with made-up rooms and students, clearly labelled. Default `false`. |
 
-If the Supabase values are missing, the app shows which ones to set instead of the pages.
+If the Supabase values are missing, the app shows which ones to set instead of the pages. The NightRoll API must be running for any data to appear; the top bar shows Reconnecting or Polling when the live connection is down.
 
 ## Run
 
@@ -70,7 +69,9 @@ src/
 ├── styles/tokens.css  Design tokens: colours, type, spacing
 ├── components/        Layout, shared pieces
 │   └── ui/            RoomWindow, StatusPill, Wordmark, EmptyState
-├── sample/            Made-up data for VITE_SAMPLE_DATA=true
+├── api/               Types that mirror the backend, React Query hooks
+├── auth/              Session, MFA steps, route guard
+├── live/              WebSocket client, cache patching, connection state
 ├── lib/
 │   ├── api.ts         NightRoll API client with the warden's token
 │   └── supabase.ts    Supabase client (login only)
