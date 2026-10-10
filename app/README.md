@@ -4,7 +4,10 @@ Expo app for students: device key, enrollment, Home status, nightly marking. And
 
 ## Status
 
-The Expo project is set up: routes, placeholder screens, config, linting and EAS build profiles. The device key module, Home status and the other features are built in Phases 4 to 7.
+Phase 4 is done: the `DeviceKey` Expo Module (Kotlin, Android Keystore, StrongBox with a TEE
+fallback), a signed API client, Home showing live window status with a 60-second refresh and
+an offline fallback, Welcome/Fallback/Settings screens, and the dev-only cleartext HTTP config
+plugin for LAN testing. Consent, Enrollment and Marking stay shells until Phases 6 and 7.
 
 ## Stack
 
@@ -16,15 +19,19 @@ The Expo project is set up: routes, placeholder screens, config, linting and EAS
 | expo-secure-store | Sensitive local values (student and room IDs) |
 | @react-native-async-storage/async-storage | Non-sensitive local state |
 | expo-build-properties | Android `minSdkVersion` 28 |
+| expo-crypto | SHA-256 for the signed-request body hash (`src/api/signing.ts`) |
+| @expo/config-plugins | `plugins/withDevCleartextHttp.js`, dev-build-only cleartext HTTP |
 | eslint, eslint-config-expo, prettier | Lint and format |
 
-Later phases add `react-native-vision-camera` and the Kotlin Expo Modules in `modules/`.
+`modules/device-key` is the Kotlin Expo Module for the Keystore-backed signing key. Later
+phases add `react-native-vision-camera` for enrollment and marking.
 
 ## How it runs
 
 | What | Runs in Expo Go | Runs in a development build |
 |---|---|---|
-| Welcome, consent and Home screens (with mock status) | Yes | Yes |
+| Welcome, Consent and Home (`EXPO_PUBLIC_MOCK_STATUS=true` for Home) | Yes | Yes |
+| Settings (device info needs a dev build; the rest works) | Partly | Yes |
 | Device key, Wi-Fi scan, Play Integrity, camera checks | No | Yes |
 
 Expo Go is for quick checks of screens on a phone. The test phones use a development build made with EAS.

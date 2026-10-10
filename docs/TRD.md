@@ -456,6 +456,29 @@ Hosted on Upstash over TLS, so every connection uses a `rediss://` URL. Upstash 
 - No face data or photos are stored on the device.
 - Only the key alias, student ID, and room ID are kept in app storage.
 
+### 9.4 Signed requests (status and enrollment)
+
+Every app request that acts for a student (status and nonce fetch, enrollment steps) carries three headers, built in `app/src/api/signing.ts`:
+
+| Header | Value |
+|---|---|
+| `X-Student-Id` | Student UUID |
+| `X-Timestamp` | Current time, Unix seconds |
+| `X-Signature` | Base64 DER signature over the string below, made with the device's Keystore key |
+
+String to sign, joined with newlines:
+
+```text
+<HTTP method>
+<path with query>
+<X-Timestamp>
+<SHA-256 hex of the request body, or of the empty string>
+```
+
+The backend rejects a timestamp more than 60 seconds from its own clock. The marking request in section 5.2 has its own stronger envelope; this format is for the lighter-weight status and enrollment calls.
+
+Until Phase 8 wires up signature verification, `backend/app/auth/device.py` is a stub: it reads `X-Student-Id` and trusts it outright, with no check of `X-Timestamp` or `X-Signature`, and only responds when `APP_ENV=local`.
+
 ---
 
 ## 10. Warden dashboard
