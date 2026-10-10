@@ -15,6 +15,14 @@ const STATE_LABEL: Record<WindowState, string> = {
   off: 'Off',
 }
 
+// Short labels for the small calendar cells. The full word stays in the accessible name.
+const CELL_LABEL: Record<WindowState, string> = {
+  scheduled: 'Planned',
+  open: 'Open',
+  closed: 'Done',
+  off: 'Off',
+}
+
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 function pad(n: number): string {
@@ -257,7 +265,7 @@ export function Windows() {
                 <button key={key} type="button" className={classes} onClick={() => setNight(key)}
                   aria-label={`${key}${item ? `, ${STATE_LABEL[item.state]}` : ''}`}>
                   <span>{day}</span>
-                  {item && <span className="calendar__state">{STATE_LABEL[item.state]}</span>}
+                  {item && <span className="calendar__state" aria-hidden="true">{CELL_LABEL[item.state]}</span>}
                 </button>
               )
             })}
