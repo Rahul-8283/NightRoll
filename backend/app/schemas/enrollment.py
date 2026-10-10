@@ -36,3 +36,9 @@ class StudentEnrollmentStatus(BaseModel):
 class WithdrawStudentResponse(BaseModel):
     withdrawn: bool
     student_id: UUID
+
+
+class EnrollmentSuccessResponse(BaseModel):
+    student_id: UUID
+    room_id: UUID
+    room_number: str

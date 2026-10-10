@@ -6,6 +6,7 @@ import hashlib
 import logging
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 import asyncpg
@@ -141,3 +142,227 @@ async def withdraw_student_consent(
                 target_id=str(student_id),
                 payload={"roll_number": student["roll_number"]},
             )
+
+
+def validate_p256_public_key(public_key_b64: str) -> bytes:
+    import base64
+
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives.serialization import load_der_public_key
+
+    try:
+        der_bytes = base64.b64decode(public_key_b64.strip())
+    except Exception as exc:
+        raise AppError(
+            code="INVALID_PUBLIC_KEY",
+            status_code=400,
+            message="Public key must be valid base64 DER",
+        ) from exc
+
+    try:
+        key = load_der_public_key(der_bytes)
+    except Exception as exc:
+        raise AppError(
+            code="INVALID_PUBLIC_KEY",
+            status_code=400,
+            message="Public key does not parse as DER SubjectPublicKeyInfo",
+        ) from exc
+
+    if not isinstance(key, ec.EllipticCurvePublicKey):
+        raise AppError(code="INVALID_PUBLIC_KEY", status_code=400, message="Public key is not an elliptic curve key")
+
+    if not isinstance(key.curve, ec.SECP256R1):
+        raise AppError(
+            code="INVALID_PUBLIC_KEY",
+            status_code=400,
+            message=f"Public key must use curve P-256 (SECP256R1), got {key.curve.name}",
+        )
+
+    return der_bytes
+
+
+async def complete_student_enrollment(
+    pool: asyncpg.Pool,
+    redis: Redis,
+    settings: Settings,
+    *,
+    code: str,
+    roll_number: str,
+    public_key_b64: str,
+    key_security_level: str,
+    consent_version: str,
+    frames: list[tuple[str, bytes, str]],  # (filename, bytes, content_type)
+) -> dict[str, Any]:
+    # Validate security level
+    if key_security_level not in ("strongbox", "tee", "software"):
+        raise AppError(
+            code="INVALID_SECURITY_LEVEL",
+            status_code=400,
+            message="key_security_level must be strongbox, tee, or software",
+        )
+
+    # 3.1 Validate the code against the student. Count failed attempts.
+    student = await enrollment_q.get_student_by_roll_number(pool, roll_number)
+    if student is None:
+        raise AppError(code="NOT_FOUND", status_code=404, message=f"Student with roll number {roll_number} not found")
+
+    student_id: UUID = student["id"]
+
+    # Check lockout
+    if await is_student_locked_out(redis, student_id):
+        raise AppError(
+            code="CODE_LOCKED",
+            status_code=403,
+            message="Too many failed attempts. Code entry is locked until the warden issues a new code.",
+        )
+
+    # Validate code hash against database
+    code_hash = hash_code(code)
+    record = await enrollment_q.get_valid_code_record(pool, code_hash=code_hash, student_id=student_id)
+
+    if record is None:
+        failed_count = await record_failed_attempt(redis, student_id)
+        if failed_count >= MAX_FAILED_ATTEMPTS:
+            raise AppError(
+                code="CODE_LOCKED",
+                status_code=403,
+                message="Too many failed attempts. Code entry is locked until the warden issues a new code.",
+            )
+        raise AppError(
+            code="INVALID_CODE",
+            status_code=400,
+            message=f"Invalid enrollment code. Attempt {failed_count} of {MAX_FAILED_ATTEMPTS}.",
+        )
+
+    if record["used_at"] is not None:
+        await record_failed_attempt(redis, student_id)
+        raise AppError(code="USED_CODE", status_code=400, message="This enrollment code has already been used.")
+
+    if record["expires_at"] < datetime.now(UTC):
+        await record_failed_attempt(redis, student_id)
+        raise AppError(
+            code="EXPIRED_CODE",
+            status_code=400,
+            message="Enrollment code has expired. Ask the warden to issue a new code.",
+        )
+
+    # 3.2 Check the public key parses as a P-256 key
+    der_public_key = validate_p256_public_key(public_key_b64)
+
+    # Check frames count
+    if len(frames) < 3 or len(frames) > 5:
+        raise AppError(
+            code="INVALID_FRAMES",
+            status_code=400,
+            message=f"Enrollment requires between 3 and 5 frames, received {len(frames)}",
+        )
+
+    # 3.3 Send the frames to the face worker's /enroll.
+    # If it rejects them, return its reason so the app can ask for a retake.
+    # The code is not consumed on a retake.
+    face_worker_url = f"{settings.FACE_WORKER_URL.rstrip('/')}/enroll"
+    files_payload = [
+        ("frames", (fname or f"frame_{idx}.jpg", fcontent, fctype or "image/jpeg"))
+        for idx, (fname, fcontent, fctype) in enumerate(frames)
+    ]
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                face_worker_url,
+                data={"student_id": str(student_id)},
+                files=files_payload,
+                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}"},
+            )
+    except Exception as exc:
+        logger.error(f"Failed to communicate with face worker: {exc}")
+        raise AppError(
+            code="FACE_SERVICE_UNAVAILABLE",
+            status_code=503,
+            message="Face verification service is currently unavailable",
+        ) from exc
+
+    if resp.status_code != 200:
+        try:
+            err_detail = resp.json().get("detail", "Face quality or detection check failed")
+        except Exception:
+            err_detail = resp.text or "Face check failed"
+        raise AppError(
+            code="FACE_REJECTED",
+            status_code=400,
+            message=str(err_detail),
+        )
+
+    # 3.4 In one transaction: mark code used, set consent_at and consent version,
+    # deactivate earlier device, insert new device, set enrolled_at, write audit row
+    try:
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                # Mark code used
+                await conn.execute(
+                    "update enrollment_codes set used_at = now() where code_hash = $1",
+                    code_hash,
+                )
+
+                # Update student
+                await conn.execute(
+                    """
+                    update students
+                    set consent_at = now(), consent_version = $2, enrolled_at = now()
+                    where id = $1
+                    """,
+                    student_id,
+                    consent_version,
+                )
+
+                # Deactivate earlier device
+                await conn.execute(
+                    "update devices set active = false where student_id = $1 and active = true",
+                    student_id,
+                )
+
+                # Insert new device
+                await conn.execute(
+                    """
+                    insert into devices (student_id, public_key, key_alias, active, enrolled_at)
+                    values ($1, $2, $3, true, now())
+                    """,
+                    student_id,
+                    der_public_key,
+                    key_security_level,
+                )
+
+                # Write audit row
+                await audit.write(
+                    conn,
+                    actor=str(student_id),
+                    action="student.enrolled",
+                    target_id=str(student_id),
+                    payload={
+                        "roll_number": roll_number,
+                        "key_security_level": key_security_level,
+                        "consent_version": consent_version,
+                    },
+                )
+    except Exception as exc:
+        # If step 3.4 fails after face worker stored an embedding, delete it
+        logger.error(f"Enrollment transaction failed, rolling back embedding: {exc}")
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.delete(
+                    f"{settings.FACE_WORKER_URL.rstrip('/')}/students/{student_id}/embedding",
+                    headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}"},
+                )
+        except Exception as rollback_err:
+            logger.error(f"Failed to delete face embedding on rollback: {rollback_err}")
+        raise
+
+    # Clear lockout counters
+    await clear_lockout(redis, student_id)
+
+    # 3.5 Return {student_id, room_id, room_number}
+    return {
+        "student_id": student["id"],
+        "room_id": student["room_id"],
+        "room_number": student["room_number"],
+    }
