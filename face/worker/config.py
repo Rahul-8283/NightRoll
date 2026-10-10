@@ -35,7 +35,7 @@ class Settings(BaseSettings):
 
     # Quality & Detection Floors (provisional, tuned in Phase 13)
     FACE_MIN_SIZE: int = 112  # Minimum box dimension in pixels
-    BLUR_THRESHOLD: float = 75.0  # Laplacian variance floor
+    BLUR_THRESHOLD: float = 60.0  # Face-region Laplacian variance floor: sharp faces 80-330, sigma-1 blur 46
     LIGHT_MIN: float = 35.0  # Minimum mean grayscale brightness
     LIGHT_MAX: float = 230.0  # Maximum mean grayscale brightness
     MAX_POSE_YAW: float = 30.0  # Head turn limit in degrees

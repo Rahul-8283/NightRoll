@@ -64,6 +64,12 @@ def load_face_app() -> Any:
     return face_app
 
 
+def require_ready() -> None:
+    """Never score a face with a model that did not load."""
+    if not worker_ready or face_app is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Face model is not loaded")
+
+
 async def cleanup_loop() -> None:
     """Hourly background loop for frame retention cleanup."""
     while True:
@@ -149,6 +155,7 @@ async def enroll_student_face(
 
     Enrollment photos are NEVER saved to disk or storage (Task 7.3).
     """
+    require_ready()
     if len(frames) < settings.ENROLL_MIN_VALID_FRAMES or len(frames) > 5:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -221,6 +228,7 @@ async def verify_nightly_frames(
     5. Computes best and median cosine similarity.
     6. Stores frames in the private frames bucket for 24-hour audit retention.
     """
+    require_ready()
     try:
         expected_hashes: list[str] = json.loads(frame_hashes)
     except ValueError as e:

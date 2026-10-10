@@ -48,8 +48,21 @@ def decode_image(image_bytes: bytes) -> np.ndarray | None:
         return None
 
 
+SHARPNESS_SIZE = 128
+
+
+def face_region_gray(img: np.ndarray, bbox: np.ndarray) -> np.ndarray:
+    """Grayscale crop of the face box, scaled to a fixed size so scores do not depend on resolution."""
+    h, w = img.shape[:2]
+    x1, y1 = max(0, int(bbox[0])), max(0, int(bbox[1]))
+    x2, y2 = min(w, int(bbox[2])), min(h, int(bbox[3]))
+    region = img[y1:y2, x1:x2] if x2 > x1 and y2 > y1 else img
+    gray = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
+    return cv2.resize(gray, (SHARPNESS_SIZE, SHARPNESS_SIZE), interpolation=cv2.INTER_AREA)
+
+
 def calculate_blur_score(gray_img: np.ndarray) -> float:
-    """Compute variance of the Laplacian as a measure of sharpness."""
+    """Variance of the Laplacian: higher means sharper."""
     return float(cv2.Laplacian(gray_img, cv2.CV_64F).var())
 
 
@@ -135,41 +148,8 @@ def evaluate_frame(
             valid=False, issues=issues, face=None, head_pose=HeadPose(pitch=0, yaw=0, roll=0), img=None
         )
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # 2. Blur / sharpness check
-    blur_score = calculate_blur_score(gray)
-    if blur_score < settings.BLUR_THRESHOLD:
-        issues.append(
-            FrameIssue(
-                frame_index=frame_index,
-                code="TOO_BLURRY",
-                detail=f"Blur score {blur_score:.1f} is below floor {settings.BLUR_THRESHOLD}",
-            )
-        )
-
-    # 3. Lighting check
-    light_score = calculate_lighting_score(gray)
-    if not (settings.LIGHT_MIN <= light_score <= settings.LIGHT_MAX):
-        issues.append(
-            FrameIssue(
-                frame_index=frame_index,
-                code="BAD_LIGHTING",
-                detail=f"Mean brightness {light_score:.1f} outside range [{settings.LIGHT_MIN}, {settings.LIGHT_MAX}]",
-            )
-        )
-
-    # 4. Face detection
     if face_app is None:
-        # Mock / offline testing mode when model is not initialized
-        head_pose = HeadPose(pitch=0.0, yaw=0.0, roll=0.0)
-        return QualityResult(
-            valid=len(issues) == 0,
-            issues=issues,
-            face={"bbox": [0, 0, 150, 150], "embedding": np.ones(512) / np.sqrt(512)},
-            head_pose=head_pose,
-            img=img,
-        )
+        raise RuntimeError("Face model is not loaded; refusing to score frames without it")
 
     faces = face_app.get(img)
 
@@ -194,6 +174,29 @@ def evaluate_frame(
                 frame_index=frame_index,
                 code="FACE_TOO_SMALL",
                 detail=f"Face short side {short_side}px is below minimum {settings.FACE_MIN_SIZE}px",
+            )
+        )
+
+    # Sharpness and brightness are judged on the face itself, not the whole frame: a sharp face in front
+    # of a flat, dark wall is a good capture, and a blurry face in front of a busy room is not.
+    face_gray = face_region_gray(img, bbox)
+    blur_score = calculate_blur_score(face_gray)
+    if blur_score < settings.BLUR_THRESHOLD:
+        issues.append(
+            FrameIssue(
+                frame_index=frame_index,
+                code="TOO_BLURRY",
+                detail=f"Blur score {blur_score:.1f} is below floor {settings.BLUR_THRESHOLD}",
+            )
+        )
+
+    light_score = calculate_lighting_score(face_gray)
+    if not (settings.LIGHT_MIN <= light_score <= settings.LIGHT_MAX):
+        issues.append(
+            FrameIssue(
+                frame_index=frame_index,
+                code="BAD_LIGHTING",
+                detail=f"Mean brightness {light_score:.1f} outside range [{settings.LIGHT_MIN}, {settings.LIGHT_MAX}]",
             )
         )
 
