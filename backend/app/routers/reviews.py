@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
 from app.config import Settings, get_settings
+from app.db.queries import windows as windows_q
 from app.deps import CurrentWarden, DbPool, RedisClient
 from app.schemas.reviews import (
     AbsenteeListOut,
@@ -77,10 +79,6 @@ async def view_frames(
 @router.get("/v1/attendance/absentees", response_model=AbsenteeListOut)
 async def absentees(pool: DbPool, _: CurrentWarden, window_id: UUID | None = None) -> AbsenteeListOut:
     """Students not present in tonight's window, or the one given. Grouped by floor on the page."""
-    from datetime import UTC, datetime
-
-    from app.db.queries import windows as windows_q
-
     if window_id is None:
         window = await windows_q.current(pool, datetime.now(UTC))
     else:
