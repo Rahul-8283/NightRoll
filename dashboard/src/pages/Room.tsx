@@ -9,7 +9,7 @@ import { RoomWindow } from '../components/ui/RoomWindow'
 import { StatusPill } from '../components/ui/StatusPill'
 import type { Status } from '../components/ui/status'
 import { ErrorBanner } from '../components/ErrorBanner'
-import { apiFetch, ApiError } from '../lib/api'
+import { apiFetch, ApiError, postJson } from '../lib/api'
 import { formatClock } from '../lib/format'
 
 const VERDICT: Record<Verdict, { status: Status; label: string }> = {
@@ -31,7 +31,59 @@ function paneFor(student: RoomStudentStatus): Status {
   return studentStatus(student).status
 }
 
-function StudentRow({ student }: { student: RoomStudentStatus }) {
+// A warden's decision on one student, always with a written reason. Changes the status everywhere it is shown.
+function OverridePanel({ student, windowId }: { student: RoomStudentStatus; windowId: string | null }) {
+  const queryClient = useQueryClient()
+  const [note, setNote] = useState('')
+  const [status, setStatus] = useState<'PRESENT' | 'ABSENT'>('PRESENT')
+  const mark = student.mark
+  const save = useMutation({
+    mutationFn: () =>
+      mark
+        ? postJson(`/attendance/marks/${mark.mark_id}/override`, { status, note: note.trim() })
+        : postJson('/attendance/manual', { student_id: student.student_id, window_id: windowId, note: note.trim() }),
+    onSuccess: () => {
+      setNote('')
+      void queryClient.invalidateQueries({ queryKey: ['roomTonight'] })
+      void queryClient.invalidateQueries({ queryKey: ['tonight'] })
+      void queryClient.invalidateQueries({ queryKey: ['absentees'] })
+      void queryClient.invalidateQueries({ queryKey: ['reviews'] })
+    },
+  })
+
+  if (!student.enrolled || !windowId) return null
+  return (
+    <div className="override" onClick={(event) => event.stopPropagation()}>
+      <strong>{mark ? 'Change this status' : 'Record a manual mark'}</strong>
+      {mark && (
+        <div className="field">
+          <label htmlFor={`status-${student.student_id}`}>New status</label>
+          <select id={`status-${student.student_id}`} value={status} onChange={(e) => setStatus(e.target.value as 'PRESENT' | 'ABSENT')}>
+            <option value="PRESENT">Present</option>
+            <option value="ABSENT">Absent</option>
+          </select>
+        </div>
+      )}
+      <div className="field">
+        <label htmlFor={`note-${student.student_id}`}>Written reason (at least 10 characters)</label>
+        <textarea id={`note-${student.student_id}`} rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+      </div>
+      {save.isError && (
+        <p className="form-error" role="alert">{save.error instanceof ApiError ? save.error.message : 'The change was not saved.'}</p>
+      )}
+      <button
+        className={mark && status === 'ABSENT' ? 'btn btn--danger' : 'btn btn--primary'}
+        type="button"
+        disabled={note.trim().length < 10 || save.isPending}
+        onClick={() => save.mutate()}
+      >
+        {save.isPending ? 'Saving…' : mark ? 'Save change' : 'Record present'}
+      </button>
+    </div>
+  )
+}
+
+function StudentRow({ student, windowId }: { student: RoomStudentStatus; windowId: string | null }) {
   const state = studentStatus(student)
   return (
     <details className="student">
@@ -46,6 +98,7 @@ function StudentRow({ student }: { student: RoomStudentStatus }) {
         <StatusPill status={state.status} label={state.label} />
       </summary>
       <div className="student__body">
+        <OverridePanel student={student} windowId={windowId} />
         <div className="student__enrollment">
           <span className={`pill ${student.face_enrolled ? 'pill--present' : 'pill--unlit'}`}>
             Face {student.face_enrolled ? 'enrolled' : 'not enrolled'}
@@ -228,7 +281,7 @@ export function Room() {
             ) : (
               <div className="ledger">
                 {data.students.map((student) => (
-                  <StudentRow key={student.student_id} student={student} />
+                  <StudentRow key={student.student_id} student={student} windowId={data.window?.id ?? null} />
                 ))}
               </div>
             )}

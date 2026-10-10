@@ -1408,3 +1408,28 @@ a.window:hover {
   min-width: 9.5em;
   font-size: var(--text-sm);
 }
+
+.override {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-control);
+  font-size: var(--text-sm);
+}
+
+.override textarea {
+  width: 100%;
+  font: inherit;
+  padding: var(--s-3);
+  border-radius: var(--r-control);
+  border: 1px solid var(--line);
+  background: var(--ink-0);
+  color: var(--paper);
+  resize: vertical;
+}
+
+.override .btn {
+  align-self: flex-start;
+}
