@@ -35,13 +35,6 @@ const config: ExpoConfig = {
     'expo-router',
     'expo-secure-store',
     'expo-dev-client',
-    [
-      'react-native-vision-camera',
-      {
-        cameraPermissionText:
-          'NightRoll requires camera access to capture face frames for enrollment and attendance.',
-      },
-    ],
     ['expo-build-properties', { android: { minSdkVersion: 28 } }],
     [
       'expo-splash-screen',
