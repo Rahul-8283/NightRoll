@@ -1154,3 +1154,76 @@ a.window:hover {
     display: none;
   }
 }
+
+/* ---------- Windows page (Phase 10) ---------- */
+
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.admin-controls {
+  margin-top: var(--s-4);
+}
+
+.calendar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--s-1);
+}
+
+.calendar__weekday {
+  font-size: var(--text-xs);
+  color: var(--paper-3);
+  text-align: center;
+  padding-bottom: var(--s-1);
+}
+
+.calendar__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: var(--s-2) 2px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-control);
+  background: var(--ink-1);
+  color: var(--paper);
+  font: inherit;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar__day:hover {
+  border-color: var(--line);
+}
+
+.calendar__day.is-selected {
+  border-color: var(--lamp);
+  box-shadow: 0 0 0 1px var(--lamp) inset;
+}
+
+.calendar__day.is-off {
+  color: var(--paper-3);
+  border-style: dashed;
+}
+
+.calendar__state {
+  font-size: 10px;
+  line-height: 1.1;
+  color: var(--paper-2);
+  text-align: center;
+}
+
+.calendar__day:focus-visible {
+  outline: 2px solid var(--lamp);
+  outline-offset: 2px;
+}
