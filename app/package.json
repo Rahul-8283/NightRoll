@@ -3,10 +3,14 @@
   "main": "expo-router/entry",
   "version": "0.1.0",
   "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.27",
+    "expo-build-properties": "~57.0.22",
     "expo-constants": "~57.0.21",
+    "expo-dev-client": "~57.0.19",
     "expo-linking": "~57.0.12",
     "expo-router": "~57.0.25",
+    "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
@@ -20,6 +24,9 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~57.0.2",
+    "prettier": "^3.9.10",
     "typescript": "~6.0.3"
   },
   "scripts": {

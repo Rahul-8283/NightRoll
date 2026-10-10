@@ -10,6 +10,15 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
   android: {
     package: 'com.zerolatency.nightroll',
+    permissions: [
+      'INTERNET',
+      'ACCESS_NETWORK_STATE',
+      'CAMERA',
+      'ACCESS_FINE_LOCATION',
+      'ACCESS_WIFI_STATE',
+      'CHANGE_WIFI_STATE',
+      'NEARBY_WIFI_DEVICES',
+    ],
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
       foregroundImage: './assets/images/android-icon-foreground.png',
@@ -19,6 +28,9 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    'expo-secure-store',
+    'expo-dev-client',
+    ['expo-build-properties', { android: { minSdkVersion: 28 } }],
     [
       'expo-splash-screen',
       {
