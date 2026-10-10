@@ -32,8 +32,10 @@ def test_issue_and_peek():
 
         # pipeline mock
         pipe_mock = MagicMock()
+
         def mock_hsetnx(key, field, val):
             storage.setdefault(key, {})[field] = val
+
         pipe_mock.hsetnx.side_effect = mock_hsetnx
         pipe_mock.expireat.return_value = None
         pipe_mock.execute = AsyncMock(return_value=None)
@@ -41,6 +43,7 @@ def test_issue_and_peek():
         class PipeContext:
             async def __aenter__(self):
                 return pipe_mock
+
             async def __aexit__(self, *args):
                 pass
 
