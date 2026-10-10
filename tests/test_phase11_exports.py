@@ -6,7 +6,7 @@ Run from the backend folder:
 from __future__ import annotations
 
 import sys
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
