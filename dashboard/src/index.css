@@ -1539,3 +1539,39 @@ a.window:hover {
 .facade__rooms {
   grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
 }
+
+/* ---------- Search results: each student is one spaced row, status on the right ---------- */
+
+.result.ledger__row,
+.result.ledger__row:first-child,
+.result.ledger__row:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  margin: 0 0 var(--s-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-control);
+  background: var(--ink-1);
+}
+
+.result.ledger__row:last-child {
+  margin-bottom: 0;
+}
+
+.result.ledger__row .ledger__main {
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.result .pill {
+  flex: none;
+  font-size: var(--text-xs);
+  padding: 3px 9px;
+}
+
+.result.is-selected {
+  border-color: var(--lamp);
+  box-shadow: inset 3px 0 0 var(--lamp);
+}
