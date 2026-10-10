@@ -670,7 +670,7 @@ Install these once. The commands are for macOS with Homebrew; Windows and Linux 
 | Backend API | 8000 | `cd backend && uvicorn app.main:app --reload --port 8000` | Phase 2 |
 | Window scheduler | none | `cd backend && python -m app.scheduler` | Phase 3 |
 | Face worker | 8100 | `cd face && uvicorn worker.main:app --port 8100` | Phase 5 |
-| Warden dashboard | 5173 | `cd dashboard && npm run dev` | Phase 10 |
+| Warden dashboard | 5173 | `cd dashboard && npm run dev` | Shell now; screens in Phase 10 |
 | Student app | Metro 8081 | `cd app && npx react-native run-android` | Phase 4 |
 
 Start order once everything exists: face worker, backend API, scheduler, dashboard, then the phone app. Upstash Redis is always on.
@@ -707,13 +707,16 @@ python scripts/download_models.py
 uvicorn worker.main:app --port 8100
 ```
 
-**Warden dashboard (from Phase 10)**
+**Warden dashboard (shell available now)**
 
 ```bash
 cd dashboard
+cp .env.example .env     # fill in the Supabase URL and anon key
 npm install
-npm run dev        # open http://localhost:5173
+npm run dev              # open http://localhost:5173
 ```
+
+The pages are placeholders until Phase 10. The dashboard shows which variables are missing if `.env` is incomplete.
 
 **Student app (from Phase 4)**
 
