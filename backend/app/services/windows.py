@@ -13,7 +13,7 @@ from app.db.queries import students as students_q
 from app.db.queries import windows as windows_q
 from app.errors import AppError
 from app.logging import log_event
-from app.services import audit, nonces
+from app.services import absentees, audit, nonces
 
 logger = logging.getLogger("nightroll.windows")
 
@@ -121,12 +121,15 @@ async def close_window(pool: asyncpg.Pool, redis: Redis, window_id: UUID, actor:
         if window is None or window["state"] != "open":
             return False
         await windows_q.set_closed(conn, window_id)
-        await audit.write(conn, actor=actor, action="window.close", target_id=str(window_id))
+        absent_count = await absentees.record(conn, window_id)
+        await audit.write(
+            conn, actor=actor, action="window.close", target_id=str(window_id), payload={"absent": absent_count}
+        )
         student_ids = await students_q.list_enrolled_student_ids(conn)
 
     await nonces.drop(redis, window_id, student_ids)
     await nonces.set_closed(redis, window_id)
-    log_event(logger, logging.INFO, "window closed", window_id=str(window_id))
+    log_event(logger, logging.INFO, "window closed", window_id=str(window_id), absent=absent_count)
     return True
 
 
