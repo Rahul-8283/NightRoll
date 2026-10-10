@@ -35,7 +35,8 @@ def fuse(results: dict[str, ScorerResult], settings: Settings) -> Verdict:
     if results["liveness"].score == 0.0:
         return Verdict("REJECTED", score, ("LIVENESS_FAILED",), "liveness floor")
 
-    reasons = tuple(result.reason for result in results.values() if result.reason)
+    # Two scorers can report the same reason (both Wi-Fi scorers do). Say each one once, in order.
+    reasons = tuple(dict.fromkeys(result.reason for result in results.values() if result.reason))
 
     # A room with no learned Wi-Fi pattern cannot be confirmed by the Wi-Fi signals, so it goes to review
     # rather than being presented as confirmed (Phase 9 task 4.1).
