@@ -102,8 +102,11 @@ flowchart LR
 
 **Data**
 
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![pgvector](https://img.shields.io/badge/pgvector-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![Supabase Auth](https://img.shields.io/badge/Supabase%20Auth-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Supabase Storage](https://img.shields.io/badge/Supabase%20Storage-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 
 **Dashboard and delivery**
 
@@ -119,7 +122,9 @@ flowchart LR
 | API | FastAPI | Async, typed, fast to build |
 | State | Redis | Nonces and window state with native TTL |
 | Face | InsightFace `buffalo_l` on ONNX Runtime | Strong open ArcFace embeddings, runs on CPU |
-| Storage | PostgreSQL with pgvector | Relational data and 512-dimension embeddings in one database |
+| Database | Supabase (PostgreSQL with pgvector) | Relational data and 512-dimension embeddings in one managed database |
+| Auth | Supabase Auth | Warden and admin login with MFA; student devices are bound by Keystore keys, not passwords |
+| Frame storage | Supabase Storage (private bucket) | Encrypted, short-lived frames with a 24-hour deletion job |
 | Network verify | Subnet check, then controller API or RADIUS accounting | Starts simple, upgrades without app changes |
 | Dashboard | React over WebSocket | Room tiles update live |
 | Push | Firebase Cloud Messaging | Opens the window on every phone at once |
@@ -160,7 +165,7 @@ flowchart LR
         B2["Hard gates"]
         B3["Scored checks"]
         B4["Fusion engine"]
-        B5[("PostgreSQL + pgvector")]
+        B5[("Supabase PostgreSQL + pgvector")]
         B6[("Redis")]
         B7["Network adapter"]
         B0 --> B1 --> B2 --> B3 --> B4
@@ -205,7 +210,7 @@ flowchart TB
 
     WS["Window service"] --> RD[("Redis<br/>nonces, window state")]
     CV --> RD
-    FV --> PG[("PostgreSQL + pgvector<br/>students, rooms, embeddings, logs")]
+    FV --> PG[("Supabase PostgreSQL + pgvector<br/>students, rooms, embeddings, logs")]
     WV --> PG
     FE --> PG
     FE --> RT["WebSocket hub"] --> DB["Warden dashboard"]
@@ -316,7 +321,7 @@ flowchart TD
     A(["Student at warden office"]) --> B["Consent recorded"]
     B --> C["Controlled face capture"]
     C --> D["ArcFace embedding, 512 dimensions"]
-    D --> E[("Store vector in pgvector<br/>photo discarded")]
+    D --> E[("Store vector in Supabase pgvector<br/>photo discarded")]
     B --> F["App generates keypair in Keystore"]
     F --> G[("Register public key to student")]
     B --> H["3 to 5 WiFi scans in the room<br/>bed, desk, door"]
@@ -540,7 +545,7 @@ flowchart TB
             API["FastAPI service"]
             WK["Face worker"]
             RDS[("Redis")]
-            PGS[("PostgreSQL + pgvector")]
+            PGS[("Supabase PostgreSQL + pgvector")]
             WEB["Dashboard"]
             API --> RDS
             API --> PGS
@@ -642,3 +647,32 @@ Two things are still open and are marked as provisional above: the trust score w
 ## License
 
 Released under the [Apache License 2.0](LICENSE).
+
+## Team
+
+**Team Zero_Latency**
+
+<table align="center">
+  <tr>
+    <td align="center" width="25%">
+      <a href="https://github.com/Rahul-8283"><img src="https://github.com/Rahul-8283.png?size=200" width="100" alt="Rahul L S"></a><br>
+      <b>Rahul L S</b><br>
+      <a href="https://github.com/Rahul-8283">@Rahul-8283</a>
+    </td>
+    <td align="center" width="25%">
+      <a href="https://github.com/djivites"><img src="https://github.com/djivites.png?size=200" width="100" alt="Jivites"></a><br>
+      <b>Jivites</b><br>
+      <a href="https://github.com/djivites">@djivites</a>
+    </td>
+    <td align="center" width="25%">
+      <a href="https://github.com/sukanthan06"><img src="https://github.com/sukanthan06.png?size=200" width="100" alt="Sukanthan"></a><br>
+      <b>Sukanthan</b><br>
+      <a href="https://github.com/sukanthan06">@sukanthan06</a>
+    </td>
+    <td align="center" width="25%">
+      <a href="https://github.com/kesavvvvvv"><img src="https://github.com/kesavvvvvv.png?size=200" width="100" alt="Kesav Satya Sai Nimmagadda"></a><br>
+      <b>Kesav Satya Sai Nimmagadda</b><br>
+      <a href="https://github.com/kesavvvvvv">@kesavvvvvv</a>
+    </td>
+  </tr>
+</table>
