@@ -18,7 +18,7 @@ Every teammate can clone the repo, fill in one env file per service, start the l
 - Supabase and Google Cloud projects exist, and every credential is shared with the team outside git.
 - Redis is hosted on Upstash (TLS). The team shares one development database and uses a separate one for tests.
 - Two test Android phones and two routers are ready for the demo network.
-- Four risk spikes are done and their results are written down.
+- Five risk spikes are done and their results are written down.
 
 ---
 
@@ -30,7 +30,7 @@ Every teammate can clone the repo, fill in one env file per service, start the l
 | 1.2 | Create a Supabase organisation and a project named `nightroll-dev` | Project URL and keys |
 | 1.3 | Create a Google Cloud project named `nightroll`. Record the Android package name `com.zerolatency.nightroll` for the Play Integrity setup. | Project ID and number noted |
 | 1.4 | In the linked Google Cloud project, enable the Play Integrity API | API enabled, project number noted |
-| 1.5 | Give all four teammates write access to the GitHub repo | Everyone can push to `base` |
+| 1.5 | Give all four teammates write access to the GitHub repo | Everyone can push to the Phase 0 branch, `feat/0` |
 | 1.6 | Create an Upstash Redis database for development (TLS on, region closest to the hostel). Copy its `rediss://` URL. | URL in the team password manager |
 | 1.7 | Ask the campus network admin the three network questions (section 10) | Written answer, or a date for one |
 | 1.8 | Create a free Expo account for EAS builds and add the team to it | Team account in the password manager |
@@ -50,7 +50,9 @@ Everyone installs the same versions so builds match.
 | Docker Desktop | Current stable | Later services (Phase 12) |
 | Supabase CLI | Current stable | Migrations |
 | Git | Any recent | Version control |
-| Expo account and EAS CLI | Current | Development and production builds of the app | Free Expo account, then `npx eas-cli login` (no global install needed) |
+| Expo account and EAS CLI | Current | Development and production builds of the app (`npx eas-cli login`, no global install) |
+
+Version pins live in the repo: `backend/.python-version` and `face/.python-version` (Python 3.12), `app/.nvmrc` and `dashboard/.nvmrc` (Node 20). `uv` installs Python 3.12 for you.
 
 The app is an Expo project. Expo Go runs only screens without native code. The Keystore, Wi-Fi and Play Integrity code is Kotlin in Expo Modules, so the test phones run a development build made with EAS.
 
@@ -171,9 +173,10 @@ SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_JWT_SECRET=
 DATABASE_URL=
+REQUIRE_MFA=true
 
-# Redis (Upstash, TLS)
-REDIS_URL=rediss://default:<password>@<endpoint>.upstash.io:6379
+# Redis (Upstash, hosted, TLS). Format: rediss://default:<password>@<endpoint>.upstash.io:6379
+REDIS_URL=
 
 # Face worker
 FACE_WORKER_URL=http://localhost:8100
@@ -234,6 +237,7 @@ VITE_SUPABASE_ANON_KEY=
 ```dotenv
 EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000/v1
 EXPO_PUBLIC_GOOGLE_CLOUD_PROJECT_NUMBER=
+EXPO_PUBLIC_MOCK_STATUS=false
 ```
 
 Rules:
@@ -276,7 +280,7 @@ Rules:
 
 | # | Task |
 |---|---|
-| 8.1 | Run `supabase init` at the repo root and `supabase link` to `nightroll-dev` |
+| 8.1 | Install the Supabase CLI (section 13), run `supabase init` at the repo root, then `supabase link` to `nightroll-dev` |
 | 8.2 | Enable the `vector` extension (Database, Extensions) |
 | 8.3 | Create a private Storage bucket named `frames`. Public access off. |
 | 8.4 | In Auth settings, turn off public sign-ups. Warden accounts are created by an admin only. |
@@ -306,14 +310,24 @@ Record each router's SSID, BSSIDs for both bands, and the address the laptop see
 
 ```json
 {
+  "_comment": "Example only, with made-up values. Copy to config/rooms.local.json (git-ignored) and put the real room map there.",
   "rooms": [
     {
       "number": "101",
       "floor": 1,
-      "subnet": "192.168.101.0/24",
+      "subnet": "192.168.101.10/32",
       "access_points": [
         {"bssid": "aa:bb:cc:00:01:01", "band": "2.4GHz"},
         {"bssid": "aa:bb:cc:00:01:05", "band": "5GHz"}
+      ]
+    },
+    {
+      "number": "102",
+      "floor": 1,
+      "subnet": "192.168.102.10/32",
+      "access_points": [
+        {"bssid": "aa:bb:cc:00:02:01", "band": "2.4GHz"},
+        {"bssid": "aa:bb:cc:00:02:05", "band": "5GHz"}
       ]
     }
   ]
@@ -343,7 +357,7 @@ If a spike fails, stop and decide the workaround before Phase 1 starts. Likely w
 
 ## 12. Repo conventions
 
-- Work on `base`. Follow the git workflow in `CLAUDE.md`: conventional commits, short messages, every commit pushed.
+- Work on the Phase 0 branch, `feat/0`. Follow the git workflow in `CLAUDE.md`: conventional commits, short messages, every commit pushed.
 - One phase file is the unit of work. A phase is finished when its exit criteria are all true.
 - Config that changes behaviour (weights, thresholds, window times) goes in env, never in code.
 
@@ -360,6 +374,7 @@ If a spike fails, stop and decide the workaround before Phase 1 starts. Likely w
 - [ ] The Google service account file is in place locally and ignored by git.
 - [ ] All five spikes have a written result.
 - [ ] The network admin has been asked the three questions.
+- [ ] `python3 scripts/check_setup.py` reports no failures on the development machine.
 
 ## Risks
 
@@ -369,6 +384,17 @@ If a spike fails, stop and decide the workaround before Phase 1 starts. Likely w
 | Play Integrity does not give a usable verdict for a directly installed app | Demo with enforcement in warn-only mode and say so on stage |
 | Face model too slow on the demo laptop | Score fewer frames, or borrow a faster machine for the demo |
 | Routers hide phones behind one address | Use each router's upstream address as the room identity for the demo |
+
+## 13. Tool installs and version pins
+
+Install the tools the checklist in section 2 names. On macOS with Homebrew:
+
+```bash
+brew install uv supabase/tap/supabase
+brew install openjdk@17          # only for local Android builds
+```
+
+Node 20 is pinned in `app/.nvmrc` and `dashboard/.nvmrc`. Use `nvm use` (or `fnm use`) in each folder.
 
 ## Hand-off to Phase 1
 
