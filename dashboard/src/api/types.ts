@@ -76,6 +76,9 @@ export type RoomStudentStatus = {
   name: string
   active: boolean
   enrolled: boolean
+  face_enrolled: boolean
+  device_enrolled: boolean
+  device_security_level: string | null
   mark: MarkDetail | null
 }
 

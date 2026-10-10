@@ -1039,3 +1039,118 @@ a.window:hover {
     align-items: flex-start;
   }
 }
+
+/* ---------- Room page (Phase 10) ---------- */
+
+.banner--moon {
+  border-color: rgba(169, 193, 232, 0.3);
+  background: var(--moon-wash);
+  color: var(--paper);
+}
+
+.room-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+}
+
+.room-head__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+  margin: 0 0 var(--s-4);
+}
+
+.facts dt {
+  font-size: var(--text-xs);
+  color: var(--paper-3);
+}
+
+.facts dd {
+  margin: 2px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.student {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.student:last-child {
+  border-bottom: 0;
+}
+
+.student__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-3) 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.student__summary::-webkit-details-marker {
+  display: none;
+}
+
+.student__summary .ledger__main {
+  min-width: 0;
+}
+
+.student__time {
+  font-size: var(--text-sm);
+  min-width: 4.5em;
+  text-align: right;
+}
+
+.student__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: 0 0 var(--s-4);
+}
+
+.student__enrollment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+  padding: var(--s-4);
+  border: 1px solid rgba(238, 108, 77, 0.3);
+  border-radius: var(--r-control);
+  background: var(--ember-wash);
+  font-size: var(--text-sm);
+}
+
+.confirm p {
+  margin: 0;
+}
+
+.confirm__actions {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .student__summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .student__summary .student__time {
+    display: none;
+  }
+}
