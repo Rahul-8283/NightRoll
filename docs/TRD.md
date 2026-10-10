@@ -338,6 +338,7 @@ CREATE TABLE rooms (
   number text NOT NULL UNIQUE,
   floor int NOT NULL,
   subnet cidr,
+  fingerprint_reset_pending boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -352,7 +353,8 @@ CREATE TABLE students (
   roll_number text NOT NULL UNIQUE,
   name text NOT NULL,
   room_id uuid NOT NULL REFERENCES rooms(id),
-  consent_at timestamptz NOT NULL,
+  consent_at timestamptz,
+  consent_version text,
   enrolled_at timestamptz,
   active boolean NOT NULL DEFAULT true
 );
