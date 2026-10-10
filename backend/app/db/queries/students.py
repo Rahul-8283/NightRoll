@@ -7,6 +7,18 @@ from uuid import UUID
 import asyncpg
 
 
+async def list_enrolled_student_ids(db: asyncpg.Pool | asyncpg.Connection) -> list[UUID]:
+    rows = await db.fetch("select id from students where active and enrolled_at is not null")
+    return [row["id"] for row in rows]
+
+
+async def get_active_enrolled(pool: asyncpg.Pool, student_id: UUID) -> asyncpg.Record | None:
+    return await pool.fetchrow(
+        "select id, room_id from students where id = $1 and active and enrolled_at is not null",
+        student_id,
+    )
+
+
 async def list_students(
     pool: asyncpg.Pool,
     *,
