@@ -4,7 +4,21 @@ Expo app for students: device key, enrollment, Home status, nightly marking. And
 
 ## Status
 
-The Expo project is created in Phase 4. Today this folder holds only the environment example.
+The Expo project is set up: routes, placeholder screens, config, linting and EAS build profiles. The device key module, Home status and the other features are built in Phases 4 to 7.
+
+## Stack
+
+| Package | Used for |
+|---|---|
+| expo, expo-router | App runtime and file-based routing (`src/app`) |
+| react-native 0.86, react 19 | UI |
+| expo-dev-client | Development build, needed for any native code |
+| expo-secure-store | Sensitive local values (student and room IDs) |
+| @react-native-async-storage/async-storage | Non-sensitive local state |
+| expo-build-properties | Android `minSdkVersion` 28 |
+| eslint, eslint-config-expo, prettier | Lint and format |
+
+Later phases add `react-native-vision-camera` and the Kotlin Expo Modules in `modules/`.
 
 ## How it runs
 
@@ -22,12 +36,20 @@ Expo Go is for quick checks of screens on a phone. The test phones use a develop
 - For local Android builds only: JDK 17 and Android Studio with an Android SDK
 - A filled-in `app/.env`, with the values as `EXPO_PUBLIC_` variables
 
-## Setup (from Phase 4)
+## Setup
 
 ```bash
 cd app
 cp .env.example .env
 npm install
+```
+
+## Scripts
+
+```bash
+npm run typecheck     # tsc --noEmit
+npm run lint          # expo lint
+npx prettier --write "src/**/*.{ts,tsx}"
 ```
 
 ## Run

@@ -674,7 +674,7 @@ Install these once. The commands are for macOS with Homebrew; Windows and Linux 
 | Window scheduler | none | `cd backend && python -m app.scheduler` | Phase 3 |
 | Face worker | 8100 | `cd face && uvicorn worker.main:app --port 8100` | Phase 5 |
 | Warden dashboard | 5173 | `cd dashboard && npm run dev` | Shell now; screens in Phase 10 |
-| Student app | Metro 8081 | `cd app && npx expo start` | Phase 4 (Expo Go for screens; development build for the rest) |
+| Student app | Metro 8081 | `cd app && npx expo start` | Shell now; features in Phases 4 to 7 (Expo Go for screens; development build for the rest) |
 
 Start order once everything exists: face worker, backend API, scheduler, dashboard, then the phone app. Upstash Redis is always on.
 
