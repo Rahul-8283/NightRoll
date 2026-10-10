@@ -43,6 +43,13 @@ def _locked_key(student_id: UUID) -> str:
     return f"enrollment:locked:{student_id}"
 
 
+def _inflight_key(student_id: UUID) -> str:
+    return f"enrollment:inflight:{student_id}"
+
+
+INFLIGHT_SECONDS = 90
+
+
 async def issue_enrollment_code(
     pool: asyncpg.Pool,
     redis: Redis,
@@ -249,6 +256,46 @@ async def complete_student_enrollment(
     # 3.2 Check the public key parses as a P-256 key
     der_public_key = validate_p256_public_key(public_key_b64)
 
+    # One enrollment per student at a time: the face worker stores the embedding before the code is
+    # claimed, so two simultaneous requests could otherwise overwrite or delete each other's work.
+    if not await redis.set(_inflight_key(student_id), "1", nx=True, ex=INFLIGHT_SECONDS):
+        raise AppError(
+            code="ENROLLMENT_IN_PROGRESS",
+            status_code=409,
+            message="An enrollment for this student is already in progress.",
+        )
+    try:
+        return await _enroll_locked(
+            pool,
+            settings,
+            redis,
+            student=student,
+            code_hash=code_hash,
+            roll_number=roll_number,
+            der_public_key=der_public_key,
+            key_security_level=key_security_level,
+            consent_version=consent_version,
+            frames=frames,
+        )
+    finally:
+        await redis.delete(_inflight_key(student_id))
+
+
+async def _enroll_locked(
+    pool: asyncpg.Pool,
+    settings: Settings,
+    redis: Redis,
+    *,
+    student: asyncpg.Record,
+    code_hash: str,
+    roll_number: str,
+    der_public_key: bytes,
+    key_security_level: str,
+    consent_version: str,
+    frames: list[tuple[str, bytes, str]],
+) -> dict[str, Any]:
+    student_id: UUID = student["id"]
+
     # Check frames count
     if len(frames) < 3 or len(frames) > 5:
         raise AppError(
@@ -298,11 +345,15 @@ async def complete_student_enrollment(
     try:
         async with pool.acquire() as conn:
             async with conn.transaction():
-                # Mark code used
-                await conn.execute(
-                    "update enrollment_codes set used_at = now() where code_hash = $1",
+                # Claim the code. Only one request can flip used_at from null.
+                claimed = await conn.fetchval(
+                    "update enrollment_codes set used_at = now() where code_hash = $1 and used_at is null returning 1",
                     code_hash,
                 )
+                if claimed is None:
+                    raise AppError(
+                        code="USED_CODE", status_code=400, message="This enrollment code has already been used."
+                    )
 
                 # Update student
                 await conn.execute(
@@ -344,6 +395,9 @@ async def complete_student_enrollment(
                         "consent_version": consent_version,
                     },
                 )
+    except AppError:
+        # The code was already claimed by another request, which owns the embedding now.
+        raise
     except Exception as exc:
         # If step 3.4 fails after face worker stored an embedding, delete it
         logger.error(f"Enrollment transaction failed, rolling back embedding: {exc}")
