@@ -10,7 +10,7 @@ import { StatusPill } from '../components/ui/StatusPill'
 import type { Status } from '../components/ui/status'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { apiFetch, ApiError, postJson } from '../lib/api'
-import { formatClock } from '../lib/format'
+import { describeReasons, formatClock } from '../lib/format'
 
 const VERDICT: Record<Verdict, { status: Status; label: string }> = {
   PRESENT: { status: 'present', label: 'Present' },
@@ -112,7 +112,7 @@ function StudentRow({ student, windowId }: { student: RoomStudentStatus; windowI
             <p className="muted">
               Attempt {student.mark.attempt}
               {student.mark.score !== null ? ` · trust ${student.mark.score.toFixed(2)}` : ''}
-              {student.mark.reasons.length > 0 ? ` · ${student.mark.reasons.map((reason) => reason.message).join(' ')}` : ''}
+              {student.mark.reasons.length > 0 ? ` · ${describeReasons(student.mark.reasons)}` : ''}
             </p>
             <ScoreBars scorers={student.mark.scorers} />
           </>

@@ -16,5 +16,6 @@ export function formatCountdown(ms: number): string {
 }
 
 export function describeReasons(reasons: ReasonOut[]): string {
-  return reasons.map((reason) => reason.message).join(' ')
+  // Older marks can carry the same reason twice. Say each one once.
+  return [...new Set(reasons.map((reason) => reason.message))].join(' ')
 }

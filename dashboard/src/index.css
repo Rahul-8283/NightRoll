@@ -1507,3 +1507,35 @@ a.window:hover {
   flex: 1;
   min-width: 0;
 }
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* ---------- Room tile: count and state on their own lines, empty rooms keep the window shape ---------- */
+
+.pane--empty {
+  background: transparent;
+  border: 1px dashed var(--line);
+}
+
+.window {
+  gap: 6px;
+  padding: var(--s-3) var(--s-2);
+}
+
+.window__count {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+  white-space: nowrap;
+}
+
+.window__caption {
+  white-space: nowrap;
+}
+
+.facade__rooms {
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+}
