@@ -1379,3 +1379,22 @@ a.window:hover {
   border: 1px solid var(--line);
   background: var(--ink-0);
 }
+
+/* ---------- Absentee page (Phase 11) ---------- */
+
+.absentee {
+  align-items: center;
+}
+
+.absentee__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.absentee__manual {
+  width: 100%;
+  margin-top: var(--s-3);
+}

@@ -8,12 +8,13 @@ import { Wordmark } from './ui/Wordmark'
 const links = [
   { to: '/dashboard', label: 'Tonight', end: true },
   { to: '/dashboard/review', label: 'Review', end: false },
+  { to: '/dashboard/absentees', label: 'Absentees', end: false },
   { to: '/dashboard/windows', label: 'Windows', end: false },
   { to: '/dashboard/enrollment', label: 'Enrollment', end: false },
 ]
 
 // Phase 11 pages are listed so the layout is complete, and stay inactive until they are built.
-const later = ['Absentees', 'Audit']
+const later = ['Audit']
 
 export function Layout() {
   const { email, role, signOut } = useAuth()

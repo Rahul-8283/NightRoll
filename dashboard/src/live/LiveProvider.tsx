@@ -63,6 +63,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
           // A decision by any warden moves cards in and out of the review queue on every open dashboard.
           void queryClient.invalidateQueries({ queryKey: ['reviews'] })
           void queryClient.invalidateQueries({ queryKey: ['mark'] })
+          void queryClient.invalidateQueries({ queryKey: ['absentees'] })
           return
         case 'window_state': {
           const current = queryClient.getQueryData<TonightData>(['tonight'])

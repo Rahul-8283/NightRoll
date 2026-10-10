@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiFetch, ApiError } from '../lib/api'
-import type { MarkDetailFull, ReviewItem, RoomFingerprint, RoomTonight, TonightData } from './types'
+import type { AbsenteeList, MarkDetailFull, ReviewItem, RoomFingerprint, RoomTonight, TonightData } from './types'
 
 // The live provider writes into this key, so the page and the top bar always share one copy.
 export function useTonight() {
@@ -39,5 +39,12 @@ export function useMarkDetail(markId: string, enabled: boolean) {
     queryKey: ['mark', markId],
     queryFn: () => apiFetch<MarkDetailFull>(`/attendance/marks/${markId}`),
     enabled,
+  })
+}
+
+export function useAbsentees() {
+  return useQuery({
+    queryKey: ['absentees'],
+    queryFn: () => apiFetch<AbsenteeList>('/attendance/absentees'),
   })
 }

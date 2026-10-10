@@ -201,3 +201,23 @@ export type FramesView = {
   expires_in_seconds: number
   links: FrameLink[]
 }
+
+export type AbsenteeRow = {
+  student_id: string
+  student_name: string
+  roll_number: string
+  room_number: string
+  floor: number
+  status: 'ABSENT' | 'NOT_MARKED'
+  reason: 'declined' | 'rejected_only' | 'no_attempt' | 'no_present_mark' | 'not_marked'
+  reason_text: string
+  device_enrolled: boolean
+}
+
+export type AbsenteeList = {
+  window_id: string | null
+  window_state: WindowState | null
+  still_to_mark: number
+  absent: number
+  students: AbsenteeRow[]
+}
