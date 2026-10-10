@@ -3,8 +3,20 @@
 from __future__ import annotations
 
 
+async def purge_test_windows(pool):
+    """Tests use nights from 2090 on, far from any real night. Remove any a crashed run left behind."""
+    ids = [r["id"] for r in await pool.fetch("select id from attendance_windows where night >= '2090-01-01'")]
+    if ids:
+        await pool.execute(
+            "delete from reviews where mark_id in (select id from attendance_marks where window_id = any($1))", ids
+        )
+        await pool.execute("delete from attendance_marks where window_id = any($1)", ids)
+        await pool.execute("delete from attendance_windows where id = any($1)", ids)
+
+
 async def enrol_for_test(pool):
     """Seeded students are not enrolled (that happens on a phone). Mark one enrolled for the test, restore after."""
+    await purge_test_windows(pool)
     student = await pool.fetchrow(
         "select id, room_id, enrolled_at, consent_at, consent_version "
         "from students where active order by roll_number limit 1"
