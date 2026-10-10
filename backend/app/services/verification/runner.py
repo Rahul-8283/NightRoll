@@ -18,6 +18,7 @@ from redis.asyncio import Redis
 
 from app.config import Settings
 from app.schemas.verify import SubmissionPayload
+from app.services.verification.network import RoomNetwork
 
 logger = logging.getLogger("nightroll.verify")
 
@@ -38,7 +39,8 @@ class Submission:
     payload_hash: str = ""
     device_key: bytes | None = None
     window: Any | None = None
-    room: Any | None = None
+    room: RoomNetwork | None = None
+    mark_id: UUID | None = None
     warnings: list[str] = field(default_factory=list)
 
 

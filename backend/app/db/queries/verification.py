@@ -59,17 +59,34 @@ async def insert_attempt(
     reasons: list[str],
     scores: str,
     attempt: int,
+    score: float | None,
+    frames_path: str | None,
+    mark_id: UUID,
 ) -> UUID:
     return await conn.fetchval(
         """
-        insert into attendance_marks (window_id, student_id, verdict, reasons, scores, attempt)
-        values ($1, $2, $3, $4, $5::jsonb, $6)
+        insert into attendance_marks (id, window_id, student_id, verdict, reasons, scores, attempt, score, frames_path)
+        values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9)
         returning id
         """,
+        mark_id,
         window_id,
         student_id,
         verdict,
         reasons,
         scores,
         attempt,
+        score,
+        frames_path,
+    )
+
+
+async def present_mark(pool: asyncpg.Pool, window_id: UUID, student_id: UUID) -> asyncpg.Record | None:
+    return await pool.fetchrow(
+        """
+        select id, score from attendance_marks
+        where window_id = $1 and student_id = $2 and verdict = 'PRESENT'
+        """,
+        window_id,
+        student_id,
     )

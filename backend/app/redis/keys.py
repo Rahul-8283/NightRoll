@@ -32,3 +32,6 @@ def submit_rate_key(student_id: UUID | str) -> str:
 
 def unattributed_counter_key(day: str) -> str:
     return f"verify:unattributed:{day}"
+
+
+MARK_RECORDED_CHANNEL = "attendance:mark_recorded"

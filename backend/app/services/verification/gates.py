@@ -166,6 +166,7 @@ async def network_gate(submission: Submission) -> GateCheck:
         subnet=row["subnet"],
         access_point_bssids=frozenset(row["access_point_bssids"]),
     )
+    submission.room = room
     verifier = get_network_verifier(submission.settings.NETWORK_VERIFY_MODE)
     result = verifier.verify(room, submission.client_ip, payload.wifi.connected.bssid)
     if result.warning:
