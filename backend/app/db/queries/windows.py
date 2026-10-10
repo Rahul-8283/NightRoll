@@ -135,11 +135,21 @@ async def next_upcoming(db: Db, now: datetime) -> asyncpg.Record | None:
 
 
 async def current(db: Db, now: datetime) -> asyncpg.Record | None:
+    """Tonight's window: the open one, else the one that closed in the last 12 hours, else the next one.
+
+    A window that has just closed stays "tonight" so the warden can see the final state, the absentees and
+    the review queue, and so a student can see the outcome. It gives way as soon as another window opens.
+    """
     return await db.fetchrow(
         """
         select id, night, opens_at, closes_at, state from attendance_windows
-        where state = 'open' or closes_at > $1
-        order by (state = 'open') desc, opens_at limit 1
+        where state = 'open'
+           or (state = 'closed' and closes_at > $1::timestamptz - interval '12 hours')
+           or (state <> 'closed' and closes_at > $1::timestamptz)
+        order by
+          case state when 'open' then 0 when 'closed' then 1 else 2 end,
+          case when state = 'closed' then -extract(epoch from closes_at) else extract(epoch from opens_at) end
+        limit 1
         """,
         now,
     )

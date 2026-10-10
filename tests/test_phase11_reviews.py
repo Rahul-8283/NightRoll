@@ -18,6 +18,8 @@ import pytest_asyncio
 BACKEND = Path(__file__).resolve().parent.parent / "backend"
 sys.path.insert(0, str(BACKEND))
 
+from phase11_support import enrol_for_test, restore_enrolment  # noqa: E402
+
 from app.config import get_settings  # noqa: E402
 from app.db import pool as db_pool  # noqa: E402
 from app.main import app  # noqa: E402
@@ -51,10 +53,7 @@ async def world():
     await db_pool.connect(settings)
     await redis_client.connect(settings)
     pool = db_pool.get_pool()
-    student = await pool.fetchrow(
-        "select id, room_id from students where active and enrolled_at is not null order by roll_number limit 1"
-    )
-    assert student is not None, "seed an enrolled student before running these tests"
+    student = await enrol_for_test(pool)
     # Each test gets its own night far in the future, so it never meets real attendance.
     night = date(2090, 1, 1) + timedelta(days=uuid4().int % 3000)
     now = datetime.now(UTC)
@@ -74,6 +73,7 @@ async def world():
     )
     await pool.execute("delete from attendance_marks where window_id = $1", window_id)
     await pool.execute("delete from attendance_windows where id = $1", window_id)
+    await restore_enrolment(pool, student)
     await db_pool.disconnect()
     await redis_client.disconnect()
 
@@ -262,7 +262,14 @@ async def test_every_decision_writes_an_audit_row(world):
 async def test_absentees_list_students_without_a_present_status_with_a_reason(world):
     pool = world["pool"]
     other = await pool.fetchrow(
-        "select id from students where active and enrolled_at is not null and id <> $1 limit 1", world["student"]["id"]
+        "select id, enrolled_at, consent_at, consent_version from students where active and id <> $1 "
+        "order by roll_number limit 1",
+        world["student"]["id"],
+    )
+    await pool.execute(
+        "update students set enrolled_at = coalesce(enrolled_at, now()), consent_at = coalesce(consent_at, now()), "
+        "consent_version = coalesce(consent_version, 'test') where id = $1",
+        other["id"],
     )
     await pool.execute(
         "update attendance_windows set state = 'closed', closes_at = now() - interval '1 minute' where id = $1",
@@ -275,3 +282,4 @@ async def test_absentees_list_students_without_a_present_status_with_a_reason(wo
     students = {row["student_id"]: row for row in response.json()["students"]}
     assert str(other["id"]) not in students
     assert students[str(world["student"]["id"])]["reason"] == "no_attempt"
+    await restore_enrolment(pool, other)

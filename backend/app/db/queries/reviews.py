@@ -159,8 +159,10 @@ async def absentee_rows(pool: asyncpg.Pool, window_id: UUID) -> list[asyncpg.Rec
         select v.student_id, v.status, v.decided_how,
                s.name as student_name, s.roll_number, r.number as room_number, r.floor,
                exists (select 1 from devices d where d.student_id = s.id and d.active) as device_enrolled,
+               -- Only what the student sent counts as an attempt, not the absent row written at close.
                (select count(*) from attendance_marks m
-                  where m.window_id = v.window_id and m.student_id = v.student_id) as attempts,
+                  where m.window_id = v.window_id and m.student_id = v.student_id
+                    and m.verdict in ('PRESENT', 'NEEDS_REVIEW', 'REJECTED')) as attempts,
                (select count(*) from attendance_marks m
                   where m.window_id = v.window_id and m.student_id = v.student_id
                     and m.verdict = 'REJECTED') as rejected_attempts

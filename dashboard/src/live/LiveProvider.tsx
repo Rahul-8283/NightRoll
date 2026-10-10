@@ -94,8 +94,15 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     const connect = async () => {
       if (stopped) return
       const { data } = await supabase.auth.getSession()
+      // The component may have unmounted while the session was being read (React's dev double-mount does this).
+      if (stopped) return
       const token = data.session?.access_token
-      if (!token) return
+      if (!token) {
+        // No session yet: say so, and check again shortly, rather than sitting on "Connecting".
+        setStatus('reconnecting')
+        scheduleReconnect(5000)
+        return
+      }
       const ws = new WebSocket(config.wsUrl)
       socket = ws
       ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token }))
@@ -110,6 +117,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
         }
         if (event.code === CLOSE_UNAUTHORIZED) {
           // A fresh token is needed before the socket can authenticate again. If refresh fails, the auth guard takes over.
+          setStatus('reconnecting')
           void supabase.auth.refreshSession().then(({ error }) => {
             if (error) {
               stopped = true

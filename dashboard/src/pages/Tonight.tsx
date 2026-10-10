@@ -14,7 +14,7 @@ const today = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric'
 type TileState = 'empty' | 'none' | 'some' | 'all' | 'review' | 'problem'
 
 const TILE_LABEL: Record<TileState, string> = {
-  empty: 'No students',
+  empty: 'No one enrolled',
   none: 'None yet',
   some: 'Some in',
   all: 'All in',
@@ -102,7 +102,7 @@ function RecentRow({ mark }: { mark: RecentMark }) {
       <span className="mono muted activity__time">{formatClock(mark.marked_at)}</span>
       <div className="ledger__main">
         <span>
-          {mark.student_name} <span className="muted">· Room {mark.room_number}</span>
+          {mark.student_name} <span className="muted nowrap">· Room {mark.room_number}</span>
         </span>
         {detail && <small>{detail}</small>}
       </div>
@@ -217,7 +217,8 @@ export function Tonight() {
                               panes={panesFor(room)}
                               to={`/dashboard/rooms/${room.room_id}`}
                               index={index}
-                              caption={`${room.present} / ${room.total} · ${TILE_LABEL[state]}`}
+                              count={state === 'empty' ? undefined : `${room.present} / ${room.total}`}
+                              caption={TILE_LABEL[state]}
                               problem={state === 'problem'}
                               pulse={roomPulses[room.room_id]}
                               flag={room.health.map((h) => FLAG_ACTION[h]).join(' · ') || undefined}

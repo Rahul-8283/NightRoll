@@ -18,6 +18,8 @@ import pytest_asyncio
 BACKEND = Path(__file__).resolve().parent.parent / "backend"
 sys.path.insert(0, str(BACKEND))
 
+from phase11_support import enrol_for_test, restore_enrolment  # noqa: E402
+
 from app.config import get_settings  # noqa: E402
 from app.db import pool as db_pool  # noqa: E402
 from app.db.queries import windows as windows_q  # noqa: E402
@@ -47,9 +49,7 @@ async def world():
     await db_pool.connect(settings)
     await redis_client.connect(settings)
     pool = db_pool.get_pool()
-    student = await pool.fetchrow(
-        "select id from students where active and enrolled_at is not null order by roll_number limit 1"
-    )
+    student = await enrol_for_test(pool)
     now = datetime.now(UTC)
     window_id = await pool.fetchval(
         "insert into attendance_windows (night, opens_at, closes_at, state) values ($1, $2, $3, 'open') returning id",
@@ -63,6 +63,7 @@ async def world():
     )
     await pool.execute("delete from attendance_marks where window_id = $1", window_id)
     await pool.execute("delete from attendance_windows where id = $1", window_id)
+    await restore_enrolment(pool, student)
     await db_pool.disconnect()
     await redis_client.disconnect()
 

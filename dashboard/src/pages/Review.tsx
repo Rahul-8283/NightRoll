@@ -146,7 +146,7 @@ function ReviewCard({ item, selected, declining, onSelect, onStartDecline, onCan
         <div className="review-card__why">
           <strong>Why it was held</strong>
           <ul>
-            {item.reasons.map((reason) => (
+            {[...new Map(item.reasons.map((reason) => [reason.code, reason])).values()].map((reason) => (
               <li key={reason.code}>{reason.message}</li>
             ))}
           </ul>

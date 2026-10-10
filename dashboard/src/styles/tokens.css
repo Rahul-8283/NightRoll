@@ -57,11 +57,11 @@
   --s-7: 48px;
   --s-8: 72px;
 
-  /* Shape: windows are architectural (tight corners), cards are softer */
-  --r-pane: 3px;
-  --r-window: 7px;
-  --r-control: 10px;
-  --r-card: 16px;
+  /* Shape: one tight scale. Nothing is a pill and nothing is a bubble. */
+  --r-pane: 2px;
+  --r-window: 4px;
+  --r-control: 6px;
+  --r-card: 8px;
 
   --rail-width: 248px;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);

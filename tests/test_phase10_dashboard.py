@@ -79,7 +79,7 @@ async def test_tonight_returns_totals_rooms_and_recent_for_a_warden(connected):
     assert response.status_code == 200
     body = response.json()
     assert set(body) >= {"window", "totals", "rooms", "recent"}
-    assert set(body["totals"]) == {"enrolled", "present", "pending_review", "not_marked", "rejected"}
+    assert set(body["totals"]) == {"enrolled", "present", "pending_review", "not_marked", "absent", "rejected"}
     assert body["totals"]["not_marked"] >= 0
     for room in body["rooms"]:
         assert set(room) >= {"room_id", "number", "floor", "present", "total", "pending_review", "rejected"}

@@ -149,11 +149,8 @@ export function Landing() {
           ))}
         </nav>
         <div className="landing__nav-actions">
-          <Link to="/login" className="landing__signin">
-            Sign in
-          </Link>
           <Link to="/login" className="btn btn--primary landing__signup">
-            Sign up
+            Sign in
           </Link>
         </div>
       </header>
@@ -171,13 +168,16 @@ export function Landing() {
           </p>
           <div className="hero__actions">
             <Link to="/login" className="btn btn--primary">
-              Sign up as a warden
+              Warden sign-in
             </Link>
             <a href="#night" className="btn btn--quiet">
               Walk through a night
             </a>
           </div>
-          <p className="muted hero__note">Built for the Genesis hackathon. Android first. Sample data throughout.</p>
+          <p className="muted hero__note">
+            Built for the Genesis hackathon. Android first. Sample data throughout. Warden accounts are
+            created by an admin; there is no self sign-up.
+          </p>
         </div>
 
         <div className="hero__building reveal" aria-label="Sample hostel floors, one window per room">
@@ -384,12 +384,10 @@ export function Landing() {
         </h2>
         <div className="hero__actions">
           <Link to="/login" className="btn btn--primary">
-            Sign up as a warden
-          </Link>
-          <Link to="/login" className="btn btn--quiet">
-            Sign in
+            Warden sign-in
           </Link>
         </div>
+        <p className="muted">Accounts are created by an admin. There is no self sign-up.</p>
       </section>
 
       <footer className="landing__foot">
