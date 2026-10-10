@@ -20,7 +20,7 @@ Scores are fused into a trust decision instead of a single yes/no, with hard gat
 
 ## Architecture
 
-- **Phone (Android first):** React Native or Flutter app. Liveness challenge, face capture (ML Kit + TFLite for on-device pre-check), WiFi scan (BSSID, SSID, RSSI, band), Play Integrity token, Keystore signer. Sends a signed payload `{sid, nonce, bssid, rssi, frames, ts}`.
+- **Phone (Android first):** Expo app (React Native, TypeScript) with Kotlin Expo Modules, run as a development build. Liveness challenge, face capture (ML Kit + TFLite for on-device pre-check), WiFi scan (BSSID, SSID, RSSI, band), Play Integrity token, Keystore signer. Sends a signed payload `{sid, nonce, bssid, rssi, frames, ts}`.
 - **Network:** the request goes out through the room AP, so source IP identifies the room subnet. A VPN or proxy fails here.
 - **Backend (FastAPI):** API gateway → verification orchestrator with crypto verifier (signature + nonce freshness), integrity verifier (Play Integrity), network verifier (source IP / controller / RADIUS), face verifier (InsightFace ArcFace + anti-spoof), fusion engine. Upstash Redis (hosted, TLS) holds nonces and window state. Supabase PostgreSQL + pgvector holds students, rooms, AP map, embeddings, logs. Supabase Auth handles warden and admin login (with MFA). Supabase Storage holds encrypted frames on a private bucket, deleted after 24 hours.
 - **Outputs:** warden dashboard (React, WebSocket, live floor heatmap, review queue, absentees, CSV export), students open the app at window time to see status and mark, student result screen with a reason.
@@ -98,6 +98,7 @@ Be honest in the demo: the subnet check needs real router subnets; phone hotspot
 ## Constraints and gotchas
 
 - Android only for the hackathon.
+- App: use Expo. Native code goes in Expo Modules. Expo Go is for screens only; anything native needs a development build made with EAS.
 - No push notifications. Students open the app at window time. Do not add FCM or any other push service without asking.
 - Privacy: store face embeddings only, never photos; delete captured frames after 24 hours; explicit consent at enrollment; say so on the pitch slide.
 - Biometric data is sensitive. Don't log embeddings or raw frames.
