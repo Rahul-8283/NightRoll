@@ -11,7 +11,8 @@ const config: ExpoConfig = {
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'nightroll',
-  userInterfaceStyle: 'automatic',
+  userInterfaceStyle: 'dark',
+  backgroundColor: '#0b0d13',
   android: {
     package: 'com.zerolatency.nightroll',
     permissions: [
@@ -24,7 +25,7 @@ const config: ExpoConfig = {
       'NEARBY_WIFI_DEVICES',
     ],
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      backgroundColor: '#0b0d13',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -38,7 +39,7 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#208AEF',
+        backgroundColor: '#0b0d13',
         image: './assets/images/splash-icon.png',
         imageWidth: 76,
       },

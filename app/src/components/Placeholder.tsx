@@ -1,13 +1,14 @@
-import { Link, type Href } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { Href } from 'expo-router';
 
-import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { Button } from '@/components/Button';
+import { RoomWindow } from '@/components/RoomWindow';
+import { Screen } from '@/components/Screen';
+import { Body, Eyebrow, Title } from '@/components/Text';
 
 type Props = {
   title: string;
   phase: string;
-  /** Shown as a "Continue" link, so the real flow stays navigable while this is a shell. */
+  /** Shown as a "Continue" button, so the real flow stays navigable while this is a shell. */
   nextRoute?: Href;
   nextLabel?: string;
 };
@@ -15,24 +16,12 @@ type Props = {
 // Stand-in for screens whose features are built in later phases.
 export function Placeholder({ title, phase, nextRoute, nextLabel = 'Continue' }: Props) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.note}>Not built yet. Planned in {phase}.</Text>
-      {nextRoute && (
-        <Link href={nextRoute} asChild>
-          <Pressable style={styles.button}>
-            <Text style={styles.buttonText}>{nextLabel}</Text>
-          </Pressable>
-        </Link>
-      )}
-    </View>
+    <Screen glow="moon">
+      <RoomWindow light="dark" size={96} label="An unlit window" />
+      <Eyebrow>Not built yet</Eyebrow>
+      <Title style={{ textAlign: 'center' }}>{title}</Title>
+      <Body style={{ textAlign: 'center' }}>Planned in {phase}.</Body>
+      {nextRoute && <Button variant="quiet" label={nextLabel} href={nextRoute} />}
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: spacing.md },
-  title: { fontSize: 22, fontWeight: '600', color: colors.text },
-  note: { fontSize: 15, color: colors.muted, textAlign: 'center' },
-  button: { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
-  buttonText: { color: colors.primary, fontSize: 16, fontWeight: '600' },
-});
