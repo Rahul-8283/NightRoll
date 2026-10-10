@@ -1,5 +1,9 @@
 import type { ExpoConfig } from 'expo/config';
 
+// EAS sets EAS_BUILD_PROFILE during a cloud build; it is unset for `expo start` and for the
+// production profile, so cleartext HTTP only ever reaches the development build (task 9.5).
+const isDevelopmentBuild = process.env.EAS_BUILD_PROFILE === 'development';
+
 const config: ExpoConfig = {
   name: 'NightRoll',
   slug: 'nightroll',
@@ -39,6 +43,7 @@ const config: ExpoConfig = {
         imageWidth: 76,
       },
     ],
+    ...(isDevelopmentBuild ? ['./plugins/withDevCleartextHttp'] : []),
   ],
   experiments: {
     typedRoutes: true,

@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "0.1.0",
   "dependencies": {
+    "@expo/config-plugins": "57.0.10",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.27",
     "expo-build-properties": "~57.0.22",
@@ -34,7 +35,7 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
+    "android": "expo run:android",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit"
   },
