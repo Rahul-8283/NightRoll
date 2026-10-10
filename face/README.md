@@ -4,7 +4,7 @@ Internal service that makes face embeddings and runs anti-spoof checks. It is no
 
 ## Status
 
-Phase 0 creates only the environment file and the model folder. There is no code yet.
+Phase 5 implemented. Includes InsightFace buffalo_l embedding pipeline, anti-spoof scoring, frame quality checks, private Supabase Storage frame upload, 24-hour retention cleanup, and authenticated internal API.
 
 ## Requirements
 
