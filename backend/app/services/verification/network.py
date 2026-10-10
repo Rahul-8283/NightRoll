@@ -32,6 +32,8 @@ class NetworkResult:
 class NetworkVerifier(Protocol):
     def verify(self, room: RoomNetwork, client_ip: str | None, connected_bssid: str) -> NetworkResult: ...
 
+    def measured_rssi(self, room: RoomNetwork, client_ip: str | None, connected_bssid: str) -> int | None: ...
+
 
 class NetworkNotConfigured(AppError):
     def __init__(self, mode: str) -> None:
@@ -61,6 +63,10 @@ class SubnetVerifier:
             return NetworkResult(False, "connected access point is not this room's")
         return NetworkResult(True, "client address and access point match the room")
 
+    def measured_rssi(self, room: RoomNetwork, client_ip: str | None, connected_bssid: str) -> int | None:
+        """The subnet mode has no controller, so the access point never reports what it hears."""
+        return None
+
 
 class _Unconfigured:
     def __init__(self, mode: str) -> None:
@@ -69,10 +75,16 @@ class _Unconfigured:
     def verify(self, room: RoomNetwork, client_ip: str | None, connected_bssid: str) -> NetworkResult:
         raise NetworkNotConfigured(self._mode)
 
+    def measured_rssi(self, room: RoomNetwork, client_ip: str | None, connected_bssid: str) -> int | None:
+        raise NetworkNotConfigured(self._mode)
+
 
 class _Off:
     def verify(self, room: RoomNetwork, client_ip: str | None, connected_bssid: str) -> NetworkResult:
         return NetworkResult(True, "network gate disabled", warning="NETWORK_GATE_DISABLED")
+
+    def measured_rssi(self, room: RoomNetwork, client_ip: str | None, connected_bssid: str) -> int | None:
+        return None
 
 
 def get_network_verifier(mode: str) -> NetworkVerifier:

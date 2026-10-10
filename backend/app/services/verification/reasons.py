@@ -19,8 +19,15 @@ GATE_FAILURE_CODES = (
     "NETWORK_MISMATCH",
 )
 
-# Reserved for the scoring phase; never produced by a gate.
-SCORING_CODES = ("SCORING_PENDING",)
+# Produced by the scorers and the verdict rules (Phase 9).
+SCORING_CODES = (
+    "FACE_MISMATCH",
+    "LIVENESS_FAILED",
+    "FINGERPRINT_MISSING",
+    "WIFI_PATTERN_MISMATCH",
+    "AP_UNAVAILABLE",
+    "LOW_SCORE",
+)
 
 _MESSAGES: dict[str, str] = {
     "DEVICE_NOT_ENROLLED": "This phone is not registered for your attendance. Use the ground-floor scanner.",
@@ -31,7 +38,12 @@ _MESSAGES: dict[str, str] = {
     "INTEGRITY_FAILED": "This phone or app could not be verified. Use the ground-floor scanner.",
     "ENVIRONMENT_FLAGGED": "Turn off your VPN, proxy and mock location, then try again.",
     "NETWORK_MISMATCH": "Request did not come from your room network.",
-    "SCORING_PENDING": "Your attendance is waiting to be checked.",
+    "FACE_MISMATCH": "We could not match your face. Try again, or use the ground-floor scanner.",
+    "LIVENESS_FAILED": "The check did not look like a live person. Try again in good light.",
+    "FINGERPRINT_MISSING": "This room's Wi-Fi has not been learned yet. The warden will check your attendance.",
+    "WIFI_PATTERN_MISMATCH": "Your phone does not appear to be in your room.",
+    "AP_UNAVAILABLE": "The warden will check the Wi-Fi part of your attendance.",
+    "LOW_SCORE": "Your attendance could not be confirmed from here.",
 }
 
 

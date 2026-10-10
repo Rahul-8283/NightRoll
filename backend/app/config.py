@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     FACE_SIM_HIGH: float = 0.50
     ANTISPOOF_MIN: float = 0.90
     HEAD_TURN_MIN_DEG: float = 15.0
+    # Sign of the worker's yaw for a left turn. Confirm with real turned-head captures before the walk test.
+    HEAD_TURN_LEFT_SIGN: int = -1
     OWN_AP_RSSI_LOW: float = -75.0
     OWN_AP_RSSI_HIGH: float = -55.0
     FP_NEIGHBOUR_LOW: float = 0.3
@@ -105,6 +107,9 @@ class Settings(BaseSettings):
             ("FP_NEIGHBOUR_LOW", self.FP_NEIGHBOUR_LOW, "FP_NEIGHBOUR_HIGH", self.FP_NEIGHBOUR_HIGH),
             ("AP_AGREEMENT_FULL_DB", self.AP_AGREEMENT_FULL_DB, "AP_AGREEMENT_ZERO_DB", self.AP_AGREEMENT_ZERO_DB),
         ]
+        if self.HEAD_TURN_LEFT_SIGN not in (-1, 1):
+            raise ValueError("HEAD_TURN_LEFT_SIGN must be -1 or 1")
+
         for low_name, low, high_name, high in ranges:
             if low >= high:
                 raise ValueError(f"{low_name} ({low}) must be less than {high_name} ({high})")
