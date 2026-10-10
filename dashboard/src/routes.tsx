@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router'
 import { Layout } from './components/Layout'
-import { Landing } from './pages/Landing'
+import { Landing } from './pages/Landing.tsx'
 import { Enrollment } from './pages/Enrollment'
 import { Login } from './pages/Login'
 import { NotFound } from './pages/NotFound'
