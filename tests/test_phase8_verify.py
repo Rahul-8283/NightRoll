@@ -101,6 +101,23 @@ def _service_account_file(directory: Path) -> Path:
     return path
 
 
+GATE_CODES = {
+    "DEVICE_NOT_ENROLLED",
+    "SIGNATURE_INVALID",
+    "PAYLOAD_INVALID",
+    "OUTSIDE_WINDOW",
+    "NONCE_INVALID",
+    "INTEGRITY_FAILED",
+    "ENVIRONMENT_FLAGGED",
+    "NETWORK_MISMATCH",
+}
+
+
+def passed_all_gates(body: dict) -> bool:
+    """Phase 9 scores what passes the gates, so gate tests check the gates, not the final verdict."""
+    return not any(reason["code"] in GATE_CODES for reason in body["reasons"])
+
+
 def _sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -302,11 +319,10 @@ async def test_genuine_submission_passes_all_six_gates(harness: Harness):
     resp = await harness.post(built)
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body["verdict"] == "NEEDS_REVIEW"
-    assert body["reasons"][0]["code"] == "SCORING_PENDING"
+    assert passed_all_gates(body), body
     assert body["mark_id"] is not None
     rows = await harness.marks(window_id)
-    assert [r["verdict"] for r in rows] == ["NEEDS_REVIEW"]
+    assert len(rows) == 1
 
 
 @pytest.mark.asyncio
@@ -344,7 +360,7 @@ async def test_forwarded_for_is_trusted_only_from_a_listed_proxy(harness: Harnes
     fresh = await harness.nonce()
     proxied_envelope = harness.build(window_id, fresh["nonce"], fresh["challenge"])
     proxied = await harness.post(proxied_envelope, peer=ROUTER_PEER, headers={"X-Forwarded-For": ROUTER_101})
-    assert proxied.json()["verdict"] == "NEEDS_REVIEW"
+    assert passed_all_gates(proxied.json())
 
     # The proxied attempt used this window's nonce, so the unproxied case gets its own window.
     await harness.pool.execute("update attendance_windows set state = 'closed' where id = $1", uuid.UUID(window_id))
@@ -397,7 +413,7 @@ async def test_reused_nonce_in_a_new_submission_is_rejected(harness: Harness):
     window_id = await harness.open_window()
     issued = await harness.nonce()
     first = harness.build(window_id, issued["nonce"], issued["challenge"])
-    assert (await harness.post(first)).json()["verdict"] == "NEEDS_REVIEW"
+    assert passed_all_gates((await harness.post(first)).json())
 
     await harness.clear_rate_limit()
     second = harness.build(window_id, issued["nonce"], issued["challenge"], env={"developer_options": True})
@@ -416,7 +432,7 @@ async def test_wrong_challenge_is_refused_and_a_fresh_nonce_is_issued(harness: H
     fresh = await harness.nonce()
     assert fresh["nonce"] != issued["nonce"]
     right = harness.build(window_id, fresh["nonce"], fresh["challenge"])
-    assert (await harness.post(right)).json()["verdict"] == "NEEDS_REVIEW"
+    assert passed_all_gates((await harness.post(right)).json())
 
 
 @pytest.mark.asyncio
@@ -555,7 +571,7 @@ async def test_play_integrity_warning_only_when_not_enforced(harness: Harness):
     issued = await harness.nonce()
     built = harness.build(window_id, issued["nonce"], issued["challenge"])
     body = (await harness.post(built, token=f"wronghash:{_sha256_hex(built['payload'].encode())}")).json()
-    assert body["verdict"] == "NEEDS_REVIEW"
+    assert passed_all_gates(body)
     recorded = await harness.pool.fetchval(
         "select scores::text from attendance_marks where window_id = $1", uuid.UUID(window_id)
     )
