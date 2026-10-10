@@ -23,6 +23,7 @@ from app.db.queries import windows as windows_q
 from app.schemas.verify import SubmissionPayload
 from app.services import nonces
 from app.services.verification import integrity
+from app.services.verification.network import RoomNetwork, get_network_verifier
 from app.services.verification.runner import GateCheck, Submission
 
 SUPPORTED_PAYLOAD_VERSION = 1
@@ -147,4 +148,28 @@ async def nonce_gate(submission: Submission) -> GateCheck:
     consumed = await nonces.consume(submission.redis, window_id, payload.student_id, payload.nonce)
     if consumed != "ok":
         return GateCheck.fail("NONCE_INVALID", f"nonce {consumed}")
+    return GateCheck.ok()
+
+
+async def network_gate(submission: Submission) -> GateCheck:
+    """Gate 6: the request came from the student's own room network, through the room's own router.
+
+    The detail stays in the logs. The student is told only that the request did not come from the room.
+    """
+    payload = submission.payload
+    row = await verification_q.student_room_network(submission.pool, payload.student_id)
+    if row is None:
+        return GateCheck.fail("NETWORK_MISMATCH", "student has no room")
+
+    room = RoomNetwork(
+        room_id=str(row["room_id"]),
+        subnet=row["subnet"],
+        access_point_bssids=frozenset(row["access_point_bssids"]),
+    )
+    verifier = get_network_verifier(submission.settings.NETWORK_VERIFY_MODE)
+    result = verifier.verify(room, submission.client_ip, payload.wifi.connected.bssid)
+    if result.warning:
+        return GateCheck.ok(warning=result.warning)
+    if not result.passed:
+        return GateCheck.fail("NETWORK_MISMATCH", result.detail)
     return GateCheck.ok()
