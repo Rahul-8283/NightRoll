@@ -15,14 +15,22 @@ export type RequestOptions = {
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? 'GET';
   const bodyText = options.body !== undefined ? JSON.stringify(options.body) : '';
-  const url = new URL(path, config.apiBaseUrl.endsWith('/') ? config.apiBaseUrl : `${config.apiBaseUrl}/`);
+  const url = new URL(
+    path,
+    config.apiBaseUrl.endsWith('/') ? config.apiBaseUrl : `${config.apiBaseUrl}/`,
+  );
 
   const headers: Record<string, string> = {};
   if (bodyText) {
     headers['Content-Type'] = 'application/json';
   }
   if (options.signAs) {
-    const signed = await signRequest(options.signAs, method, `${url.pathname}${url.search}`, bodyText);
+    const signed = await signRequest(
+      options.signAs,
+      method,
+      `${url.pathname}${url.search}`,
+      bodyText,
+    );
     Object.assign(headers, signed);
   }
 

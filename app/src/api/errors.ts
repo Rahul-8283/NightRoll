@@ -42,18 +42,31 @@ function isApiErrorBody(value: unknown): value is ApiErrorBody {
   return typeof err === 'object' && err !== null && 'code' in err && 'message' in err;
 }
 
-export async function toApiError(status: number, response: Response): Promise<ApiError | NetworkError> {
+export async function toApiError(
+  status: number,
+  response: Response,
+): Promise<ApiError | NetworkError> {
   try {
     const body: unknown = await response.json();
     if (isApiErrorBody(body)) {
       return new ApiError(status, body);
     }
     return new ApiError(status, {
-      error: { code: 'HTTP_ERROR', message: `Request failed with status ${status}`, details: [], request_id: null },
+      error: {
+        code: 'HTTP_ERROR',
+        message: `Request failed with status ${status}`,
+        details: [],
+        request_id: null,
+      },
     });
   } catch {
     return new ApiError(status, {
-      error: { code: 'HTTP_ERROR', message: `Request failed with status ${status}`, details: [], request_id: null },
+      error: {
+        code: 'HTTP_ERROR',
+        message: `Request failed with status ${status}`,
+        details: [],
+        request_id: null,
+      },
     });
   }
 }

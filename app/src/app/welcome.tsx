@@ -1,44 +1,78 @@
-import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { Button } from '@/components/Button';
+import { RoomWindow } from '@/components/RoomWindow';
+import { Screen } from '@/components/Screen';
+import { Body, Display, Eyebrow } from '@/components/Text';
+import { Wordmark } from '@/components/Wordmark';
 import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { radius, spacing } from '@/theme/spacing';
+import { fonts } from '@/theme/typography';
+
+const PROOFS = [
+  { title: 'It is you', detail: 'A quick face check with a blink or a turn.' },
+  { title: 'You are in your room', detail: 'Your room’s own Wi-Fi, checked by the hostel.' },
+  { title: 'It is your phone', detail: 'A key that lives only on this device.' },
+];
 
 export default function WelcomeScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>NightRoll</Text>
-      <Text style={styles.body}>
-        Mark attendance from your bed at 10 PM, right from your phone. No walk to the ground
-        floor.
-      </Text>
-      <Text style={styles.body}>
-        NightRoll still proves it is really you, in your own room, on your own phone: a quick
-        face check, your room&apos;s own Wi-Fi, and a key that lives only on this device.
-      </Text>
-      <Text style={styles.body}>
-        Set up takes one visit to the warden&apos;s desk. After that, marking is one tap a
-        night.
-      </Text>
-      <Link href="/consent" asChild>
-        <Pressable style={styles.button}>
-          <Text style={styles.buttonText}>Get started</Text>
-        </Pressable>
-      </Link>
-    </View>
+    <Screen edges={['top', 'bottom']} contentStyle={styles.content}>
+      <Wordmark size={26} />
+
+      <View style={styles.hero}>
+        <RoomWindow light="lit" size={132} label="A lit room window" />
+        <Display>Mark attendance from your bed</Display>
+        <Body style={styles.centre}>At 10 PM, on your phone. No walk to the ground floor.</Body>
+      </View>
+
+      <View style={styles.card}>
+        <Eyebrow>What NightRoll checks</Eyebrow>
+        {PROOFS.map((proof) => (
+          <View key={proof.title} style={styles.proof}>
+            <View style={styles.pane} />
+            <View style={styles.proofText}>
+              <Body style={styles.proofTitle}>{proof.title}</Body>
+              <Body style={styles.proofDetail}>{proof.detail}</Body>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.foot}>
+        <Button label="Get started" href="/consent" />
+        <Body style={[styles.centre, styles.small]}>
+          Setup takes one visit to the warden’s desk.
+        </Body>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, gap: spacing.md },
-  title: { fontSize: 28, fontWeight: '700', color: colors.text },
-  body: { fontSize: 15, color: colors.muted, textAlign: 'center' },
-  button: {
-    marginTop: spacing.md,
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 12,
+  content: { alignItems: 'stretch', justifyContent: 'space-between', gap: spacing.xl },
+  hero: { alignItems: 'center', gap: spacing.md, paddingTop: spacing.md },
+  centre: { textAlign: 'center' },
+  card: {
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.lineSoft,
+    backgroundColor: colors.ink2,
   },
-  buttonText: { color: '#fff', fontSize: 17, fontWeight: '600' },
+  proof: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
+  pane: {
+    width: 10,
+    height: 13,
+    marginTop: 5,
+    borderRadius: 2,
+    backgroundColor: colors.lamp,
+    boxShadow: `0 0 10px ${colors.lampGlow}`,
+  },
+  proofText: { flex: 1 },
+  proofTitle: { fontFamily: fonts.bodySemi, color: colors.paper },
+  proofDetail: { fontSize: 15, lineHeight: 21 },
+  foot: { gap: spacing.md },
+  small: { fontSize: 14, color: colors.paper3 },
 });

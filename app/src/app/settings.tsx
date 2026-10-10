@@ -1,11 +1,16 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+
+import { Button } from '@/components/Button';
+import { Screen } from '@/components/Screen';
+import { Body, Eyebrow } from '@/components/Text';
 
 import * as DeviceKey from '@/modules/device-key';
 import { clearEnrollment, getEnrollment } from '@/state/enrollment';
 import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { radius, spacing } from '@/theme/spacing';
+import { fonts } from '@/theme/typography';
 
 type KeyInfo =
   | { kind: 'available'; securityLevel: DeviceKey.SecurityLevel; hasKey: boolean }
@@ -18,7 +23,9 @@ const DEV_BUILD_NEEDED: KeyInfo = {
 
 export default function SettingsScreen() {
   const [roomNumber, setRoomNumber] = useState<string | null>(null);
-  const [keyInfo, setKeyInfo] = useState<KeyInfo | null>(() => (DeviceKey.isAvailable() ? null : DEV_BUILD_NEEDED));
+  const [keyInfo, setKeyInfo] = useState<KeyInfo | null>(() =>
+    DeviceKey.isAvailable() ? null : DEV_BUILD_NEEDED,
+  );
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -29,10 +36,16 @@ export default function SettingsScreen() {
     }
     void (async () => {
       try {
-        const [hasKey, securityLevel] = await Promise.all([DeviceKey.exists(), DeviceKey.securityLevel()]);
+        const [hasKey, securityLevel] = await Promise.all([
+          DeviceKey.exists(),
+          DeviceKey.securityLevel(),
+        ]);
         setKeyInfo({ kind: 'available', hasKey, securityLevel });
       } catch (error) {
-        setKeyInfo({ kind: 'unavailable', message: error instanceof Error ? error.message : 'Unknown error' });
+        setKeyInfo({
+          kind: 'unavailable',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     })();
   }, []);
@@ -51,59 +64,70 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
+    <Screen glow="moon" contentStyle={styles.content}>
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <Eyebrow>Room</Eyebrow>
+          <Body style={styles.value}>{roomNumber ?? 'Not enrolled'}</Body>
+        </View>
 
-      <View style={styles.row}>
-        <Text style={styles.label}>Room</Text>
-        <Text style={styles.value}>{roomNumber ?? 'Not enrolled'}</Text>
-      </View>
-
-      <View style={styles.row}>
-        <Text style={styles.label}>Device key</Text>
-        {keyInfo === null && <ActivityIndicator />}
-        {keyInfo?.kind === 'available' && (
-          <Text style={styles.value}>
-            {keyInfo.hasKey ? `Present (${keyInfo.securityLevel})` : 'Not generated'}
-          </Text>
-        )}
-        {keyInfo?.kind === 'unavailable' && <Text style={styles.valueMuted}>{keyInfo.message}</Text>}
+        <View style={[styles.row, styles.rowLast]}>
+          <Eyebrow>Device key</Eyebrow>
+          {keyInfo === null && <ActivityIndicator color={colors.lamp} />}
+          {keyInfo?.kind === 'available' && (
+            <Body style={styles.value}>
+              {keyInfo.hasKey ? `Present (${keyInfo.securityLevel})` : 'Not generated'}
+            </Body>
+          )}
+          {keyInfo?.kind === 'unavailable' && (
+            <Body style={styles.valueMuted}>{keyInfo.message}</Body>
+          )}
+        </View>
       </View>
 
       {keyInfo?.kind === 'available' && keyInfo.securityLevel === 'software' && (
-        <Text style={styles.warning}>
+        <Body style={styles.warning}>
           This phone has no secure hardware for the key. It still works, but is weaker proof.
-        </Text>
+        </Body>
       )}
 
-      <Pressable style={styles.dangerButton} onPress={reEnroll} disabled={busy}>
-        <Text style={styles.dangerButtonText}>{busy ? 'Working…' : 'Re-enroll this device'}</Text>
-      </Pressable>
-    </View>
+      <View style={styles.danger}>
+        <Body>
+          Re-enrolling removes this phone’s key and your room details. You will need a new code from
+          the warden.
+        </Body>
+        <Button
+          variant="danger"
+          label={busy ? 'Working…' : 'Re-enroll this device'}
+          onPress={reEnroll}
+          disabled={busy}
+        />
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: spacing.lg, gap: spacing.md },
-  title: { fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
+  content: { justifyContent: 'flex-start', alignItems: 'stretch', gap: spacing.lg },
+  card: {
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.lineSoft,
+    backgroundColor: colors.ink2,
+  },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  label: { fontSize: 15, color: colors.muted },
-  value: { fontSize: 15, color: colors.text, fontWeight: '600' },
-  valueMuted: { fontSize: 13, color: colors.muted, flex: 1, textAlign: 'right' },
-  warning: { fontSize: 13, color: colors.warning },
-  dangerButton: {
-    marginTop: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.danger,
-    borderRadius: 10,
-    paddingVertical: spacing.md,
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.lineSoft,
   },
-  dangerButtonText: { color: colors.danger, fontSize: 16, fontWeight: '600' },
+  rowLast: { borderBottomWidth: 0 },
+  value: { fontFamily: fonts.bodySemi, color: colors.paper },
+  valueMuted: { flex: 1, textAlign: 'right', fontSize: 14, lineHeight: 20, color: colors.paper3 },
+  warning: { color: colors.lamp },
+  danger: { gap: spacing.md, marginTop: spacing.md },
 });

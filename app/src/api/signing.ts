@@ -27,7 +27,7 @@ export async function buildSigningString(
   method: string,
   pathWithQuery: string,
   timestamp: string,
-  body: string
+  body: string,
 ): Promise<string> {
   const bodyHash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, body);
   return [method.toUpperCase(), pathWithQuery, timestamp, bodyHash].join('\n');
@@ -37,7 +37,7 @@ export async function signRequest(
   studentId: string,
   method: string,
   pathWithQuery: string,
-  body: string
+  body: string,
 ): Promise<SignedHeaders> {
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const toSign = await buildSigningString(method, pathWithQuery, timestamp, body);
