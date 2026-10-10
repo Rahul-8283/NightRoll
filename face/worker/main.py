@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
-import hashlib
 import json
 import logging
-from typing import Any
+from contextlib import asynccontextmanager
+from typing import Annotated, Any
 from uuid import UUID
+
 import numpy as np
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 
@@ -24,7 +24,6 @@ from worker.schemas import (
     FrameIssue,
     HeadPose,
     HealthResponse,
-    VerifyJSONRequest,
     VerifyResponse,
 )
 from worker.storage import storage
@@ -61,6 +60,7 @@ async def lifespan(app: FastAPI):
     # 1. Load InsightFace FaceAnalysis on CPU
     try:
         from insightface.app import FaceAnalysis
+
         face_app = FaceAnalysis(
             name=settings.FACE_MODEL_NAME,
             root=settings.FACE_MODEL_DIR,
@@ -86,7 +86,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Warm-up inference warning: {e}")
 
-    worker_ready = True
+    worker_ready = face_app is not None
+    if not worker_ready:
+        logger.error("Face model failed to load: /health will report ready=false")
 
     # 4. Start background retention cleanup
     cleanup_task = asyncio.create_task(cleanup_loop())
@@ -107,7 +109,7 @@ app = FastAPI(
 )
 
 
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health", response_model=HealthResponse, dependencies=[Depends(verify_service_token)])
 async def health_check() -> HealthResponse:
     """Report readiness, model versions, anti-spoof availability, and last cleanup time."""
     antispoof_ok = antispoof_classifier.is_available if antispoof_classifier else False
@@ -121,8 +123,8 @@ async def health_check() -> HealthResponse:
 
 @app.post("/enroll", response_model=EnrollmentResponse, dependencies=[Depends(verify_service_token)])
 async def enroll_student_face(
-    student_id: UUID = Form(...),
-    frames: list[UploadFile] = File(...),
+    student_id: Annotated[UUID, Form()],
+    frames: Annotated[list[UploadFile], File()],
 ) -> EnrollmentResponse:
     """Process 3 to 5 enrollment frames, generate and store an aggregate 512-d ArcFace embedding.
 
@@ -131,7 +133,9 @@ async def enroll_student_face(
     if len(frames) < settings.ENROLL_MIN_VALID_FRAMES or len(frames) > 5:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Enrollment requires between {settings.ENROLL_MIN_VALID_FRAMES} and 5 frames, received {len(frames)}",
+            detail=(
+                f"Enrollment requires between {settings.ENROLL_MIN_VALID_FRAMES} and 5 frames, received {len(frames)}"
+            ),
         )
 
     valid_embeddings: list[np.ndarray] = []
@@ -155,14 +159,17 @@ async def enroll_student_face(
         reasons = [f"Frame {iss.frame_index}: {iss.code} ({iss.detail})" for iss in issues_encountered]
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Fewer than {settings.ENROLL_MIN_VALID_FRAMES} frames passed quality checks. Issues: {'; '.join(reasons)}",
+            detail=(
+                f"Fewer than {settings.ENROLL_MIN_VALID_FRAMES} frames passed quality checks. "
+                f"Issues: {'; '.join(reasons)}"
+            ),
         )
 
     # Validate cross-frame consistency and compute normalized average vector
     try:
         final_embedding, count_used = aggregate_enrollment_embeddings(valid_embeddings)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     # Persist directly into face_embeddings table
     saved = await storage.save_embedding(student_id, final_embedding, settings.MODEL_VERSION)
@@ -180,11 +187,11 @@ async def enroll_student_face(
 
 @app.post("/verify", response_model=VerifyResponse, dependencies=[Depends(verify_service_token)])
 async def verify_nightly_frames(
-    student_id: UUID = Form(...),
-    window_id: UUID = Form(...),
-    mark_id: UUID = Form(...),
-    frame_hashes: str = Form(..., description="JSON-encoded list of expected frame SHA-256 hex hashes"),
-    frames: list[UploadFile] = File(...),
+    student_id: Annotated[UUID, Form()],
+    window_id: Annotated[UUID, Form()],
+    mark_id: Annotated[UUID, Form()],
+    frame_hashes: Annotated[str, Form(description="JSON-encoded list of expected frame SHA-256 hex hashes")],
+    frames: Annotated[list[UploadFile], File()],
 ) -> VerifyResponse:
     """Score nightly frames for cosine similarity, anti-spoofing, and head pose.
 
@@ -197,8 +204,10 @@ async def verify_nightly_frames(
     """
     try:
         expected_hashes: list[str] = json.loads(frame_hashes)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="frame_hashes must be a valid JSON array")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="frame_hashes must be a valid JSON array"
+        ) from e
 
     if len(frames) != len(expected_hashes):
         raise HTTPException(
@@ -221,7 +230,7 @@ async def verify_nightly_frames(
     frame_issues: list[FrameIssue] = []
 
     # 2. Process frames
-    for idx, (upload, expected_hash) in enumerate(zip(frames, expected_hashes)):
+    for idx, (upload, expected_hash) in enumerate(zip(frames, expected_hashes, strict=True)):
         content = await upload.read()
 
         # SHA-256 check
