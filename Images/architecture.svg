@@ -1,0 +1,425 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2200 1580" width="2200" height="1580" role="img" aria-labelledby="t d">
+<title id="t">NightRoll system architecture</title>
+<desc id="d">The student phone gathers proof and signs it, the request leaves through the room access point, the FastAPI backend runs six hard gates then five scores to reach a verdict, backed by a face worker, Supabase, Upstash Redis and Google Play Integrity, and the warden dashboard shows the result live.</desc>
+<defs>
+  <linearGradient id="card" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#11141d"/><stop offset="1" stop-color="#0d1017"/></linearGradient>
+  <linearGradient id="lamp" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0" stop-color="#ffd58e"/><stop offset="0.55" stop-color="#f5b95c"/><stop offset="1" stop-color="#d98f2b"/></linearGradient>
+  <radialGradient id="sky" cx="0.78" cy="0" r="0.75"><stop offset="0" stop-color="rgba(245,185,92,0.13)"/><stop offset="1" stop-color="rgba(245,185,92,0)"/></radialGradient>
+  <radialGradient id="sky2" cx="0" cy="1" r="0.6"><stop offset="0" stop-color="rgba(169,193,232,0.08)"/><stop offset="1" stop-color="rgba(169,193,232,0)"/></radialGradient>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <marker id="a-lamp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#f5b95c"/></marker>
+  <marker id="a-moon" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#a9c1e8"/></marker>
+</defs>
+<rect width="2200" height="1580" fill="#0b0d13"/><rect width="2200" height="1580" fill="url(#sky)"/><rect width="2200" height="1580" fill="url(#sky2)"/>
+<rect x="40" y="44" width="44" height="52.58" rx="6.16" fill="#181c28" stroke="#2c3247"/>
+<rect x="43.52" y="47.52" width="17.16" height="21.45" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="63.32000000000001" y="47.52" width="17.16" height="21.45" rx="2.5" fill="#0b0d13"/>
+<rect x="43.52" y="71.61" width="17.16" height="21.45" rx="2.5" fill="#0b0d13"/>
+<rect x="63.32000000000001" y="71.61" width="17.16" height="21.45" rx="2.5" fill="#0b0d13"/>
+<text x="100" y="86" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="40" fill="#efe9dd">Night<tspan fill="#f5b95c" font-style="italic">Roll</tspan></text>
+<text x="300" y="66" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">SYSTEM ARCHITECTURE · END TO END</text>
+<text x="300" y="92" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="400" fill="#adb2c1" text-anchor="start">Hostel attendance marked from bed. One request has to prove three things at once.</text>
+<rect x="1240" y="40" width="290" height="70" rx="12" fill="#11141d" stroke="#1c2130"/>
+<text x="1256" y="68" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="500" fill="#f5b95c" text-anchor="start">I</text>
+<text x="1290" y="68" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#efe9dd" text-anchor="start">Right person</text>
+<text x="1290" y="92" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#7d8397" text-anchor="start">face match + liveness</text>
+<rect x="1550" y="40" width="290" height="70" rx="12" fill="#11141d" stroke="#1c2130"/>
+<text x="1566" y="68" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="500" fill="#f5b95c" text-anchor="start">II</text>
+<text x="1600" y="68" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#efe9dd" text-anchor="start">Right place</text>
+<text x="1600" y="92" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#7d8397" text-anchor="start">own room network</text>
+<rect x="1860" y="40" width="290" height="70" rx="12" fill="#11141d" stroke="#1c2130"/>
+<text x="1876" y="68" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="500" fill="#f5b95c" text-anchor="start">III</text>
+<text x="1910" y="68" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#efe9dd" text-anchor="start">Right device, right now</text>
+<text x="1910" y="92" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#7d8397" text-anchor="start">Keystore key signs a one-time nonce</text>
+<rect x="40" y="170" width="440" height="660" rx="18" fill="url(#card)" stroke="#1c2130"/>
+<text x="64" y="206" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">ANDROID · EXPO APP · KOTLIN MODULES</text>
+<text x="64" y="240" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="27" font-weight="400" fill="#efe9dd" text-anchor="start">Student phone</text>
+<rect x="64" y="264" width="392" height="62" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="78" y="288" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">1</text>
+<text x="108" y="288" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Guard checks</text>
+<text x="78" y="308" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">VPN, proxy, mock location · stops before the camera</text>
+<rect x="64" y="338" width="392" height="62" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="78" y="362" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">2</text>
+<text x="108" y="362" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Liveness challenge</text>
+<text x="78" y="382" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">blink, turn, smile chosen by the server · ML Kit</text>
+<rect x="64" y="412" width="392" height="62" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="78" y="436" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">3</text>
+<text x="108" y="436" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Face frames</text>
+<text x="78" y="456" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">quality pre-check on the phone · VisionCamera, TFLite</text>
+<rect x="64" y="486" width="392" height="62" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="78" y="510" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">4</text>
+<text x="108" y="510" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Wi-Fi scan</text>
+<text x="78" y="530" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">BSSID, RSSI and band of nearby access points</text>
+<rect x="64" y="560" width="392" height="62" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="78" y="584" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">5</text>
+<text x="108" y="584" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Play Integrity token</text>
+<text x="78" y="604" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">bound to the SHA-256 of the payload</text>
+<rect x="64" y="634" width="392" height="62" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="78" y="658" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">6</text>
+<text x="108" y="658" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Device key signs</text>
+<text x="78" y="678" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">ECDSA P-256 · Android Keystore (StrongBox or TEE)</text>
+<rect x="64" y="708" width="392" height="62" rx="10" fill="rgba(245,185,92,0.12)" stroke="#f5b95c"/>
+<text x="78" y="732" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">7</text>
+<text x="108" y="732" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#ffd58e" text-anchor="start">Signed payload</text>
+<text x="78" y="752" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">nonce, hashes of frames, scan, token, signature</text>
+<rect x="590" y="170" width="240" height="660" rx="18" fill="url(#card)" stroke="#1c2130"/>
+<text x="614" y="206" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">HOSTEL WI-FI</text>
+<text x="614" y="240" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="27" font-weight="400" fill="#efe9dd" text-anchor="start">Room network</text>
+<rect x="668" y="274" width="84" height="100.38" rx="11.760000000000002" fill="#181c28" stroke="#2c3247"/>
+<rect x="674.72" y="280.72" width="32.76" height="40.949999999999996" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="712.52" y="280.72" width="32.76" height="40.949999999999996" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="674.72" y="326.71000000000004" width="32.76" height="40.949999999999996" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="712.52" y="326.71000000000004" width="32.76" height="40.949999999999996" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<text x="710" y="404.38" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#efe9dd" text-anchor="middle">Room access point</text>
+<text x="710" y="426.38" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#7d8397" text-anchor="middle">one router per room,</text>
+<text x="710" y="444.38" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#7d8397" text-anchor="middle">its own address range</text>
+<line x1="710" y1="482" x2="710" y2="514" stroke="#2c3247" stroke-width="2"/>
+<rect x="614" y="520" width="192" height="62" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="628" y="544" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Hostel LAN</text>
+<text x="628" y="564" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">keeps the room's address</text>
+<line x1="710" y1="582" x2="710" y2="614" stroke="#2c3247" stroke-width="2"/>
+<rect x="614" y="620" width="192" height="62" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="628" y="644" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Reverse proxy</text>
+<text x="628" y="664" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">TLS · trusted forward header</text>
+<rect x="614" y="716" width="192" height="62" rx="10" fill="rgba(238,108,77,0.12)" stroke="#ee6c4d"/>
+<text x="628" y="740" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#ee6c4d" text-anchor="start">VPN or hotspot</text>
+<text x="628" y="760" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">other address → rejected</text>
+<rect x="940" y="170" width="700" height="660" rx="18" fill="url(#card)" stroke="rgba(245,185,92,0.35)"/>
+<text x="964" y="206" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">FASTAPI · PYTHON 3.12 · ASYNCPG</text>
+<text x="964" y="240" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="27" font-weight="400" fill="#efe9dd" text-anchor="start">Backend API: verification</text>
+<text x="964" y="276" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start" letter-spacing="1.6">SIX HARD GATES · ANY FAILURE REJECTS, NO SCORE IS CALCULATED</text>
+<rect x="964" y="290" width="208" height="60" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="978" y="314" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">G1</text>
+<text x="1008" y="314" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Device and signature</text>
+<text x="978" y="334" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">public key of the active device</text>
+<rect x="1186" y="290" width="208" height="60" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1200" y="314" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">G2</text>
+<text x="1230" y="314" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Window</text>
+<text x="1200" y="334" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">server clock inside the window</text>
+<rect x="1408" y="290" width="208" height="60" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1422" y="314" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">G3</text>
+<text x="1452" y="314" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Nonce</text>
+<text x="1422" y="334" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">fresh, single use, right challenge</text>
+<rect x="964" y="360" width="208" height="60" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="978" y="384" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">G4</text>
+<text x="1008" y="384" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Play Integrity</text>
+<text x="978" y="404" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">genuine phone, genuine app</text>
+<rect x="1186" y="360" width="208" height="60" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1200" y="384" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">G5</text>
+<text x="1230" y="384" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Environment</text>
+<text x="1200" y="404" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">no VPN, proxy or mock location</text>
+<rect x="1408" y="360" width="208" height="60" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1422" y="384" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start">G6</text>
+<text x="1452" y="384" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Room network</text>
+<text x="1422" y="404" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">room subnet and its BSSID</text>
+<line x1="1290" y1="432" x2="1290" y2="456" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<text x="964" y="482" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start" letter-spacing="1.6">FIVE SCORES · EACH 0 TO 1, WEIGHTS ARE PROVISIONAL</text>
+<rect x="964" y="496" width="120" height="76" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="976" y="520" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#efe9dd" text-anchor="start">Face match</text>
+<text x="976" y="546" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="17" font-weight="500" fill="#ffd58e" text-anchor="start">0.30</text>
+<rect x="976" y="556" width="96" height="5" rx="2.5" fill="#07080c"/>
+<rect x="976" y="556" width="96.0" height="5" rx="2.5" fill="url(#lamp)"/>
+<rect x="1097" y="496" width="120" height="76" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1109" y="520" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#efe9dd" text-anchor="start">Room fingerprint</text>
+<text x="1109" y="546" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="17" font-weight="500" fill="#ffd58e" text-anchor="start">0.30</text>
+<rect x="1109" y="556" width="96" height="5" rx="2.5" fill="#07080c"/>
+<rect x="1109" y="556" width="96.0" height="5" rx="2.5" fill="url(#lamp)"/>
+<rect x="1230" y="496" width="120" height="76" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1242" y="520" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#efe9dd" text-anchor="start">Liveness</text>
+<text x="1242" y="546" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="17" font-weight="500" fill="#ffd58e" text-anchor="start">0.20</text>
+<rect x="1242" y="556" width="96" height="5" rx="2.5" fill="#07080c"/>
+<rect x="1242" y="556" width="64.00000000000001" height="5" rx="2.5" fill="url(#lamp)"/>
+<rect x="1363" y="496" width="120" height="76" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1375" y="520" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#efe9dd" text-anchor="start">Own AP signal</text>
+<text x="1375" y="546" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="17" font-weight="500" fill="#ffd58e" text-anchor="start">0.15</text>
+<rect x="1375" y="556" width="96" height="5" rx="2.5" fill="#07080c"/>
+<rect x="1375" y="556" width="48.0" height="5" rx="2.5" fill="url(#lamp)"/>
+<rect x="1496" y="496" width="120" height="76" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1508" y="520" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#efe9dd" text-anchor="start">AP agreement</text>
+<text x="1508" y="546" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="17" font-weight="500" fill="#ffd58e" text-anchor="start">0.05</text>
+<rect x="1508" y="556" width="96" height="5" rx="2.5" fill="#07080c"/>
+<rect x="1508" y="556" width="16.000000000000004" height="5" rx="2.5" fill="url(#lamp)"/>
+<text x="1290" y="606" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#adb2c1" text-anchor="middle">score = 0.30·face + 0.30·fingerprint + 0.20·liveness + 0.15·own_ap + 0.05·ap_agreement</text>
+<line x1="1290" y1="618" x2="1290" y2="642" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<text x="964" y="668" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start" letter-spacing="1.6">VERDICT · ALWAYS WITH A REASON CODE</text>
+<rect x="964" y="682" width="208" height="60" rx="10" fill="rgba(245,185,92,0.12)" stroke="#f5b95c"/>
+<text x="978" y="706" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#ffd58e" text-anchor="start">PRESENT</text>
+<text x="978" y="726" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">score ≥ 0.80</text>
+<rect x="1186" y="682" width="208" height="60" rx="10" fill="rgba(169,193,232,0.10)" stroke="#a9c1e8"/>
+<text x="1200" y="706" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#a9c1e8" text-anchor="start">NEEDS REVIEW</text>
+<text x="1200" y="726" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">0.60 to 0.80 · warden decides</text>
+<rect x="1408" y="682" width="208" height="60" rx="10" fill="rgba(238,108,77,0.12)" stroke="#ee6c4d"/>
+<text x="1422" y="706" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#ee6c4d" text-anchor="start">REJECTED</text>
+<text x="1422" y="726" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">below 0.60, or a failed gate</text>
+<line x1="964" y1="762" x2="1616" y2="762" stroke="#1c2130"/>
+<text x="964" y="788" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#7d8397" text-anchor="start">Also here: window scheduler (opens and closes on the server clock) · absentee recording ·</text>
+<text x="964" y="806" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#7d8397" text-anchor="start">append-only audit log · JSON logs with secrets redacted</text>
+<rect x="1760" y="170" width="400" height="660" rx="18" fill="url(#card)" stroke="#1c2130"/>
+<text x="1784" y="206" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">REACT · VITE · WEBSOCKET</text>
+<text x="1784" y="240" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="27" font-weight="400" fill="#efe9dd" text-anchor="start">Warden dashboard</text>
+<rect x="1784" y="262" width="352" height="176" rx="12" fill="#07080c" stroke="#1c2130"/>
+<rect x="1802" y="278" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="1805.36" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1824.26" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1805.36" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1824.26" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1856" y="278" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="1859.36" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1878.26" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1859.36" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1878.26" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1910" y="278" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="1913.36" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<rect x="1932.26" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1913.36" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1932.26" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<rect x="1964" y="278" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="1967.36" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1986.26" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1967.36" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1986.26" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2018" y="278" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="2021.36" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2040.26" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2021.36" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2040.26" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2072" y="278" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="2075.36" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2094.26" y="281.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2075.36" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2094.26" y="304.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1802" y="354" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="1805.36" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1824.26" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1805.36" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1824.26" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1856" y="354" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="1859.36" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="rgba(238,108,77,0.14)" stroke="#ee6c4d"/>
+<rect x="1878.26" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1859.36" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1878.26" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="rgba(238,108,77,0.14)" stroke="#ee6c4d"/>
+<rect x="1910" y="354" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="1913.36" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1932.26" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1913.36" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1932.26" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1964" y="354" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="1967.36" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1986.26" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1967.36" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1986.26" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2018" y="354" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="2021.36" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="#0b0d13"/>
+<rect x="2040.26" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="#0b0d13"/>
+<rect x="2021.36" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="#0b0d13"/>
+<rect x="2040.26" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="#0b0d13"/>
+<rect x="2072" y="354" width="42" height="50.19" rx="5.880000000000001" fill="#181c28" stroke="#2c3247"/>
+<rect x="2075.36" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2094.26" y="357.36" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2075.36" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="2094.26" y="380.355" width="16.38" height="20.474999999999998" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<text x="1960" y="428" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#7d8397" text-anchor="middle">one window per room, one pane per bed</text>
+<rect x="1784" y="458" width="352" height="60" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1798" y="482" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Live floor view</text>
+<text x="1798" y="502" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">a room lights up as its students mark</text>
+<rect x="1784" y="530" width="352" height="60" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1798" y="554" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Review queue</text>
+<text x="1798" y="574" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">approve, decline or override</text>
+<rect x="1784" y="602" width="352" height="60" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1798" y="626" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Absentees and CSV export</text>
+<text x="1798" y="646" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">after the window closes</text>
+<rect x="1784" y="674" width="352" height="60" rx="10" fill="#181c28" stroke="#2c3247"/>
+<text x="1798" y="698" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#efe9dd" text-anchor="start">Windows and enrollment codes</text>
+<text x="1798" y="718" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="start">set tonight's time, issue one-time codes</text>
+<text x="1784" y="772" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#7d8397" text-anchor="start">Sign-in: Supabase Auth, JWT with a TOTP</text>
+<text x="1784" y="790" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#7d8397" text-anchor="start">second step. Role: warden or admin.</text>
+<line x1="482" y1="420" x2="588" y2="420" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<text x="535" y="398" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="middle" letter-spacing="1.6">HTTPS</text>
+<text x="535" y="446" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="middle">signed</text>
+<text x="535" y="462" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="middle">payload</text>
+<line x1="832" y1="420" x2="938" y2="420" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<text x="885" y="398" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="middle" letter-spacing="1.6">SOURCE IP</text>
+<text x="885" y="446" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="middle">= the room's</text>
+<text x="885" y="462" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="middle">own range</text>
+<line x1="1642" y1="380" x2="1758" y2="380" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<text x="1700" y="358" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="middle" letter-spacing="1.6">WEBSOCKET</text>
+<text x="1700" y="402" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="middle">live verdicts</text>
+<line x1="1758" y1="500" x2="1642" y2="500" stroke="#a9c1e8" stroke-width="2" marker-end="url(#a-moon)"/>
+<text x="1700" y="478" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#a9c1e8" text-anchor="middle" letter-spacing="1.6">REST + JWT</text>
+<text x="1700" y="522" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#7d8397" text-anchor="middle">warden actions</text>
+<path d="M 940 780 H 886 V 868 H 260 V 834" fill="none" stroke="#a9c1e8" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#a-moon)"/>
+<text x="560" y="859" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#a9c1e8" text-anchor="middle" letter-spacing="1.6">VERDICT + PLAIN REASON BACK TO THE PHONE</text>
+<path d="M 1290 830 V 900" fill="none" stroke="#f5b95c" stroke-width="2"/>
+<line x1="775" y1="900" x2="1975" y2="900" stroke="#f5b95c" stroke-width="2"/>
+<line x1="775" y1="900" x2="775" y2="948" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<rect x="590" y="950" width="370" height="250" rx="18" fill="url(#card)" stroke="#1c2130"/>
+<text x="612" y="984" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">PYTHON · ONNX RUNTIME · INTERNAL ONLY</text>
+<text x="612" y="1018" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="24" font-weight="400" fill="#efe9dd" text-anchor="start">Face worker</text>
+<rect x="612" y="1043" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="630" y="1053" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">InsightFace buffalo_l: detect, align, embed</text>
+<rect x="612" y="1077" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="630" y="1087" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">512-number ArcFace embedding per frame</text>
+<rect x="612" y="1111" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="630" y="1121" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Silent-Face anti-spoof: live face or a photo?</text>
+<rect x="612" y="1145" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="630" y="1155" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Cosine similarity against the enrolled face</text>
+<line x1="1175" y1="900" x2="1175" y2="948" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<rect x="990" y="950" width="370" height="250" rx="18" fill="url(#card)" stroke="#1c2130"/>
+<text x="1012" y="984" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">SUPABASE · POSTGRES · AUTH · STORAGE</text>
+<text x="1012" y="1018" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="24" font-weight="400" fill="#efe9dd" text-anchor="start">Database and files</text>
+<rect x="1012" y="1043" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1030" y="1053" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">PostgreSQL + pgvector: students, rooms,</text>
+<rect x="1012" y="1077" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1030" y="1087" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">access points, embeddings, marks, audit</text>
+<rect x="1012" y="1111" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1030" y="1121" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Row-level security on every table</text>
+<rect x="1012" y="1145" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1030" y="1155" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Private frames bucket, deleted in 24 hours</text>
+<line x1="1575" y1="900" x2="1575" y2="948" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<rect x="1390" y="950" width="370" height="250" rx="18" fill="url(#card)" stroke="#1c2130"/>
+<text x="1412" y="984" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">UPSTASH REDIS · TLS</text>
+<text x="1412" y="1018" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="24" font-weight="400" fill="#efe9dd" text-anchor="start">Nonces and window state</text>
+<rect x="1412" y="1043" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1430" y="1053" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">One nonce per student per window</text>
+<rect x="1412" y="1077" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1430" y="1087" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Consumed once by an atomic Lua script</text>
+<rect x="1412" y="1111" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1430" y="1121" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Expires when the window closes</text>
+<rect x="1412" y="1145" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1430" y="1155" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Live window state, scheduler heartbeat</text>
+<line x1="1975" y1="900" x2="1975" y2="948" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<rect x="1790" y="950" width="370" height="250" rx="18" fill="url(#card)" stroke="#1c2130"/>
+<text x="1812" y="984" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">GOOGLE · EXTERNAL API</text>
+<text x="1812" y="1018" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="24" font-weight="400" fill="#efe9dd" text-anchor="start">Play Integrity</text>
+<rect x="1812" y="1043" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1830" y="1053" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Backend decodes the phone's token</text>
+<rect x="1812" y="1077" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1830" y="1087" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Requires MEETS_DEVICE_INTEGRITY</text>
+<rect x="1812" y="1111" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1830" y="1121" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Token must match the payload hash</text>
+<rect x="1812" y="1145" width="7" height="9" rx="1.5" fill="#f5b95c"/>
+<text x="1830" y="1155" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Package must be the NightRoll app</text>
+<rect x="40" y="950" width="440" height="250" rx="18" fill="url(#card)" stroke="rgba(169,193,232,0.35)"/>
+<text x="62" y="984" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#a9c1e8" text-anchor="start" letter-spacing="1.6">ONCE · AT THE WARDEN'S DESK</text>
+<text x="62" y="1018" font-family="Georgia, 'Iowan Old Style', 'Times New Roman', serif" font-size="24" font-weight="400" fill="#efe9dd" text-anchor="start">Enrollment</text>
+<text x="62" y="1050" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#a9c1e8" text-anchor="start">1</text>
+<text x="86" y="1050" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Warden issues a one-time code, valid 15 minutes</text>
+<text x="62" y="1079" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#a9c1e8" text-anchor="start">2</text>
+<text x="86" y="1079" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Student reads the privacy notice and consents</text>
+<text x="62" y="1108" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#a9c1e8" text-anchor="start">3</text>
+<text x="86" y="1108" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Face → embedding stored, the photo is discarded</text>
+<text x="62" y="1137" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#a9c1e8" text-anchor="start">4</text>
+<text x="86" y="1137" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Phone creates its key, public key is stored</text>
+<text x="62" y="1166" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#a9c1e8" text-anchor="start">5</text>
+<text x="86" y="1166" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Room Wi-Fi scanned 3 times → room fingerprint</text>
+<text x="40" y="1260" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#f5b95c" text-anchor="start" letter-spacing="1.6">ONE NIGHT, END TO END</text>
+<rect x="40" y="1280" width="284" height="170" rx="14" fill="url(#card)" stroke="#1c2130"/>
+<rect x="60" y="1300" width="26" height="31.07" rx="3.6400000000000006" fill="#181c28" stroke="#2c3247"/>
+<rect x="62.08" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<rect x="73.78" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<rect x="62.08" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<rect x="73.78" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<text x="100" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="500" fill="#f5b95c" text-anchor="start">01</text>
+<text x="130" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">21:00</text>
+<text x="60" y="1366" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#efe9dd" text-anchor="start">Warden sets the window</text>
+<text x="60" y="1392" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">Default 22:00 to 22:30,</text>
+<text x="60" y="1412" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">or an off day</text>
+<line x1="326" y1="1365" x2="344" y2="1365" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<rect x="346" y="1280" width="284" height="170" rx="14" fill="url(#card)" stroke="#1c2130"/>
+<rect x="366" y="1300" width="26" height="31.07" rx="3.6400000000000006" fill="#181c28" stroke="#2c3247"/>
+<rect x="368.08" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<rect x="379.78" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<rect x="368.08" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<rect x="379.78" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<text x="406" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="500" fill="#f5b95c" text-anchor="start">02</text>
+<text x="436" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">22:00</text>
+<text x="366" y="1366" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#efe9dd" text-anchor="start">Window opens</text>
+<text x="366" y="1392" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">One nonce per enrolled</text>
+<text x="366" y="1412" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">student. Nothing is pushed.</text>
+<line x1="632" y1="1365" x2="650" y2="1365" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<rect x="652" y="1280" width="284" height="170" rx="14" fill="url(#card)" stroke="#1c2130"/>
+<rect x="672" y="1300" width="26" height="31.07" rx="3.6400000000000006" fill="#181c28" stroke="#2c3247"/>
+<rect x="674.08" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<rect x="685.7800000000001" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<rect x="674.08" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<rect x="685.7800000000001" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<text x="712" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="500" fill="#f5b95c" text-anchor="start">03</text>
+<text x="742" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">IN BED</text>
+<text x="672" y="1366" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#efe9dd" text-anchor="start">Student opens NightRoll</text>
+<text x="672" y="1392" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">Guard checks run before</text>
+<text x="672" y="1412" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">the camera opens</text>
+<line x1="938" y1="1365" x2="956" y2="1365" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<rect x="958" y="1280" width="284" height="170" rx="14" fill="url(#card)" stroke="#1c2130"/>
+<rect x="978" y="1300" width="26" height="31.07" rx="3.6400000000000006" fill="#181c28" stroke="#2c3247"/>
+<rect x="980.08" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<rect x="991.7800000000001" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<rect x="980.08" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<rect x="991.7800000000001" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="#0b0d13"/>
+<text x="1018" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="500" fill="#f5b95c" text-anchor="start">04</text>
+<text x="1048" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">SECONDS</text>
+<text x="978" y="1366" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#efe9dd" text-anchor="start">Phone gathers the proof</text>
+<text x="978" y="1392" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">Liveness, frames, Wi-Fi scan,</text>
+<text x="978" y="1412" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">integrity token, signature</text>
+<line x1="1244" y1="1365" x2="1262" y2="1365" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<rect x="1264" y="1280" width="284" height="170" rx="14" fill="url(#card)" stroke="#1c2130"/>
+<rect x="1284" y="1300" width="26" height="31.07" rx="3.6400000000000006" fill="#181c28" stroke="#2c3247"/>
+<rect x="1286.08" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<rect x="1297.78" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<rect x="1286.08" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<rect x="1297.78" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<text x="1324" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="500" fill="#f5b95c" text-anchor="start">05</text>
+<text x="1354" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">INSTANT</text>
+<text x="1284" y="1366" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#efe9dd" text-anchor="start">Server decides</text>
+<text x="1284" y="1392" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">Six gates, then five scores</text>
+<text x="1284" y="1412" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">fused into one value</text>
+<line x1="1550" y1="1365" x2="1568" y2="1365" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<rect x="1570" y="1280" width="284" height="170" rx="14" fill="url(#card)" stroke="#1c2130"/>
+<rect x="1590" y="1300" width="26" height="31.07" rx="3.6400000000000006" fill="#181c28" stroke="#2c3247"/>
+<rect x="1592.08" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1603.78" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1592.08" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="1603.78" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<text x="1630" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="500" fill="#f5b95c" text-anchor="start">06</text>
+<text x="1660" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">VERDICT</text>
+<text x="1590" y="1366" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#efe9dd" text-anchor="start">Present, review or rejected</text>
+<text x="1590" y="1392" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">Lit tile, warden queue, or</text>
+<text x="1590" y="1412" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">the ground-floor scanner</text>
+<line x1="1856" y1="1365" x2="1874" y2="1365" stroke="#f5b95c" stroke-width="2" marker-end="url(#a-lamp)"/>
+<rect x="1876" y="1280" width="284" height="170" rx="14" fill="url(#card)" stroke="#1c2130"/>
+<rect x="1896" y="1300" width="26" height="31.07" rx="3.6400000000000006" fill="#181c28" stroke="#2c3247"/>
+<rect x="1898.08" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="rgba(238,108,77,0.14)" stroke="#ee6c4d"/>
+<rect x="1909.78" y="1302.08" width="10.14" height="12.675" rx="2.5" fill="rgba(238,108,77,0.14)" stroke="#ee6c4d"/>
+<rect x="1898.08" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="rgba(238,108,77,0.14)" stroke="#ee6c4d"/>
+<rect x="1909.78" y="1316.3149999999998" width="10.14" height="12.675" rx="2.5" fill="rgba(238,108,77,0.14)" stroke="#ee6c4d"/>
+<text x="1936" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="13" font-weight="500" fill="#f5b95c" text-anchor="start">07</text>
+<text x="1966" y="1318" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="12" font-weight="500" fill="#7d8397" text-anchor="start" letter-spacing="1.6">22:30</text>
+<text x="1896" y="1366" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#efe9dd" text-anchor="start">Window closes</text>
+<text x="1896" y="1392" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">No mark → absent.</text>
+<text x="1896" y="1412" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="start">Warden exports the CSV.</text>
+<rect x="40" y="1488" width="22" height="26.29" rx="3.08" fill="#181c28" stroke="#2c3247"/>
+<rect x="41.76" y="1489.76" width="8.58" height="10.725" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="51.66" y="1489.76" width="8.58" height="10.725" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="41.76" y="1501.805" width="8.58" height="10.725" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<rect x="51.66" y="1501.805" width="8.58" height="10.725" rx="2.5" fill="url(#lamp)" filter="url(#glow)"/>
+<text x="74" y="1510" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Present</text>
+<rect x="160.2" y="1488" width="22" height="26.29" rx="3.08" fill="#181c28" stroke="#2c3247"/>
+<rect x="161.95999999999998" y="1489.76" width="8.58" height="10.725" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<rect x="171.85999999999999" y="1489.76" width="8.58" height="10.725" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<rect x="161.95999999999998" y="1501.805" width="8.58" height="10.725" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<rect x="171.85999999999999" y="1501.805" width="8.58" height="10.725" rx="2.5" fill="rgba(169,193,232,0.12)" stroke="#a9c1e8"/>
+<text x="194.2" y="1510" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">In review</text>
+<rect x="297.59999999999997" y="1488" width="22" height="26.29" rx="3.08" fill="#181c28" stroke="#2c3247"/>
+<rect x="299.35999999999996" y="1489.76" width="8.58" height="10.725" rx="2.5" fill="rgba(238,108,77,0.14)" stroke="#ee6c4d"/>
+<rect x="309.25999999999993" y="1489.76" width="8.58" height="10.725" rx="2.5" fill="rgba(238,108,77,0.14)" stroke="#ee6c4d"/>
+<rect x="299.35999999999996" y="1501.805" width="8.58" height="10.725" rx="2.5" fill="rgba(238,108,77,0.14)" stroke="#ee6c4d"/>
+<rect x="309.25999999999993" y="1501.805" width="8.58" height="10.725" rx="2.5" fill="rgba(238,108,77,0.14)" stroke="#ee6c4d"/>
+<text x="331.59999999999997" y="1510" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Rejected</text>
+<rect x="426.4" y="1488" width="22" height="26.29" rx="3.08" fill="#181c28" stroke="#2c3247"/>
+<rect x="428.15999999999997" y="1489.76" width="8.58" height="10.725" rx="2.5" fill="#0b0d13"/>
+<rect x="438.05999999999995" y="1489.76" width="8.58" height="10.725" rx="2.5" fill="#0b0d13"/>
+<rect x="428.15999999999997" y="1501.805" width="8.58" height="10.725" rx="2.5" fill="#0b0d13"/>
+<rect x="438.05999999999995" y="1501.805" width="8.58" height="10.725" rx="2.5" fill="#0b0d13"/>
+<text x="460.4" y="1510" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#adb2c1" text-anchor="start">Not yet marked</text>
+<text x="2160" y="1498" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="end">Android first. GPS is not used for the decision: the room's Wi-Fi is the fence.</text>
+<text x="2160" y="1518" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#7d8397" text-anchor="end">Every automatic verdict can be overridden by the warden. The ground-floor scanner stays as the fallback.</text>
+</svg>
