@@ -33,7 +33,6 @@ Every teammate can clone the repo, fill in one env file per service, start the l
 | 1.5 | Give all four teammates write access to the GitHub repo | Everyone can push to `base` |
 | 1.6 | Create an Upstash Redis database for development (TLS on, region closest to the hostel). Copy its `rediss://` URL. | URL in the team password manager |
 | 1.7 | Ask the campus network admin the three network questions (section 10) | Written answer, or a date for one |
-| 1.8 | Create a free Expo account for EAS builds and add the team to it | Team account in the password manager |
 
 The package name is fixed here. Changing it later breaks Play Integrity.
 
@@ -46,13 +45,12 @@ Everyone installs the same versions so builds match.
 | Python | 3.12 | Backend, face worker |
 | Node.js | 20 LTS | App, dashboard |
 | JDK | 17 | Android build |
-| Android Studio | Current stable, with SDK Platform 34 or newer | Emulator and local builds (optional if you only use EAS cloud builds) |
+| Android Studio | Current stable, with SDK Platform 34 or newer | App build and emulator |
 | Docker Desktop | Current stable | Later services (Phase 12) |
 | Supabase CLI | Current stable | Migrations |
 | Git | Any recent | Version control |
-| Expo account and EAS CLI | Current | Development and production builds of the app | Free Expo account, then `npx eas-cli login` (no global install needed) |
 
-The app is an Expo project. Expo Go runs only screens without native code. The Keystore, Wi-Fi and Play Integrity code is Kotlin in Expo Modules, so the test phones run a development build made with EAS.
+The app uses the React Native CLI, not Expo Go, because it needs custom native modules for the Keystore, WiFi scans and Play Integrity.
 
 ## 3. Folder structure
 
@@ -60,7 +58,7 @@ Create these folders. Each gets a short `README.md` saying what goes there, so g
 
 ```text
 NightRoll/
-├── app/                  Expo app (TypeScript) with Kotlin modules for Android
+├── app/                  React Native Android app
 ├── backend/              FastAPI service: gates, scoring, windows, reviews
 │   └── app/
 ├── face/                 Face worker: embeddings and anti-spoof
@@ -119,7 +117,7 @@ build/
 npm-debug.log*
 yarn-error.log*
 
-# Expo and Android (generated native folders, only if created locally)
+# React Native and Android
 app/android/.gradle/
 app/android/app/build/
 app/android/build/
@@ -232,8 +230,8 @@ VITE_SUPABASE_ANON_KEY=
 ### `app/.env.example`
 
 ```dotenv
-EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000/v1
-EXPO_PUBLIC_GOOGLE_CLOUD_PROJECT_NUMBER=
+API_BASE_URL=http://10.0.2.2:8000/v1
+GOOGLE_CLOUD_PROJECT_NUMBER=
 ```
 
 Rules:
@@ -251,7 +249,7 @@ Rules:
 | Supabase JWT secret | Project Settings, API, JWT settings | `backend/.env` | No |
 | Database connection string | Project Settings, Database (use the pooled connection) | `backend/.env` | No |
 | Google service account JSON (Play Integrity) | Google Cloud console, IAM, Service accounts | `backend/secrets/` | No |
-| Google Cloud project number | Google Cloud console, project dashboard | `app/.env` as `EXPO_PUBLIC_GOOGLE_CLOUD_PROJECT_NUMBER` | No |
+| Google Cloud project number | Google Cloud console, project dashboard | `app/.env` | No |
 | Face worker token | Generate locally: `openssl rand -hex 32` | `backend/.env`, `face/.env` | No |
 | Android release keystore | Generate once with `keytool`, one copy with the app lead | Password manager | No |
 
@@ -329,7 +327,7 @@ The answers decide what the network gate can prove in production. The demo does 
 
 ## 11. Risk spikes
 
-Each spike is a throwaway script or app in `scripts/spikes/`. The aim is a yes or no, not clean code. Write the result in `scripts/spikes/RESULTS.md`. Spikes 11.1, 11.2 and 11.4 use a development build, because Expo Go cannot run the native code they test.
+Each spike is a throwaway script or app in `scripts/spikes/`. The aim is a yes or no, not clean code. Write the result in `scripts/spikes/RESULTS.md`.
 
 | # | Spike | Question | Pass looks like |
 |---|---|---|---|

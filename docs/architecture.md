@@ -74,7 +74,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Device["Student device"]
-        App["NightRoll app<br/>Expo, dev or prod build"]
+        App["NightRoll app<br/>React Native"]
         Keystore["Android Keystore<br/>signing key"]
         Models["On-device models<br/>TFLite face pre-check"]
         App --> Keystore
@@ -494,7 +494,7 @@ Nothing in the design requires a rewrite to scale. Each container can move to it
 | ADR-8 | WiFi fingerprint as a scored factor, not a gate | Hard gate on fingerprint | Fingerprints vary night to night; a gate would reject too many real students |
 | ADR-9 | Fail closed on security gates | Fail open for availability | A wrong acceptance is worse than a rejection in this setting |
 | ADR-10 | Single host for pilot | Cloud Kubernetes | Hostel scale does not justify it; easier for the team to operate |
-| ADR-11 | Expo (React Native, TypeScript) with Kotlin Expo Modules, run as a development build | React Native CLI; Flutter; native Kotlin only | Expo handles the build tooling and EAS cloud builds, and Expo Modules keep the Kotlin code in the same project. Expo Go cannot run custom native code, so the phones run a development build. |
+| ADR-11 | React Native for the app | Flutter; native Kotlin | One codebase; team familiarity; camera and ML libraries available |
 | ADR-12 | Android first, iOS deferred | Both platforms at once | iOS cannot perform full WiFi scans, which the design depends on |
 | ADR-13 | Supabase for database, auth, and frame storage | Self-hosted PostgreSQL, a separate auth provider, and S3-compatible storage | One managed platform with pgvector, MFA-capable auth, and private buckets; less to operate in a hackathon and pilot |
 | ADR-14 | Upstash Redis (hosted) kept for nonces and window state | Supabase-only (Postgres with short TTL tables) | Atomic consume and TTL expiry are a natural fit for Redis; keeps the nonce path independent of database load |

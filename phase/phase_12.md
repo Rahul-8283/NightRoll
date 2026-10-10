@@ -124,9 +124,9 @@ The demo and the first pilot use the subnet check. This task makes the upgrade p
 
 | # | Task |
 |---|---|
-| 8.1 | Build the production profile with EAS (`npx eas-cli build --profile production --platform android`). EAS signs it with the release keystore it manages. |
-| 8.2 | Turn on code shrinking in the production profile, keeping the Expo Module classes |
-| 8.3 | Set `EXPO_PUBLIC_API_BASE_URL` to the demo host's HTTPS address in the production profile |
+| 8.1 | Build a release APK signed with the release keystore |
+| 8.2 | Turn on code shrinking, with keep rules for the native modules |
+| 8.3 | Point `API_BASE_URL` at the demo host's HTTPS address |
 | 8.4 | Remove any debug screens and local-only switches from the release build |
 | 8.5 | Install on both test phones and the spare |
 | 8.6 | Confirm Play Integrity returns a verdict for this build, and record what it says |

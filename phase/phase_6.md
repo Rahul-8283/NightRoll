@@ -83,7 +83,7 @@ If step 3.4 fails after the face worker stored an embedding, delete that embeddi
 
 | # | Task |
 |---|---|
-| 4.1 | Add `react-native-vision-camera` and use the front camera. It needs the development build; Expo Go cannot run it. |
+| 4.1 | Add `react-native-vision-camera` and use the front camera |
 | 4.2 | Add ML Kit face detection as a frame processor |
 | 4.3 | Show an oval guide. Give live hints: "Move closer", "Hold still", "More light", "Look straight" |
 | 4.4 | Capture automatically when one face is centred, large enough and steady. Take 5 frames about 300 ms apart. |
@@ -105,7 +105,7 @@ A student who defers the room scan can open the app and see the window, but cann
 
 ### 6. Wi-Fi scan module (app, native)
 
-Written in Kotlin as an Expo Module in `app/modules/wifi-scanner` and exposed as `WifiScanner`.
+Written in Kotlin and exposed as `WifiScanner`.
 
 | Method | Behaviour |
 |---|---|

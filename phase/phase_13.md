@@ -62,7 +62,7 @@ Any failure here is fixed before anything else in this phase.
 
 | # | Task |
 |---|---|
-| 2.1.1 | Add `pytest` to `backend/` and `face/`, Vitest to `dashboard/`, and Jest with `jest-expo` to `app/` |
+| 2.1.1 | Add `pytest` to `backend/` and `face/`, and a test runner to `dashboard/` and `app/` |
 | 2.1.2 | Integration tests use a local Supabase stack from the Supabase CLI and a separate Upstash test database, never the development one |
 | 2.1.3 | Record a set of real submissions from the test phones as fixtures: genuine, wrong room, wrong device, tampered. Strip the frames and keep the hashes. |
 | 2.1.4 | Add a GitHub Actions workflow that runs lint and the unit tests on every push |
