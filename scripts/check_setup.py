@@ -201,6 +201,15 @@ def check_tools() -> None:
         "java": ["-version"],
     }
     for tool, args in wanted.items():
+        if tool == "supabase" and not shutil.which(tool):
+            # the team runs the CLI through npx, which uses only the npm cache
+            proc = subprocess.run(["npx", "--no-install", "supabase", *args], capture_output=True, text=True)
+            text = (proc.stdout or "").strip()
+            if proc.returncode == 0 and text:
+                record("PASS", "supabase CLI (npx) installed", text.splitlines()[0][:60])
+            else:
+                record("WARN", "supabase CLI (npx) installed", "run: npx supabase --version")
+            continue
         if not shutil.which(tool):
             record("WARN", f"{tool} installed", "missing; see phase 0 section 13")
             continue
