@@ -10,11 +10,13 @@ from fastapi import APIRouter, Depends, Request
 from starlette.datastructures import UploadFile
 
 from app.config import Settings, get_settings
-from app.deps import CurrentStudent, DbPool, RedisClient
+from app.deps import CurrentStudent, CurrentWarden, DbPool, RedisClient
 from app.errors import AppError
 from app.schemas.attendance import NonceStatusOut
+from app.schemas.dashboard import TonightOut
 from app.schemas.verify import VerifyOut
 from app.services import attendance as attendance_service
+from app.services import dashboard as dashboard_service
 from app.services.verification import service as verification_service
 from app.services.verification.network import client_address, parse_trusted_proxies
 from app.services.verification.runner import Submission
@@ -25,6 +27,11 @@ MAX_PAYLOAD_BYTES = 64 * 1024
 MAX_FRAME_BYTES = 1024 * 1024
 MAX_FRAMES = 5
 _FRAME_FIELD = re.compile(r"^frame_(\d+)$")
+
+
+@router.get("/tonight", response_model=TonightOut)
+async def tonight(pool: DbPool, _: CurrentWarden) -> TonightOut:
+    return await dashboard_service.tonight(pool)
 
 
 @router.get("/nonce", response_model=NonceStatusOut, response_model_exclude_none=True)

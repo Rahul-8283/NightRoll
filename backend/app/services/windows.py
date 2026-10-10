@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
@@ -13,6 +14,7 @@ from app.db.queries import students as students_q
 from app.db.queries import windows as windows_q
 from app.errors import AppError
 from app.logging import log_event
+from app.redis import keys
 from app.services import absentees, audit, nonces
 
 logger = logging.getLogger("nightroll.windows")
@@ -89,7 +91,7 @@ async def create_or_update(
         return updated
 
 
-async def mark_off(pool: asyncpg.Pool, window_id: UUID, actor: str) -> asyncpg.Record:
+async def mark_off(pool: asyncpg.Pool, redis: Redis, window_id: UUID, actor: str) -> asyncpg.Record:
     async with pool.acquire() as conn, conn.transaction():
         window = await windows_q.lock_by_id(conn, window_id)
         if window is None:
@@ -98,7 +100,8 @@ async def mark_off(pool: asyncpg.Pool, window_id: UUID, actor: str) -> asyncpg.R
             raise _conflict("WINDOW_STATE_CONFLICT", "Only a scheduled window can become an off day")
         updated = await windows_q.set_state(conn, window_id, "off")
         await audit.write(conn, actor=actor, action="window.off", target_id=str(window_id))
-        return updated
+    await _publish_state(redis, window_id, "off")
+    return updated
 
 
 async def open_window(pool: asyncpg.Pool, redis: Redis, window_id: UUID, actor: str) -> bool:
@@ -112,6 +115,7 @@ async def open_window(pool: asyncpg.Pool, redis: Redis, window_id: UUID, actor: 
         await nonces.issue(redis, window_id, student_ids, opened["closes_at"])
         await nonces.set_open(redis, window_id, opened["closes_at"])
     log_event(logger, logging.INFO, "window opened", window_id=str(window_id), students=len(student_ids))
+    await _publish_state(redis, window_id, "open")
     return True
 
 
@@ -130,7 +134,15 @@ async def close_window(pool: asyncpg.Pool, redis: Redis, window_id: UUID, actor:
     await nonces.drop(redis, window_id, student_ids)
     await nonces.set_closed(redis, window_id)
     log_event(logger, logging.INFO, "window closed", window_id=str(window_id), absent=absent_count)
+    await _publish_state(redis, window_id, "closed")
     return True
+
+
+async def _publish_state(redis: Redis, window_id: UUID, state: str) -> None:
+    await redis.publish(
+        keys.WINDOW_STATE_CHANNEL,
+        json.dumps({"type": "window_state", "window_id": str(window_id), "state": state}),
+    )
 
 
 async def ensure_default_windows(pool: asyncpg.Pool, settings: Settings, now: datetime) -> None:

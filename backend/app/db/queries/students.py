@@ -24,7 +24,12 @@ async def list_students(
     *,
     room_id: UUID | None = None,
     floor: int | None = None,
+    search: str | None = None,
 ) -> list[asyncpg.Record]:
+    pattern = None
+    if search:
+        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = f"%{escaped}%"
     return await pool.fetch(
         """
         select
@@ -35,8 +40,18 @@ async def list_students(
         join rooms r on r.id = s.room_id
         where ($1::uuid is null or s.room_id = $1)
           and ($2::int is null or r.floor = $2)
+          and ($3::text is null or s.name ilike $3 or s.roll_number ilike $3)
         order by r.floor, r.number, s.roll_number
         """,
         room_id,
         floor,
+        pattern,
+    )
+
+
+async def set_student_room(pool: asyncpg.Pool, student_id: UUID, room_id: UUID) -> asyncpg.Record | None:
+    return await pool.fetchrow(
+        "update students set room_id = $2 where id = $1 returning id, room_id",
+        student_id,
+        room_id,
     )

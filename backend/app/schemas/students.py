@@ -16,3 +16,13 @@ class StudentOut(ApiModel):
     floor: int
     active: bool
     enrolled: bool
+
+
+class ChangeRoomRequest(ApiModel):
+    room_id: UUID
+
+
+class ChangeRoomResponse(ApiModel):
+    student_id: UUID
+    room_id: UUID
+    room_number: str

@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.db.queries import rooms as rooms_q
 from app.deps import CurrentStudent, CurrentWarden, DbPool
 from app.errors import AppError
+from app.schemas.dashboard import RoomTonightOut
 from app.schemas.rooms import (
     AccessPointOut,
     FingerprintResetResponse,
@@ -16,6 +17,7 @@ from app.schemas.rooms import (
     RoomStudentOut,
     SubmitRoomScansRequest,
 )
+from app.services import dashboard as dashboard_service
 from app.services import fingerprint as fingerprint_svc
 
 router = APIRouter(prefix="/v1/rooms", tags=["rooms"])
@@ -42,6 +44,14 @@ async def get_room(room_id: UUID, pool: DbPool, _: CurrentWarden) -> RoomDetailO
         access_points=[AccessPointOut(**dict(row)) for row in access_points],
         students=[RoomStudentOut(**dict(row)) for row in students],
     )
+
+
+@router.get("/{room_id}/tonight", response_model=RoomTonightOut)
+async def room_tonight_endpoint(room_id: UUID, pool: DbPool, _: CurrentWarden) -> RoomTonightOut:
+    room = await rooms_q.get_room(pool, room_id)
+    if room is None:
+        raise AppError(code="NOT_FOUND", status_code=404, message="Room not found")
+    return await dashboard_service.room_tonight(pool, room_id, room)
 
 
 @router.post("/{room_id}/fingerprint", response_model=RoomFingerprintResponse)

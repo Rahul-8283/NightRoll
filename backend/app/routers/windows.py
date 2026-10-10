@@ -7,7 +7,9 @@ from fastapi import APIRouter
 from app.db.queries import windows as windows_q
 from app.deps import AdminWarden, CurrentWarden, DbPool, RedisClient
 from app.errors import AppError
+from app.schemas.dashboard import WindowHistoryOut
 from app.schemas.windows import WindowIn, WindowOut
+from app.services import dashboard as dashboard_service
 from app.services import windows as windows_service
 
 router = APIRouter(prefix="/v1/windows", tags=["windows"])
@@ -39,14 +41,19 @@ async def current(pool: DbPool, _: CurrentWarden) -> WindowOut:
     return WindowOut(**dict(row))
 
 
+@router.get("/history", response_model=list[WindowHistoryOut])
+async def window_history(pool: DbPool, _: CurrentWarden) -> list[WindowHistoryOut]:
+    return await dashboard_service.window_history(pool, limit=60)
+
+
 @router.get("", response_model=list[WindowOut])
 async def list_windows(pool: DbPool, _: CurrentWarden) -> list[WindowOut]:
     return [WindowOut(**dict(row)) for row in await windows_q.list_recent(pool, limit=60)]
 
 
 @router.post("/{window_id}/off", response_model=WindowOut)
-async def mark_off(window_id: UUID, pool: DbPool, warden: CurrentWarden) -> WindowOut:
-    row = await windows_service.mark_off(pool, window_id, actor=warden.user_id)
+async def mark_off(window_id: UUID, pool: DbPool, redis: RedisClient, warden: CurrentWarden) -> WindowOut:
+    row = await windows_service.mark_off(pool, redis, window_id, actor=warden.user_id)
     return WindowOut(**dict(row))
 
 

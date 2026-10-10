@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -16,6 +17,7 @@ from redis.asyncio import Redis
 from app.config import Settings
 from app.db.queries import enrollment as enrollment_q
 from app.errors import AppError
+from app.redis import keys
 from app.services import audit
 
 logger = logging.getLogger("nightroll.enrollment")
@@ -102,6 +104,7 @@ async def clear_lockout(redis: Redis, student_id: UUID) -> None:
 
 async def withdraw_student_consent(
     pool: asyncpg.Pool,
+    redis: Redis,
     settings: Settings,
     *,
     student_id: UUID,
@@ -149,6 +152,10 @@ async def withdraw_student_consent(
                 target_id=str(student_id),
                 payload={"roll_number": student["roll_number"]},
             )
+    await redis.publish(
+        keys.ENROLLMENT_CHANNEL,
+        json.dumps({"type": "enrollment_update", "student_id": str(student_id), "enrolled": False}),
+    )
 
 
 def validate_p256_public_key(public_key_b64: str) -> bytes:
@@ -413,6 +420,10 @@ async def _enroll_locked(
 
     # Clear lockout counters
     await clear_lockout(redis, student_id)
+    await redis.publish(
+        keys.ENROLLMENT_CHANNEL,
+        json.dumps({"type": "enrollment_update", "student_id": str(student_id), "enrolled": True}),
+    )
 
     # 3.5 Return {student_id, room_id, room_number}
     return {
