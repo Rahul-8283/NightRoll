@@ -1,0 +1,23 @@
+{
+  "_comment": "Example only, with made-up values. Copy to config/rooms.local.json (git-ignored) and put the real room map there.",
+  "rooms": [
+    {
+      "number": "101",
+      "floor": 1,
+      "subnet": "192.168.101.10/32",
+      "access_points": [
+        {"bssid": "aa:bb:cc:00:01:01", "band": "2.4GHz"},
+        {"bssid": "aa:bb:cc:00:01:05", "band": "5GHz"}
+      ]
+    },
+    {
+      "number": "102",
+      "floor": 1,
+      "subnet": "192.168.102.10/32",
+      "access_points": [
+        {"bssid": "aa:bb:cc:00:02:01", "band": "2.4GHz"},
+        {"bssid": "aa:bb:cc:00:02:05", "band": "5GHz"}
+      ]
+    }
+  ]
+}

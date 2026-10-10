@@ -65,7 +65,6 @@ Request, as multipart:
 | `public_key` | Base64 DER public key from the Keystore |
 | `key_security_level` | `strongbox`, `tee` or `software` |
 | `consent_version` | Version of the text agreed to |
-| `fcm_token` | Push token, if available |
 | `frames` | 3 to 5 JPEG frames |
 
 Steps, in order:
@@ -84,7 +83,7 @@ If step 3.4 fails after the face worker stored an embedding, delete that embeddi
 
 | # | Task |
 |---|---|
-| 4.1 | Add `react-native-vision-camera` and use the front camera |
+| 4.1 | Add `react-native-vision-camera` and use the front camera. It needs the development build; Expo Go cannot run it. |
 | 4.2 | Add ML Kit face detection as a frame processor |
 | 4.3 | Show an oval guide. Give live hints: "Move closer", "Hold still", "More light", "Look straight" |
 | 4.4 | Capture automatically when one face is centred, large enough and steady. Take 5 frames about 300 ms apart. |
@@ -99,14 +98,14 @@ This capture component is reused by Phase 7.
 2. Generate the device key if none exists.
 3. Capture the face frames.
 4. Upload. Show progress.
-5. On success, store student ID and room details, then register the push token.
+5. On success, store student ID and room details.
 6. Continue to the room scan step, or defer it with "Scan my room later".
 
-A student who defers the room scan can receive pushes but cannot mark attendance until the room has a fingerprint.
+A student who defers the room scan can open the app and see the window, but cannot mark attendance until the room has a fingerprint.
 
 ### 6. Wi-Fi scan module (app, native)
 
-Written in Kotlin and exposed as `WifiScanner`.
+Written in Kotlin as an Expo Module in `app/modules/wifi-scanner` and exposed as `WifiScanner`.
 
 | Method | Behaviour |
 |---|---|
@@ -151,7 +150,7 @@ Roommates share the room's fingerprint. Only the first enrolled student in a roo
 |---|---|
 | New phone | Warden issues a new code. The old device is deactivated. The embedding is replaced. |
 | App reinstalled | Same as a new phone, since the key is gone |
-| Consent withdrawn | Warden action `POST /v1/students/{id}/withdraw`: deletes the embedding through the face worker, deactivates the device, clears the push token, writes an audit row. The student returns to the ground-floor scanner. |
+| Consent withdrawn | Warden action `POST /v1/students/{id}/withdraw`: deletes the embedding through the face worker, deactivates the device, writes an audit row. The student returns to the ground-floor scanner. |
 | Room change | Warden updates the student's room. The device and face stay valid. |
 
 ---

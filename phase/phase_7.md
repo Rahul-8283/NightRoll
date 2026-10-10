@@ -29,7 +29,7 @@ The phone side of a nightly mark. When the student taps "Mark attendance", the a
 
 ### 1. Guard checks (native)
 
-Written in Kotlin and exposed as `Environment`.
+Written in Kotlin as an Expo Module in `app/modules/environment` and exposed as `Environment`.
 
 | Check | How | Blocks marking |
 |---|---|---|
@@ -84,7 +84,7 @@ Reuses the camera component from Phase 6.
 
 ### 5. Play Integrity token (native)
 
-Written in Kotlin and exposed as `Integrity`.
+Written in Kotlin as an Expo Module in `app/modules/integrity` and exposed as `Integrity`.
 
 | # | Task |
 |---|---|

@@ -130,7 +130,7 @@ For the demo, each router hides its phones behind one address. The room's `subne
 |---|---|
 | 10.1 | Write a `current_device` dependency that verifies the three signed headers from Phase 4 |
 | 10.2 | Reject a timestamp more than 60 seconds from server time |
-| 10.3 | Replace the stubs on `GET /v1/attendance/nonce`, `PUT /v1/devices/push-token` and `POST /v1/rooms/{id}/fingerprint` |
+| 10.3 | Replace the stubs on `GET /v1/attendance/nonce` and `POST /v1/rooms/{id}/fingerprint` |
 | 10.4 | Remove the `APP_ENV=local` guard from those routes |
 
 ### 11. Idempotency

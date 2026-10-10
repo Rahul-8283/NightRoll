@@ -9,7 +9,7 @@
 
 ## 1. Summary
 
-NightRoll lets hostel students mark their nightly attendance from bed on their phone. Today, students on every floor walk down to one ground-floor face scanner at 10:00 PM. NightRoll replaces that walk with a push notification and a short face check, and it verifies that the mark comes from the student's own room, on their enrolled device, inside the warden's window.
+NightRoll lets hostel students mark their nightly attendance from bed on their phone. Today, students on every floor walk down to one ground-floor face scanner at 10:00 PM. NightRoll replaces that walk with a short face check the student opens in bed, and it verifies that the mark comes from the student's own room, on their enrolled device, inside the warden's window.
 
 No new hardware is needed. The system uses the student's phone, the hostel's existing per-room WiFi, and a backend on the campus network.
 
@@ -35,7 +35,7 @@ No new hardware is needed. The system uses the student's phone, the hostel's exi
 | G3 | Wardens see every room live | Dashboard reflects a verdict within 2 seconds |
 | G4 | No new hardware | Works on student Android phones and existing hostel WiFi |
 | G5 | A clear fallback exists | Students with a dead phone or no WiFi can use the ground-floor scanner |
-| G6 | Marking is fast | Median time from notification tap to verdict under 30 seconds |
+| G6 | Marking is fast | Median time from opening the app to verdict under 30 seconds |
 
 ---
 
@@ -69,7 +69,7 @@ No new hardware is needed. The system uses the student's phone, the hostel's exi
 - As a warden, I can re-scan a room's WiFi fingerprint after a router change.
 
 **Nightly marking**
-- As a student, I get a push notification when the window opens.
+- As a student, I open the app during the window and see that it is open, with its closing time.
 - As a student, I can complete the face check in bed.
 - As a student, I see a result and, if rejected, the reason and the next step.
 - As a student, I can use the ground-floor scanner if my phone or WiFi fails.
@@ -92,7 +92,7 @@ No new hardware is needed. The system uses the student's phone, the hostel's exi
 - **FR-1** The warden sets the window start and end. Default is 22:00 to 22:30.
 - **FR-2** The warden can mark nights as off days, when no window opens.
 - **FR-3** At window open, the system issues one single-use nonce per enrolled student, valid until the window closes.
-- **FR-4** The system sends a push notification to every enrolled student when the window opens.
+- **FR-4** The Home screen shows tonight's window status to each enrolled student who opens the app. No push notification is sent.
 
 ### 7.2 Enrollment
 - **FR-5** Enrollment requires recorded consent before any capture.
@@ -206,7 +206,7 @@ Weights and thresholds must be tuned from measurements taken in the hostel befor
 
 - Hostel administration approval for the pilot.
 - Campus network admin cooperation to provide room-to-subnet mapping, and ideally controller or RADIUS access.
-- Google Firebase (push) and Play Integrity API access.
+- Google Cloud project for Play Integrity API access.
 - A Supabase project for database, authentication, and frame storage, with pilot data kept under the college data policy.
 - Students' Android phones with location and camera permissions.
 
@@ -234,6 +234,7 @@ Weights and thresholds must be tuned from measurements taken in the hostel befor
 4. What consent wording and privacy notice does the hostel administration approve?
 5. Will the warden accept NEEDS REVIEW volume during the first week?
 6. Is the ground-floor scanner kept as the permanent fallback, or retired after the pilot?
+7. How do students remember to open the app at window time, without a push? Options: a warden announcement, a local alarm set from the window time, or a fixed daily routine.
 
 ---
 

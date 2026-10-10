@@ -32,7 +32,8 @@ Prove the **right person**, in the **right room**, on the **right device**, insi
 - [Privacy](#privacy)
 - [Demo plan](#demo-plan)
 - [Roadmap](#roadmap)
-- [Planned repository layout](#planned-repository-layout)
+- [Getting started](#getting-started)
+- [Repository layout](#repository-layout)
 - [Project status](#project-status)
 - [License](#license)
 
@@ -48,7 +49,7 @@ Every night at 10:00 PM, every hosteller walks down to the ground floor to scan 
 
 ## The solution
 
-NightRoll moves the check to the student's phone and the hostel's existing per-room WiFi. A push arrives when the window opens, the student completes a short face check in bed, and the room tile turns green on the warden's dashboard.
+NightRoll moves the check to the student's phone and the hostel's existing per-room WiFi. At 10 PM the student opens NightRoll and completes a short face check in bed, and the room tile turns green on the warden's dashboard.
 
 A selfie alone would be easy to fake, so every mark has to prove three things at once:
 
@@ -68,7 +69,7 @@ flowchart LR
     end
     subgraph After["With NightRoll"]
         direction LR
-        B1["Push at 22:00"] --> B2["Face check in bed"] --> B3["Marked present"]
+        B1["Opens app at 22:00"] --> B2["Face check in bed"] --> B3["Marked present"]
     end
     Before -.-> After
 ```
@@ -79,6 +80,7 @@ flowchart LR
 
 **Mobile app**
 
+![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)
 ![React Native](https://img.shields.io/badge/React%20Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Android](https://img.shields.io/badge/Android%20Keystore-3DDC84?style=for-the-badge&logo=android&logoColor=white)
@@ -90,7 +92,7 @@ flowchart LR
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![Upstash Redis](https://img.shields.io/badge/Upstash%20Redis-00E9A3?style=for-the-badge&logo=upstash&logoColor=white)
 ![Celery](https://img.shields.io/badge/Celery-37814A?style=for-the-badge&logo=celery&logoColor=white)
 ![WebSocket](https://img.shields.io/badge/WebSocket-010101?style=for-the-badge)
 
@@ -111,23 +113,22 @@ flowchart LR
 **Dashboard and delivery**
 
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![Firebase Cloud Messaging](https://img.shields.io/badge/Firebase%20Cloud%20Messaging-DD2C00?style=for-the-badge&logo=firebase&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
 | Layer | Choice | Why |
 |---|---|---|
-| App | React Native, VisionCamera, ML Kit | One codebase, fast camera pipeline, on-device face detection |
+| App | Expo (React Native), Kotlin Expo Modules, VisionCamera, ML Kit | Expo for builds and EAS cloud builds; a development build runs the native code; one codebase for screens |
 | On-device ML | TFLite MobileFaceNet | Quick pre-check so a bad capture fails before upload |
 | Device trust | Android Keystore / StrongBox, Play Integrity | Key never leaves the chip; blocks root, emulators, virtual cameras |
 | API | FastAPI | Async, typed, fast to build |
-| State | Redis | Nonces and window state with native TTL |
+| State | Upstash Redis (hosted, TLS) | Nonces and window state with native TTL, no local server to run |
 | Face | InsightFace `buffalo_l` on ONNX Runtime | Strong open ArcFace embeddings, runs on CPU |
 | Database | Supabase (PostgreSQL with pgvector) | Relational data and 512-dimension embeddings in one managed database |
 | Auth | Supabase Auth | Warden and admin login with MFA; student devices are bound by Keystore keys, not passwords |
 | Frame storage | Supabase Storage (private bucket) | Encrypted, short-lived frames with a 24-hour deletion job |
 | Network verify | Subnet check, then controller API or RADIUS accounting | Starts simple, upgrades without app changes |
 | Dashboard | React over WebSocket | Room tiles update live |
-| Push | Firebase Cloud Messaging | Opens the window on every phone at once |
+| Window status | Pulled from the API when the app opens | No push service; students open the app at window time |
 
 ---
 
@@ -166,7 +167,7 @@ flowchart LR
         B3["Scored checks"]
         B4["Fusion engine"]
         B5[("Supabase PostgreSQL + pgvector")]
-        B6[("Redis")]
+        B6[("Upstash Redis")]
         B7["Network adapter"]
         B0 --> B1 --> B2 --> B3 --> B4
         B0 <--> B6
@@ -176,7 +177,7 @@ flowchart LR
 
     subgraph Out["4. Outputs"]
         direction TB
-        O1["FCM push"]
+        O1["Window status on Home"]
         O2["Student result"]
         O3["Warden dashboard"]
     end
@@ -185,7 +186,7 @@ flowchart LR
     N2 -- "source IP = room" --> B1
     N3 -.-> B7
     B0 --> O1
-    O1 -- "window open + nonce" --> P1
+    O1 -- "shown when app opens" --> P1
     B4 --> O2
     B4 --> O3
 ```
@@ -208,13 +209,12 @@ flowchart TB
     FV --> FE
     WV --> FE
 
-    WS["Window service"] --> RD[("Redis<br/>nonces, window state")]
+    WS["Window service"] --> RD[("Upstash Redis<br/>nonces, window state")]
     CV --> RD
     FV --> PG[("Supabase PostgreSQL + pgvector<br/>students, rooms, embeddings, logs")]
     WV --> PG
     FE --> PG
     FE --> RT["WebSocket hub"] --> DB["Warden dashboard"]
-    WS --> FCM["Firebase Cloud Messaging"]
 ```
 
 ---
@@ -262,8 +262,7 @@ sequenceDiagram
     actor W as Warden
     participant D as Dashboard
     participant S as Backend
-    participant R as Redis
-    participant F as FCM
+    participant R as Upstash Redis
     participant A as NightRoll app
     actor U as Student
     participant AP as Room AP
@@ -272,9 +271,7 @@ sequenceDiagram
     D->>S: Save window and off days
     Note over S: 22:00 window opens
     S->>R: Store one nonce per student with TTL
-    S->>F: Send push to every student
-    F->>A: Window open, nonce attached
-    U->>A: Tap notification in bed
+    U->>A: Opens NightRoll in bed
     A->>A: Guard checks for VPN, proxy, mock location
     A->>U: Random liveness challenge
     U->>A: Blink, turn head
@@ -523,7 +520,7 @@ erDiagram
     }
 ```
 
-Nonces live in Redis with a TTL that ends when the window closes. They are shown here for the relationships only.
+Nonces live in Upstash Redis with a TTL that ends when the window closes. They are shown here for the relationships only.
 
 ---
 
@@ -544,7 +541,7 @@ flowchart TB
         subgraph Host["NightRoll host"]
             API["FastAPI service"]
             WK["Face worker"]
-            RDS[("Redis")]
+            RDS[("Upstash Redis")]
             PGS[("Supabase PostgreSQL + pgvector")]
             WEB["Dashboard"]
             API --> RDS
@@ -556,7 +553,6 @@ flowchart TB
     end
 
     subgraph Cloud["Google services"]
-        FCMS["Firebase Cloud Messaging"]
         PIS["Play Integrity API"]
     end
 
@@ -564,8 +560,6 @@ flowchart TB
     CTRL -.-> API
     WD --> WEB
     WEB <--> API
-    API --> FCMS
-    FCMS --> PH
     API --> PIS
 ```
 
@@ -626,23 +620,143 @@ flowchart LR
     M1 --> M2 --> M3
 ```
 
-## Planned repository layout
+## Getting started
+
+### Prerequisites
+
+Install these once. The commands are for macOS with Homebrew; Windows and Linux users can use the official installers.
+
+| Tool | Version | Needed for | Install |
+|---|---|---|---|
+| Git | any recent | Source control | `brew install git` |
+| uv | current | Backend and face worker: Python versions, dependencies | `brew install uv` |
+| Python | 3.12 | Backend, face worker (uv installs it, so this is optional) | `brew install python@3.12` |
+| Node.js | 20 LTS | Dashboard, app tooling | `brew install node@20` |
+| JDK | 17 | Android build | `brew install openjdk@17` |
+| Android Studio | current stable | Android SDK, emulator | developer.android.com/studio |
+| Docker Desktop | current stable | Later services (Phase 12); not needed for Redis | docker.com, then start it |
+| EAS CLI | current | Development and production builds of the app | `npx eas-cli` (no install needed) |
+| Supabase CLI | current stable | Migrations, linking the project | `brew install supabase/tap/supabase` |
+
+### First-time setup
+
+1. Clone the repo and switch to the branch you are working on:
+
+   ```bash
+   git clone https://github.com/Rahul-8283/NightRoll.git
+   cd NightRoll
+   git checkout base
+   ```
+
+2. Create your local env files from the examples. Ask the team for the real values; never commit them.
+
+   ```bash
+   cp backend/.env.example backend/.env
+   cp face/.env.example face/.env
+   cp dashboard/.env.example dashboard/.env
+   cp app/.env.example app/.env
+   cp config/rooms.example.json config/rooms.local.json
+   ```
+
+3. Put the Google service account file at `backend/secrets/google-service-account.json` (from the team password manager).
+
+4. Paste your Upstash `rediss://` URL into `backend/.env` as `REDIS_URL`, then check it (see below).
+
+5. Link Supabase: follow [supabase/README.md](supabase/README.md).
+
+### Running each service
+
+| Service | Port | Start with | Available from |
+|---|---|---|---|
+| Upstash Redis | hosted, TLS | set `REDIS_URL` in `backend/.env` | Phase 0 (now) |
+| Supabase | hosted | `supabase link --project-ref <ref>` | Phase 0 (now) |
+| Backend API | 8000 | `cd backend && uv run uvicorn app.main:app --reload --port 8000` | Health route now; full API in Phase 2 |
+| Window scheduler | none | `cd backend && python -m app.scheduler` | Phase 3 |
+| Face worker | 8100 | `cd face && uvicorn worker.main:app --port 8100` | Phase 5 |
+| Warden dashboard | 5173 | `cd dashboard && npm run dev` | Shell now; screens in Phase 10 |
+| Student app | Metro 8081 | `cd app && npx expo start` | Shell now; features in Phases 4 to 7 (Expo Go for screens; development build for the rest) |
+
+Start order once everything exists: face worker, backend API, scheduler, dashboard, then the phone app. Upstash Redis is always on.
+
+**Redis (works now, hosted on Upstash)**
+
+Redis runs in the cloud, so there is no server to start. Check the connection with the Redis client in a container, so nothing needs installing on the laptop:
+
+```bash
+docker run --rm redis:7 redis-cli --tls -u "<your REDIS_URL>" ping   # expect PONG
+```
+
+Use the same `rediss://` URL as in `backend/.env`. Do not commit it.
+
+**Backend API (set up now with uv)**
+
+```bash
+cd backend
+uv sync
+uv run uvicorn app.main:app --reload --port 8000
+curl http://localhost:8000/v1/health    # expect {"status":"ok"}
+```
+
+**Window scheduler (from Phase 3)** runs in its own terminal: `cd backend && uv run python -m app.scheduler`.
+
+**Face worker (from Phase 5)**
+
+```bash
+cd face
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+python scripts/download_models.py
+uvicorn worker.main:app --port 8100
+```
+
+**Warden dashboard (shell available now)**
+
+```bash
+cd dashboard
+cp .env.example .env     # fill in the Supabase URL and anon key
+npm install
+npm run dev              # open http://localhost:5173
+```
+
+The pages are placeholders until Phase 10. The dashboard shows which variables are missing if `.env` is incomplete.
+
+**Student app (from Phase 4)**
+
+Expo Go shows the screens that don't use native code. Anything that uses the Keystore, Wi-Fi or Play Integrity needs a development build.
+
+```bash
+cd app
+npm install
+npx expo start                 # Metro, scan the QR code with Expo Go for screens
+npx eas-cli build --profile development --platform android   # once: a dev build to install on the phone
+npx expo start --dev-client    # then open the dev build on the phone
+```
+
+The phone and the laptop must be on the same Wi-Fi. Set `EXPO_PUBLIC_API_BASE_URL` to the laptop's LAN address, not `10.0.2.2` (that address only works in the Android emulator).
+
+### Stopping everything
+
+Press `Ctrl+C` in each terminal. Upstash Redis keeps running in the cloud, so there is nothing to stop for it.
+
+## Repository layout
 
 ```text
 NightRoll/
-├── app/          React Native app: capture, liveness, WiFi scan, signer
-├── backend/      FastAPI service: gates, verifiers, fusion, window service
-├── face/         Face worker: InsightFace embeddings and anti-spoof
+├── app/          Expo student app (Android, Kotlin Expo Modules)
+├── backend/      FastAPI service: windows, nonces, gates, scoring, review
+├── face/         Face worker: embeddings and anti-spoof (internal)
 ├── dashboard/    React warden dashboard
-├── infra/        Docker Compose, database migrations
-└── docs/         Design notes and walk-test results
+├── supabase/     Supabase CLI project and SQL migrations
+├── infra/        Docker Compose and deployment files
+├── config/       Room map example (real map stays local, git-ignored)
+├── scripts/      One-off tools and Phase 0 risk spikes
+├── docs/         PRD, TRD, architecture
+└── phase/        Build plan, one file per phase
 ```
 
 ## Project status
 
-NightRoll is at the design stage. The architecture above is settled enough to build against; the code is not written yet, so there are no setup instructions here. They will be added alongside the first working build.
-
-Two things are still open and are marked as provisional above: the trust score weights and cutoffs, and which network signal the hostel can provide (per-room subnets, a controller API, or RADIUS accounting).
+The design is settled (see `docs/` and `phase/`). Phase 0, base setup, is in progress: folders, env examples, the Upstash Redis setup and the setup steps are in place. No feature code exists yet.
 
 ## License
 

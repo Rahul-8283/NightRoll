@@ -24,7 +24,7 @@ Values marked **provisional** are starting points to be confirmed by measurement
 - Face embedding and liveness/anti-spoof service
 - WiFi scan capture and room fingerprint matching
 - Warden dashboard with live room status over WebSocket
-- Push notifications through Firebase Cloud Messaging (FCM)
+- Window status on the student app's Home screen, fetched when the app opens (no push service)
 - Audit log and CSV export
 
 **Out of scope**
@@ -43,16 +43,14 @@ flowchart LR
     S["Student Android app"] -- "HTTPS, signed payload" --> AP["Room access point"]
     AP --> GW["NightRoll API<br/>campus LAN"]
     GW --> DB[("Supabase PostgreSQL + pgvector")]
-    GW --> RD[("Redis")]
+    GW --> RD[("Upstash Redis")]
     GW --> FW["Face worker"]
-    GW -- "push" --> FCM["Firebase Cloud Messaging"]
-    FCM --> S
     GW --> PI["Google Play Integrity API"]
     W["Warden dashboard"] <-- "WebSocket" --> GW
     NET["WiFi controller or RADIUS"] -. "read-only" .-> GW
 ```
 
-**External dependencies:** Firebase Cloud Messaging, Google Play Integrity API, and the hostel WiFi controller or RADIUS (optional until confirmed).
+**External dependencies:** Google Play Integrity API, and the hostel WiFi controller or RADIUS (optional until confirmed).
 
 ---
 
@@ -62,16 +60,16 @@ flowchart LR
 
 | Component | Responsibility | Technology | Deployed as |
 |---|---|---|---|
-| Mobile app | Enrollment, liveness UI, face capture, WiFi scan, signing | React Native, VisionCamera, ML Kit, TFLite | Android APK, internal track |
+| Mobile app | Enrollment, liveness UI, face capture, WiFi scan, signing | Expo (React Native, TypeScript), Expo Modules in Kotlin, VisionCamera, ML Kit, TFLite | Development and production builds via EAS; Expo Go for screens only |
 | API service | Hard gates, orchestration, scoring, fusion, window and review logic | FastAPI on Python 3.12 | Container |
 | Face worker | Embedding extraction, anti-spoof scoring | InsightFace buffalo_l on ONNX Runtime, Silent-Face | Container, separate from API |
-| Scheduler | Opens and closes windows, issues nonces, sends push | Celery beat or APScheduler | Container |
+| Scheduler | Opens and closes windows, issues nonces | Celery beat or APScheduler | Container |
 | Network adapter | Reads client-to-AP association from controller or RADIUS | Python module behind an interface | Container, optional |
 | Dashboard | Room tiles, review queue, exports | React, WebSocket | Static build behind the gateway |
 | Database | Relational data and vector search | Supabase PostgreSQL with pgvector | Hosted, managed by Supabase |
 | Auth | Warden and admin login, MFA, JWT issuance | Supabase Auth | Hosted, managed by Supabase |
 | Frame storage | Private bucket for short-lived frames | Supabase Storage | Hosted, managed by Supabase |
-| Cache and nonce store | Nonces, window state, rate limits | Redis 7 | Container |
+| Cache and nonce store | Nonces, window state, rate limits | Upstash Redis (hosted, TLS) | Managed by Upstash |
 
 ### 4.2 Component interactions
 
@@ -110,7 +108,7 @@ flowchart TB
 
     A6 -- "POST /v1/attendance/verify" --> B1
     B2 -- "embedding and anti-spoof" --> C1
-    C2 -- "nonces and push" --> B1
+    C2 -- "nonces" --> B1
 ```
 
 ---
@@ -194,10 +192,14 @@ Reason codes come from a fixed set (section 6.4). Messages are for display only.
 
 On reconnect, the client receives a full snapshot. Clients reconnect with exponential backoff.
 
-### 5.6 Push messages
+### 5.6 Window status
 
-- **Window open:** data message with `window_id` and `nonce_expires_at`. No face or room data in the payload.
-- **Reminder:** sent at a warden-set time to students who have no mark yet.
+No messages are pushed to phones. The student app calls `GET /v1/attendance/nonce` when it opens and every 60 seconds while Home is visible. The response is one of:
+
+- `open`: window ID, closing time, nonce and liveness challenge
+- `scheduled`: next opening time
+- `marked`: the student already has a present mark
+- `off` or `closed`: no marking tonight
 
 ---
 
@@ -206,7 +208,7 @@ On reconnect, the client receives a full snapshot. Clients reconnect with expone
 ### 6.1 Window lifecycle
 
 1. Warden creates a window with `opens_at` and `closes_at`.
-2. At `opens_at`, the scheduler creates one nonce per active enrolled student in Redis, with TTL equal to `closes_at - now`, and sends FCM messages.
+2. At `opens_at`, the scheduler creates one nonce per active enrolled student in Redis, with TTL equal to `closes_at - now`.
 3. At `closes_at`, nonces expire. The scheduler records ABSENT for every student without a PRESENT mark and sends the absentee list to the dashboard.
 
 **Nonce key:** `nonce:{window_id}:{student_id}`, value `{value, used}`. Consumption uses an atomic Lua script that checks the nonce is unused, marks it used, and returns the result. This prevents double use under concurrent requests.
@@ -378,7 +380,9 @@ CREATE TABLE audit_log (
 
 `students.active` and `devices.active` allow revoking access without deleting history.
 
-### 7.2 Redis keys
+### 7.2 Redis keys (Upstash)
+
+Hosted on Upstash over TLS, so every connection uses a `rediss://` URL. Upstash supports TTLs and Lua scripts, which the nonce logic relies on. The keys are short-lived; the table lists them.
 
 | Key | Value | TTL |
 |---|---|---|
@@ -419,8 +423,9 @@ CREATE TABLE audit_log (
 
 ### 9.1 Requirements
 
+- Built with Expo (React Native, TypeScript). Native code is Kotlin in Expo Modules. Phones run a development build or a production build made with EAS. Expo Go is only for screens without native code.
 - Android 9 (API 28) or higher. Android 12 or higher recommended for StrongBox.
-- Permissions: camera, location (required by Android for WiFi scans), notifications, internet.
+- Permissions: camera, location (required by Android for WiFi scans), internet.
 - Keys are generated in the Keystore, non-exportable, using StrongBox where available and the TEE otherwise.
 
 ### 9.2 Behaviour
@@ -481,13 +486,13 @@ CREATE TABLE audit_log (
 ```mermaid
 flowchart TB
     subgraph LAN["Campus LAN"]
-        subgraph Host["Single host, Docker Compose, with hosted Supabase"]
+        subgraph Host["Single host, Docker Compose, with hosted Supabase and Upstash"]
             NGX["Reverse proxy<br/>TLS termination"]
             API["API service"]
             FW["Face worker"]
             SCH["Scheduler"]
             PG[("Supabase PostgreSQL + pgvector")]
-            RD[("Redis")]
+            RD[("Upstash Redis")]
             FS[("Encrypted frame volume")]
             NGX --> API
             API --> PG
@@ -510,7 +515,6 @@ flowchart TB
 | api | python:3.12-slim | 8000 (internal) | 2 vCPU, 2 GB |
 | face-worker | python:3.12 with ONNX Runtime | internal | 4 vCPU, 4 GB |
 | scheduler | api image | none | 0.25 vCPU, 256 MB |
-| redis | redis:7 | internal | 0.5 vCPU, 512 MB |
 
 Sizing assumes 1,000 students marking in a 30-minute window: about 0.6 verifications per second at peak, with face work dominating CPU.
 
@@ -522,7 +526,6 @@ Read from environment variables or a config file, never hard-coded:
 - Fingerprint constants
 - Room and access point map
 - Controller or RADIUS endpoint
-- FCM credentials
 - Play Integrity package name and API key
 
 Changing these does not require a code change.
@@ -532,11 +535,10 @@ Changing these does not require a code change.
 ## 13. Observability
 
 - **Logs:** structured JSON, one line per request, with request ID, endpoint, verdict, reason codes, and latency. No personal data beyond a hashed student ID.
-- **Metrics:** request count and latency per endpoint; verdict counts per window; gate failures by reason code; face worker latency; Redis and PostgreSQL health; FCM delivery rate.
+- **Metrics:** request count and latency per endpoint; verdict counts per window; gate failures by reason code; face worker latency; Redis and PostgreSQL health.
 - **Alerts:**
   - Verification error rate above 2% in a window
   - Face worker down while a window is open
-  - FCM delivery below 90%
   - Frame volume above 80% full
 - **Dashboards:** one live view for the warden's night (counts, gate failures, latency) and one for the team (all metrics).
 
@@ -549,7 +551,6 @@ Changing these does not require a code change.
 | Verdict latency, p95 | 2 seconds or less, excluding device capture |
 | Face worker, per frame | 150 ms or less on pilot hardware |
 | Dashboard update after verdict | 2 seconds or less |
-| Push delivery to 1,000 devices | 60 seconds or less |
 | Verifications per second | 5 sustained, 20 burst |
 
 ---
@@ -594,7 +595,7 @@ A pre-recorded backup video of all five steps is kept in case of failure on stag
 | PostgreSQL down | Verification returns 503; nothing is written |
 | Play Integrity unavailable | 503 with fallback; no silent pass |
 | Controller or RADIUS unavailable | `AP_UNAVAILABLE` with neutral score; mark continues |
-| FCM delivery fails for a student | Student can open the app manually; warden sees who has not marked |
+| Student does not open the app | Warden sees who has not marked on the dashboard and can announce the time |
 | Router down for a room | Fingerprint fails; students use fallback; warden sees a room alert |
 | Clock drift on the server | NTP required; window checks fail closed if the offset exceeds 5 seconds |
 
@@ -617,7 +618,7 @@ The system fails closed for security gates. It never accepts a mark it could not
 1. Does the hostel provide per-room subnets, controller API access, or RADIUS accounting?
 2. Which band do the hostel's access points use for each room?
 3. Is a single campus server acceptable for hosting, or must it sit in a managed environment?
-4. Who holds FCM and Play Integrity credentials, and how are they rotated?
+4. Who holds the Google service account credentials for Play Integrity, and how are they rotated?
 5. Is hosted Supabase (database, auth, storage) acceptable under the college data policy, or must frames and embeddings stay on campus?
 6. Does Silent-Face anti-spoof run acceptably on pilot hardware within the latency target?
 

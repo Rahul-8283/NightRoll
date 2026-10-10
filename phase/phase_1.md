@@ -48,7 +48,7 @@ All SQL goes in `supabase/migrations/` as timestamped files, applied with `supab
 Use the schema in `docs/TRD.md` section 7.1, with these additions.
 
 **`students`**
-- Add `fcm_token text` for push delivery. It is replaced whenever the app reports a new one.
+- No changes beyond the TRD schema.
 
 **`devices`**
 - Add a partial unique index so a student has at most one active device:

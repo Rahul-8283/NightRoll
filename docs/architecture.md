@@ -46,7 +46,6 @@ flowchart LR
 
     NightRoll["NightRoll system"]
 
-    FCM["Firebase Cloud Messaging"]
     PI["Google Play Integrity API"]
     Ctrl["WiFi controller or RADIUS<br/>optional"]
     Fallback["Ground-floor scanner<br/>existing"]
@@ -55,8 +54,6 @@ flowchart LR
     Warden -- "manages window, reviews marks" --> NightRoll
     Admin -- "exports records" --> NightRoll
     NetAdmin -- "provides room-to-subnet map" --> NightRoll
-    NightRoll -- "window push" --> FCM
-    FCM -- "notification" --> Student
     NightRoll -- "verifies device integrity" --> PI
     NightRoll -. "reads client association" .-> Ctrl
     Student -. "fallback when app fails" .-> Fallback
@@ -66,7 +63,6 @@ flowchart LR
 
 | System | Role | Required? |
 |---|---|---|
-| Firebase Cloud Messaging | Delivers the window-open push | Yes |
 | Google Play Integrity API | Confirms the app runs on a genuine, unmodified device | Yes |
 | WiFi controller or RADIUS | Confirms which access point a client is on | No for MVP; yes for production |
 | Ground-floor scanner | Fallback for dead phones and outages | Yes (existing) |
@@ -78,7 +74,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Device["Student device"]
-        App["NightRoll app<br/>React Native"]
+        App["NightRoll app<br/>Expo, dev or prod build"]
         Keystore["Android Keystore<br/>signing key"]
         Models["On-device models<br/>TFLite face pre-check"]
         App --> Keystore
@@ -95,13 +91,12 @@ flowchart TB
         Sched["Scheduler<br/>window and nonces"]
         Face["Face worker<br/>InsightFace, anti-spoof"]
         Adapter["Network adapter<br/>optional"]
-        Redis[("Redis<br/>nonces, window state")]
+        Redis[("Upstash Redis<br/>nonces, window state")]
         PG[("Supabase PostgreSQL + pgvector<br/>records, embeddings")]
         Frames[("Supabase Storage<br/>private bucket, 24-hour retention")]
         Dash["Warden dashboard<br/>React, static"]
     end
 
-    Ext1["Firebase Cloud Messaging"]
     Ext2["Play Integrity API"]
     Ext3["WiFi controller or RADIUS"]
 
@@ -114,8 +109,6 @@ flowchart TB
     Face --> PG
     Face --> Frames
     Sched --> Redis
-    Sched --> Ext1
-    Ext1 --> App
     API --> Ext2
     Adapter --> Ext3
     API --> Adapter
@@ -127,17 +120,17 @@ flowchart TB
 
 | Container | Responsibility | Talks to | Owns data |
 |---|---|---|---|
-| NightRoll app | Enrollment, challenge, capture, WiFi scan, signing | API (via AP), FCM, Keystore | Key alias only |
+| NightRoll app | Enrollment, challenge, capture, WiFi scan, signing | API (via AP), Keystore | Key alias only |
 | Reverse proxy | TLS termination, routing, rate limits at the edge | API, dashboard | None |
 | API service | Gates, scoring orchestration, fusion, window and review logic, WebSocket hub | Redis, Supabase PostgreSQL, Supabase Auth, face worker, Play Integrity, network adapter | Attendance records, via Supabase PostgreSQL |
-| Scheduler | Opens and closes windows, issues nonces, triggers push, records absentees | Redis, API, FCM | Window state, via Redis |
+| Scheduler | Opens and closes windows, issues nonces, records absentees | Redis, API | Window state, via Redis |
 | Face worker | Embedding and anti-spoof on frames | Supabase PostgreSQL (embeddings only), Supabase Storage | Frames, deleted after 24 hours |
 | Network adapter | Reads client-to-AP association from controller or RADIUS | Controller or RADIUS, API | None |
 | Dashboard | Room tiles, review queue, exports | API over HTTPS and WebSocket | None |
 | Supabase PostgreSQL | Relational records and pgvector embeddings; hosted by Supabase | API, face worker | All durable records |
 | Supabase Auth | Warden and admin login, MFA, JWT issuance | Dashboard, API | Warden and admin accounts |
 | Supabase Storage | Private bucket for short-lived frames | Face worker | Frames, deleted after 24 hours |
-| Redis | Nonces, window state, rate limits, live snapshot | API, scheduler | Short-lived state only |
+| Upstash Redis | Nonces, window state, rate limits, live snapshot | API, scheduler | Hosted by Upstash over TLS; short-lived state only |
 
 ### 4.2 Why these boundaries
 
@@ -221,9 +214,8 @@ sequenceDiagram
     participant W as Warden dashboard
     participant API as API service
     participant S as Scheduler
-    participant R as Redis
+    participant R as Upstash Redis
     participant DB as PostgreSQL
-    participant F as FCM
     participant A as Student app
 
     W->>API: POST /windows (opens_at, closes_at)
@@ -232,8 +224,7 @@ sequenceDiagram
     Note over S: At opens_at
     S->>DB: Load active students
     S->>R: Create nonce per student, TTL to closes_at
-    S->>F: Send window-open message per student
-    F->>A: Deliver push with window_id
+    Note over A: Student opens NightRoll during the window<br/>and the app fetches its nonce
 ```
 
 ### 6.2 Enrollment
@@ -270,13 +261,13 @@ sequenceDiagram
     participant Ks as Keystore
     participant AP as Room access point
     participant API as API service
-    participant R as Redis
+    participant R as Upstash Redis
     participant Face as Face worker
     participant PI as Play Integrity
     participant DB as PostgreSQL
     participant Dash as Dashboard
 
-    Student->>App: Tap push notification
+    Student->>App: Opens NightRoll at window time
     App->>App: Environment check
     App->>Student: Liveness challenge
     Student->>App: Performs action
@@ -324,7 +315,7 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant S as Scheduler
-    participant R as Redis
+    participant R as Upstash Redis
     participant DB as PostgreSQL
     participant API as API service
     participant Dash as Dashboard
@@ -375,13 +366,13 @@ flowchart LR
 
     subgraph T1["Semi-trusted"]
         AP["Room access point<br/>source address evidence"]
-        Ext["Google and Firebase APIs"]
+        Ext["Google APIs"]
     end
 
     subgraph T2["Trusted"]
         API["API service"]
         FaceW["Face worker"]
-        Data[("Database and Redis")]
+        Data[("Database and Upstash Redis")]
         Dash["Warden session"]
     end
 
@@ -440,7 +431,7 @@ flowchart TB
             F["face-worker"]
             S["scheduler"]
             P[("Supabase<br/>hosted PostgreSQL")]
-            R[("redis")]
+            R[("Upstash Redis<br/>hosted")]
             N --> A
             A --> P
             A --> R
@@ -453,7 +444,7 @@ flowchart TB
     end
 
     APs --> N
-    A --> Google["Google and Firebase"]
+    A --> Google["Google APIs"]
     Google --> Ph
 ```
 
@@ -503,10 +494,11 @@ Nothing in the design requires a rewrite to scale. Each container can move to it
 | ADR-8 | WiFi fingerprint as a scored factor, not a gate | Hard gate on fingerprint | Fingerprints vary night to night; a gate would reject too many real students |
 | ADR-9 | Fail closed on security gates | Fail open for availability | A wrong acceptance is worse than a rejection in this setting |
 | ADR-10 | Single host for pilot | Cloud Kubernetes | Hostel scale does not justify it; easier for the team to operate |
-| ADR-11 | React Native for the app | Flutter; native Kotlin | One codebase; team familiarity; camera and ML libraries available |
+| ADR-11 | Expo (React Native, TypeScript) with Kotlin Expo Modules, run as a development build | React Native CLI; Flutter; native Kotlin only | Expo handles the build tooling and EAS cloud builds, and Expo Modules keep the Kotlin code in the same project. Expo Go cannot run custom native code, so the phones run a development build. |
 | ADR-12 | Android first, iOS deferred | Both platforms at once | iOS cannot perform full WiFi scans, which the design depends on |
 | ADR-13 | Supabase for database, auth, and frame storage | Self-hosted PostgreSQL, a separate auth provider, and S3-compatible storage | One managed platform with pgvector, MFA-capable auth, and private buckets; less to operate in a hackathon and pilot |
-| ADR-14 | Redis kept for nonces and window state | Supabase-only (Postgres with short TTL tables) | Atomic consume and TTL expiry are a natural fit for Redis; keeps the nonce path independent of database load |
+| ADR-14 | Upstash Redis (hosted) kept for nonces and window state | Supabase-only (Postgres with short TTL tables) | Atomic consume and TTL expiry are a natural fit for Redis; keeps the nonce path independent of database load |
+| ADR-15 | No push notifications; students open the app at window time | FCM push at window open; background polling | Push adds a Google dependency and a token per student. Background polling drains batteries and is unreliable on many Android phones. A student who opens the app at 10 PM is the simplest reliable path for this hostel. |
 
 ---
 

@@ -49,7 +49,7 @@ On the packaged system from Phase 12, on the demo hardware.
 | 1.1 | Start everything from a clean state with the runbook | All services healthy |
 | 1.2 | Warden logs in with password and code | Reaches Tonight page |
 | 1.3 | Enroll a new student from scratch | Enrolled, with room fingerprint |
-| 1.4 | Admin opens the window | Push arrives on the phone |
+| 1.4 | Admin opens the window | Window shows as open once the student opens the app |
 | 1.5 | Student marks from their room | `PRESENT`, tile turns within 2 s |
 | 1.6 | Admin closes the window | Absentees listed |
 | 1.7 | Export tonight's CSV | File has the right rows |
@@ -62,8 +62,8 @@ Any failure here is fixed before anything else in this phase.
 
 | # | Task |
 |---|---|
-| 2.1.1 | Add `pytest` to `backend/` and `face/`, and a test runner to `dashboard/` and `app/` |
-| 2.1.2 | Integration tests use a local Supabase stack from the Supabase CLI and a throwaway Redis, never the shared development project |
+| 2.1.1 | Add `pytest` to `backend/` and `face/`, Vitest to `dashboard/`, and Jest with `jest-expo` to `app/` |
+| 2.1.2 | Integration tests use a local Supabase stack from the Supabase CLI and a separate Upstash test database, never the development one |
 | 2.1.3 | Record a set of real submissions from the test phones as fixtures: genuine, wrong room, wrong device, tampered. Strip the frames and keep the hashes. |
 | 2.1.4 | Add a GitHub Actions workflow that runs lint and the unit tests on every push |
 
@@ -89,7 +89,7 @@ Any failure here is fixed before anything else in this phase.
 
 | Flow | Checks |
 |---|---|
-| Enroll, open, mark, close | The whole path against real Redis and a local database, with the face worker replaced by a stand-in returning fixed scores |
+| Enroll, open, mark, close | The whole path against the Upstash test database and a local Supabase stack, with the face worker replaced by a stand-in returning fixed scores |
 | Retry | Rejected, then fresh nonce, then present; fourth attempt refused |
 | Idempotency | The same envelope twice gives one row and identical responses |
 | Review | Approve, decline, override, manual, each with its audit row |
@@ -195,7 +195,7 @@ Update `backend/.env.example`, the README and the TRD with the final values, and
 | 5.1 | Replay recorded submissions at 5 per second for 2 minutes | 95th percentile under 2 s, no errors |
 | 5.2 | Burst of 20 per second for 30 seconds | No crash; requests queue and complete |
 | 5.3 | Face worker alone, one frame | Record the time on the demo laptop |
-| 5.4 | Open a window for 1,000 seeded students | Nonces issued and pushes queued within 60 s |
+| 5.4 | Open a window for 1,000 seeded students | Nonces issued within 60 s |
 | 5.5 | 20 dashboards connected during the replay | All stay in step |
 | 5.6 | Marking flow on the slowest test phone | Under 30 s, tap to result |
 
@@ -206,7 +206,7 @@ The replay needs submissions that pass the gates. Use a test-only mode, availabl
 | # | Break this | Expected |
 |---|---|---|
 | 6.1 | Stop the face worker mid-window | Verify returns 503, app shows fallback, dashboard alert appears |
-| 6.2 | Stop Redis | Verify returns 503, nothing is accepted |
+| 6.2 | Point `REDIS_URL` at a wrong host, or revoke the test database password | Verify returns 503, nothing is accepted |
 | 6.3 | Cut the laptop's internet | Database and integrity calls fail safely; nothing is marked present by default |
 | 6.4 | Unplug a room's router | Students in that room get the fallback; room flagged |
 | 6.5 | Restart the API mid-window | Dashboards reconnect; no marks lost |
@@ -231,7 +231,7 @@ Target length: 4 minutes for the live part.
 
 | # | Action | On screen | Line to say |
 |---|---|---|---|
-| 0 | Admin opens the window | Push arrives on both phones | "It's 10 PM. Every phone in the hostel just got this." |
+| 0 | Admin opens the window | Both phones show it open once the app is opened | "It's 10 PM. Students open NightRoll and the window is waiting for them." |
 | 1 | Teammate A marks from Room 101 | Tile turns green | "Marked from bed. That took about fifteen seconds." |
 | 2 | Teammate A joins the Room 102 router and tries | Rejected: wrong room network | "Same person, same phone, wrong room." |
 | 3 | Hold a photo, then a video, to phone A | Rejected: liveness | "A photo or a video of a face is not a person." |

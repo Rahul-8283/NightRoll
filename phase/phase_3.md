@@ -1,4 +1,4 @@
-# Phase 3: Attendance Window, Nonces and Push
+# Phase 3: Attendance Window and Nonces
 
 | | |
 |---|---|
@@ -9,7 +9,7 @@
 
 ## Goal
 
-The warden can set tonight's window. At the opening time the system gives every enrolled student a one-time nonce and sends a push. At the closing time it records who is absent. This is the clock the rest of the system runs on.
+The warden can set tonight's window. At the opening time the system issues every enrolled student a one-time nonce. Students open the app during the window to get it. At the closing time the system records who is absent. Nothing is pushed to phones: students open NightRoll themselves at window time.
 
 ## Outcome
 
@@ -17,12 +17,12 @@ The warden can set tonight's window. At the opening time the system gives every 
 - A scheduler process opens and closes windows on the server clock.
 - Each student has one nonce in Redis that expires when the window closes.
 - A nonce can be consumed exactly once, even under simultaneous requests.
-- A push reaches each student's phone when the window opens.
+- A student who opens the app during the window receives their nonce and challenge. Outside the window, the app receives the next opening time.
 
 ## Scope
 
-**In:** window endpoints, scheduler, nonce issue and consume, FCM sending, absentee recording, device token registration.
-**Out:** verifying a mark (Phase 8), the app's handling of the push (Phase 4).
+**In:** window endpoints, scheduler, nonce issue and consume, the status endpoint the app calls, absentee recording.
+**Out:** verifying a mark (Phase 8), the Home screen (Phase 4).
 
 ---
 
@@ -72,13 +72,23 @@ States: `scheduled`, `open`, `closed`, `off`.
 
 A Lua script is used because Redis runs it as one step, so two requests arriving together cannot both consume the same nonce.
 
-### 4. Nonce delivery endpoint
+### 4. Nonce and status endpoint
 
-The push tells the phone a window is open. The phone then fetches its nonce, so the nonce is never carried in a push message.
+The student's app calls this endpoint when it opens, and again every 60 seconds while Home is visible. The nonce is only ever handed out in response to that call, never stored on the phone in advance.
 
-| Method | Path | Auth | Returns |
+| Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/v1/attendance/nonce` | Device signature (finished in Phase 8) | `{window_id, nonce, closes_at}` |
+| GET | `/v1/attendance/nonce` | Device signature (finished in Phase 8) | Tonight's status for this student, with nonce and challenge while the window is open |
+
+Responses:
+
+| State | Body |
+|---|---|
+| Window open, not yet marked | `{"state": "open", "window_id", "nonce", "closes_at", "challenge": ["blink", "turn_left"]}` |
+| Window scheduled, not yet open | `{"state": "scheduled", "opens_at"}` |
+| Already present tonight | `{"state": "marked", "window_id"}` |
+| Off day | `{"state": "off"}` |
+| Window closed | `{"state": "closed"}` |
 
 For this phase, build the endpoint and the lookup. Leave the signature check as a clearly marked stub that Phase 8 replaces. Do not expose this endpoint outside local development until Phase 8 is done.
 
@@ -88,7 +98,7 @@ For this phase, build the endpoint and the lookup. Leave the signature check as 
 |---|---|
 | 5.1 | Run the scheduler as its own process (`python -m app.scheduler`), using APScheduler |
 | 5.2 | Every 15 seconds, check for windows that should open or close |
-| 5.3 | **Open job:** set state to `open`, issue nonces, send pushes, write audit row |
+| 5.3 | **Open job:** set state to `open`, issue nonces, write audit row |
 | 5.4 | **Close job:** set state to `closed`, record absentees, publish final counts, write audit row |
 | 5.5 | Both jobs are safe to run twice. A window already open is not opened again. |
 | 5.6 | Take a short Redis lock per window per job, so two scheduler processes cannot both run it |
@@ -104,37 +114,15 @@ On close:
 | 6.2 | Insert an `ABSENT` mark for each, in one transaction |
 | 6.3 | Students with a mark still in `NEEDS_REVIEW` are left as they are. The warden decides those. |
 
-### 7. Push through FCM
-
-| # | Task |
-|---|---|
-| 7.1 | Add `firebase-admin` and initialise it from `GOOGLE_APPLICATION_CREDENTIALS` |
-| 7.2 | `services/push.py` exposes `send_window_open(student_ids, window)` |
-| 7.3 | Send a high-priority data message with `type=window_open`, `window_id` and `closes_at`. No nonce, name or room in the message. |
-| 7.4 | Send in batches. Collect failures per token. |
-| 7.5 | A token FCM reports as unregistered is cleared from `students.fcm_token` |
-| 7.6 | Record delivered and failed counts in the audit row for the open job |
-| 7.7 | Add `POST /v1/windows/{id}/remind` (warden): push again to students with no mark yet |
-
-### 8. Device token registration
-
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| PUT | `/v1/devices/push-token` | Device signature (finished in Phase 8) | Store or replace the student's FCM token |
-
-Same stub rule as task 4.
-
 ---
 
 ## Files
 
 ```text
 backend/app/routers/windows.py
-backend/app/routers/attendance.py      (nonce endpoint only for now)
-backend/app/routers/devices.py
+backend/app/routers/attendance.py      (nonce and status endpoint only for now)
 backend/app/services/windows.py
 backend/app/services/nonces.py
-backend/app/services/push.py
 backend/app/services/absentees.py
 backend/app/scheduler.py
 backend/app/redis/consume_nonce.lua
@@ -146,11 +134,11 @@ backend/app/redis/consume_nonce.lua
 - [ ] With the scheduler running, a window set one minute ahead opens on its own.
 - [ ] After opening, Redis holds one nonce per active enrolled student, each with an expiry.
 - [ ] Calling `consume_nonce` twice with the same value returns `ok`, then `already_used`.
-- [ ] A test phone with a stored token receives the push when the window opens.
+- [ ] The status endpoint, called with a valid device signature during an open window, returns the nonce and challenge. Outside a window it returns the next opening time.
 - [ ] `open-now` and `close-now` work for an admin and return `403` for a warden.
 - [ ] After close, each student with no mark has an `ABSENT` row, and the nonces are gone.
 - [ ] Restarting the scheduler mid-window does not issue a second set of nonces.
-- [ ] An off day opens no window and sends no push.
+- [ ] An off day opens no window.
 
 ## Deferred to Phase 13
 
@@ -163,10 +151,11 @@ backend/app/redis/consume_nonce.lua
 | Risk | What to do |
 |---|---|
 | Server clock is wrong | Sync the host with network time. Log the offset at startup. |
-| Phones delay the push while idle | High-priority data messages. The app also works if opened by hand. |
+| Students forget to open the app at window time | Warden announces the time. Home shows the opening time once opened (Phase 4). Reminder method is an open question in the PRD. |
 | Scheduler stops unnoticed | `/v1/health` reports the scheduler's last heartbeat from Redis |
+| Upstash command quota runs out during a window | Nonce issue is one pipeline per window, and the scheduler polls every 15 s. Count commands in the Phase 13 load test and check the plan limits before the pilot. |
 | Stub endpoints get exposed | Guard them with `APP_ENV=local` until Phase 8 replaces the stub |
 
 ## Hand-off to Phase 4
 
-Phase 4 needs the push message format, the nonce endpoint and the token registration endpoint.
+Phase 4 needs the nonce and status endpoint and its response format.

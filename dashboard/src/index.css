@@ -1,0 +1,38 @@
+:root {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #141b2e;
+  background: #f3f4f7;
+}
+
+body {
+  margin: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: #ffffff;
+  border-bottom: 1px solid #c3c8d6;
+}
+
+.topbar nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.topbar a {
+  color: #141b2e;
+  text-decoration: none;
+}
+
+.topbar a.active {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+main {
+  padding: 1.25rem;
+}

@@ -132,9 +132,8 @@ Faces and frames are never shown here. Viewing frames for a disputed mark is a P
 | 6.1 | Show tonight's window with its state |
 | 6.2 | A form to set opening and closing times for a date |
 | 6.3 | A calendar to mark off days |
-| 6.4 | "Send reminder" to students who have not marked |
-| 6.5 | For an admin only: "Open now" and "Close now", each with a confirmation. These drive the demo. |
-| 6.6 | A list of past windows with their final counts |
+| 6.4 | For an admin only: "Open now" and "Close now", each with a confirmation. These drive the demo. |
+| 6.5 | A list of past windows with their final counts |
 
 ### 7. Enrollment page
 

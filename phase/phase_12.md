@@ -36,14 +36,14 @@ Turn a set of services that work on developers' machines into one system that st
 | 1.1 | `backend/Dockerfile`: slim Python base, pinned dependencies, runs as a non-root user |
 | 1.2 | `face/Dockerfile`: same approach. Models are mounted or downloaded at build with checksum verification, not committed. |
 | 1.3 | `dashboard/Dockerfile`: build the static files, serve them from nginx |
-| 1.4 | Extend `infra/docker-compose.yml` with `nginx`, `api`, `scheduler`, `face-worker` and `redis` |
+| 1.4 | Extend `infra/docker-compose.yml` with `nginx`, `api`, `scheduler` and `face-worker`. Redis stays on Upstash. |
 | 1.5 | Add a `.dockerignore` to each service so env files, secrets and local data never enter an image |
-| 1.6 | Health checks on every service. `api` waits for `redis` and `face-worker` to be healthy. |
+| 1.6 | Health checks on every service. `api` waits for `face-worker` to be healthy. |
 | 1.7 | Restart policy `unless-stopped` |
-| 1.8 | Only nginx publishes ports. Redis, the face worker and the API are reachable inside the Compose network only. |
+| 1.8 | Only nginx publishes ports. The face worker and the API are reachable inside the Compose network only. Redis is hosted on Upstash and needs no port. |
 | 1.9 | Env files are passed at run time. No secret is baked into an image. |
 
-Supabase is hosted, so there is no database container. The host needs outbound internet access to Supabase, Firebase and Google.
+Supabase is hosted, so there is no database container. The host needs outbound internet access to Supabase and Google.
 
 ### 2. Reverse proxy and TLS
 
@@ -104,9 +104,9 @@ Database backups are handled by Supabase. Write down in the runbook which backup
 |---|---|
 | 6.1 | All services log JSON to standard output with the same request ID, passed from nginx through the API to the face worker |
 | 6.2 | `GET /v1/metrics` (admin, or internal network only), in Prometheus text format |
-| 6.3 | Metrics: requests and latency per route; verdicts by type; gate failures by reason; per-stage timings; face worker latency; pushes sent and failed; open WebSocket connections; scheduler heartbeat age |
+| 6.3 | Metrics: requests and latency per route; verdicts by type; gate failures by reason; per-stage timings; face worker latency; open WebSocket connections; scheduler heartbeat age |
 | 6.4 | An admin-only "System" page on the dashboard: service health, tonight's verdict counts, gate failures by reason, latency, last cleanup, last scheduler heartbeat |
-| 6.5 | Alerts shown as a banner on the dashboard: face worker down during an open window; scheduler heartbeat stale; rejection rate above 20% in the last 5 minutes; push failure rate above 10% |
+| 6.5 | Alerts shown as a banner on the dashboard: face worker down during an open window; scheduler heartbeat stale; rejection rate above 20% in the last 5 minutes |
 
 A full monitoring stack is not needed for the pilot. The System page and the logs are enough.
 
@@ -124,9 +124,9 @@ The demo and the first pilot use the subnet check. This task makes the upgrade p
 
 | # | Task |
 |---|---|
-| 8.1 | Build a release APK signed with the release keystore |
-| 8.2 | Turn on code shrinking, with keep rules for the native modules |
-| 8.3 | Point `API_BASE_URL` at the demo host's HTTPS address |
+| 8.1 | Build the production profile with EAS (`npx eas-cli build --profile production --platform android`). EAS signs it with the release keystore it manages. |
+| 8.2 | Turn on code shrinking in the production profile, keeping the Expo Module classes |
+| 8.3 | Set `EXPO_PUBLIC_API_BASE_URL` to the demo host's HTTPS address in the production profile |
 | 8.4 | Remove any debug screens and local-only switches from the release build |
 | 8.5 | Install on both test phones and the spare |
 | 8.6 | Confirm Play Integrity returns a verdict for this build, and record what it says |
@@ -201,7 +201,7 @@ Write `docs/runbook.md`.
 | Risk | What to do |
 |---|---|
 | Venue network differs from the practice setup | Bring the routers and a switch so the demo network is self-contained; only the laptop needs internet |
-| No internet at the venue | Supabase, Firebase and Play Integrity all need it. Bring a phone hotspot as the laptop's uplink, and have the backup video ready. |
+| No internet at the venue | Supabase and Play Integrity both need it. Bring a phone hotspot as the laptop's uplink, and have the backup video ready. |
 | Phones do not trust the local certificate | Install the certificate authority during setup, and check it on each phone |
 | Fingerprint captured in a different place than the demo | Capture at the venue during setup (task 9.8) |
 
