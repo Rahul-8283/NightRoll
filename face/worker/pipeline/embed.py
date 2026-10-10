@@ -40,9 +40,7 @@ def aggregate_enrollment_embeddings(embeddings: list[np.ndarray]) -> tuple[np.nd
     """
     count = len(embeddings)
     if count < settings.ENROLL_MIN_VALID_FRAMES:
-        raise ValueError(
-            f"Enrollment requires at least {settings.ENROLL_MIN_VALID_FRAMES} valid frames, got {count}"
-        )
+        raise ValueError(f"Enrollment requires at least {settings.ENROLL_MIN_VALID_FRAMES} valid frames, got {count}")
 
     # Check pairwise cosine agreement
     for i in range(count):
@@ -51,7 +49,8 @@ def aggregate_enrollment_embeddings(embeddings: list[np.ndarray]) -> tuple[np.nd
             if similarity < settings.ENROLL_MIN_AGREEMENT:
                 raise ValueError(
                     f"Enrollment frames do not agree closely enough to be the same person "
-                    f"(similarity between frame {i+1} and {j+1} is {similarity:.3f} < {settings.ENROLL_MIN_AGREEMENT})"
+                    f"(similarity between frame {i + 1} and {j + 1} is {similarity:.3f} "
+                    f"< {settings.ENROLL_MIN_AGREEMENT})"
                 )
 
     # Average embeddings and re-normalize to unit length

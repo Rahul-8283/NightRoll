@@ -14,8 +14,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import os
-import shutil
 import sys
 import urllib.request
 import zipfile
@@ -53,6 +51,7 @@ def download_file(url: str, dest: Path) -> bool:
     """Download a file with progress output."""
     print(f"Downloading {url} -> {dest.name}...")
     try:
+
         def reporthook(block_num: int, block_size: int, total_size: int) -> None:
             if total_size > 0:
                 percent = min(100, block_num * block_size * 100 // total_size)
@@ -152,8 +151,8 @@ def main() -> int:
                 z.extractall(models_dir / "buffalo_l")
             zip_dest.unlink(missing_ok=True)
         else:
-            print(f"Warning: Could not download buffalo_l directly from GitHub release.")
-            print(f"InsightFace will attempt automatic download on first initialization if needed.")
+            print("Warning: Could not download buffalo_l directly from GitHub release.")
+            print("InsightFace will attempt automatic download on first initialization if needed.")
 
     # Download anti-spoof model
     if not antispoof_model.exists() or args.force:

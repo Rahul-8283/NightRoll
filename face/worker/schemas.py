@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from datetime import datetime
 from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
     """Health check payload."""
+
     ready: bool
     model_version: str
     antispoof_available: bool
@@ -17,12 +19,14 @@ class HealthResponse(BaseModel):
 
 class EnrollmentResponse(BaseModel):
     """Response returned upon successful student face enrollment."""
+
     model_version: str
     frames_used: int
 
 
 class HeadPose(BaseModel):
     """Estimated head orientation angles in degrees."""
+
     pitch: float = Field(description="Nod angle (up/down)")
     yaw: float = Field(description="Turn angle (left/right)")
     roll: float = Field(description="Tilt angle (ear to shoulder)")
@@ -30,13 +34,17 @@ class HeadPose(BaseModel):
 
 class FrameIssue(BaseModel):
     """Describes a quality or validation defect detected in a frame."""
+
     frame_index: int
-    code: str = Field(description="Issue code: BAD_IMAGE, NO_FACE, MULTIPLE_FACES, FACE_TOO_SMALL, TOO_BLURRY, BAD_LIGHTING, BAD_POSE")
+    code: str = Field(
+        description="Issue code: BAD_IMAGE, NO_FACE, MULTIPLE_FACES, FACE_TOO_SMALL, TOO_BLURRY, BAD_LIGHTING, BAD_POSE"
+    )
     detail: str
 
 
 class VerifyResponse(BaseModel):
     """Verification results consumed by backend scoring and fusion (Phase 9)."""
+
     usable_frames: int
     best_similarity: float
     median_similarity: float
@@ -50,6 +58,7 @@ class VerifyResponse(BaseModel):
 
 class Base64Frame(BaseModel):
     """Optional JSON wrapper for base64 encoded frame input."""
+
     index: int
     data: str  # Base64 string
     sha256: str | None = None
@@ -58,6 +67,7 @@ class Base64Frame(BaseModel):
 
 class VerifyJSONRequest(BaseModel):
     """Verification request schema when delivered via JSON instead of multipart."""
+
     student_id: UUID
     window_id: UUID
     mark_id: UUID

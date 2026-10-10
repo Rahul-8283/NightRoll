@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+
 import cv2
 import numpy as np
 
@@ -12,18 +13,22 @@ from worker.schemas import FrameIssue, HeadPose
 
 # Canonical 3D facial landmark model points for solvePnP pose estimation
 # Order: Left Eye, Right Eye, Nose Tip, Left Mouth Corner, Right Mouth Corner
-CANONICAL_3D_FACE = np.array([
-    [-30.0, 30.0, -30.0],   # Left eye
-    [30.0, 30.0, -30.0],    # Right eye
-    [0.0, 0.0, 0.0],        # Nose tip
-    [-20.0, -35.0, -25.0],  # Left mouth corner
-    [20.0, -35.0, -25.0],   # Right mouth corner
-], dtype=np.float64)
+CANONICAL_3D_FACE = np.array(
+    [
+        [-30.0, 30.0, -30.0],  # Left eye
+        [30.0, 30.0, -30.0],  # Right eye
+        [0.0, 0.0, 0.0],  # Nose tip
+        [-20.0, -35.0, -25.0],  # Left mouth corner
+        [20.0, -35.0, -25.0],  # Right mouth corner
+    ],
+    dtype=np.float64,
+)
 
 
 @dataclass
 class QualityResult:
     """Result of quality and detection evaluation on a single frame."""
+
     valid: bool
     issues: list[FrameIssue]
     face: Any | None
@@ -71,9 +76,7 @@ def estimate_head_pose(face: Any, img_shape: tuple[int, int]) -> HeadPose:
             focal_length = w
             center = (w / 2.0, h / 2.0)
             camera_matrix = np.array(
-                [[focal_length, 0, center[0]],
-                 [0, focal_length, center[1]],
-                 [0, 0, 1]], dtype=np.float64
+                [[focal_length, 0, center[0]], [0, focal_length, center[1]], [0, 0, 1]], dtype=np.float64
             )
             dist_coeffs = np.zeros((4, 1), dtype=np.float64)
             image_points = np.array(face.kps[:5], dtype=np.float64)
@@ -128,7 +131,9 @@ def evaluate_frame(
     img = decode_image(image_bytes)
     if img is None:
         issues.append(FrameIssue(frame_index=frame_index, code="BAD_IMAGE", detail="Corrupted or unreadable image"))
-        return QualityResult(valid=False, issues=issues, face=None, head_pose=HeadPose(pitch=0, yaw=0, roll=0), img=None)
+        return QualityResult(
+            valid=False, issues=issues, face=None, head_pose=HeadPose(pitch=0, yaw=0, roll=0), img=None
+        )
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -205,7 +210,10 @@ def evaluate_frame(
                 FrameIssue(
                     frame_index=frame_index,
                     code="BAD_POSE",
-                    detail=f"Head pose (yaw={head_pose.yaw:.1f}°, pitch={head_pose.pitch:.1f}°, roll={head_pose.roll:.1f}°) exceeds limits",
+                    detail=(
+                        f"Head pose (yaw={head_pose.yaw:.1f}°, pitch={head_pose.pitch:.1f}°, "
+                        f"roll={head_pose.roll:.1f}°) exceeds limits"
+                    ),
                 )
             )
 

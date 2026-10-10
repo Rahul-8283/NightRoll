@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+
 import httpx
 
 from worker.config import settings
@@ -26,13 +27,13 @@ async def run_frame_cleanup() -> int:
 
     if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
         logger.warning("Supabase credentials missing, skipping cleanup run")
-        last_cleanup_time = datetime.now(timezone.utc)
+        last_cleanup_time = datetime.now(UTC)
         return 0
 
     base_url = settings.SUPABASE_URL.rstrip("/")
     key = settings.SUPABASE_SERVICE_ROLE_KEY
     bucket = settings.FRAMES_BUCKET
-    retention_cutoff = datetime.now(timezone.utc) - timedelta(hours=settings.FRAME_RETENTION_HOURS)
+    retention_cutoff = datetime.now(UTC) - timedelta(hours=settings.FRAME_RETENTION_HOURS)
 
     headers = {
         "apikey": key,
@@ -88,14 +89,18 @@ async def run_frame_cleanup() -> int:
                     )
                     if del_resp.status_code in (200, 204):
                         folders_removed = len(cleared_paths)
-                        logger.info(f"Purged {len(objects_to_delete)} expired frame object(s) across {folders_removed} folder(s)")
+                        logger.info(
+                            "Purged %d expired frame object(s) across %d folder(s)",
+                            len(objects_to_delete),
+                            folders_removed,
+                        )
 
                 # Clear frames_path on matching attendance_marks
                 for folder in cleared_paths:
                     marks_url = f"{base_url}/rest/v1/attendance_marks?frames_path=eq.{folder}"
                     await client.patch(marks_url, headers=headers, json={"frames_path": None})
 
-            last_cleanup_time = datetime.now(timezone.utc)
+            last_cleanup_time = datetime.now(UTC)
             logger.info(f"Hourly cleanup finished. Folders removed: {folders_removed}")
             return folders_removed
         except Exception as e:

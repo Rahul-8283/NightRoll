@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import secrets
+
 from fastapi import Header, HTTPException, status
+
 from worker.config import settings
 
 
