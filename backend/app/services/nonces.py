@@ -46,9 +46,7 @@ async def issue(
 
 
 async def peek(redis: Redis, window_id: UUID, student_id: UUID) -> tuple[str, str | None, list[str] | None]:
-    value, used, challenge_raw = await redis.hmget(
-        keys.nonce_key(window_id, student_id), "value", "used", "challenge"
-    )
+    value, used, challenge_raw = await redis.hmget(keys.nonce_key(window_id, student_id), "value", "used", "challenge")
     if value is None:
         return "missing", None, None
     challenge = [c.strip() for c in challenge_raw.split(",")] if challenge_raw else None

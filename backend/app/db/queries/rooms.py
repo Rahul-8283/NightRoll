@@ -86,4 +86,3 @@ async def list_all_access_points(pool: asyncpg.Pool) -> list[asyncpg.Record]:
 async def get_student_room_id(pool: asyncpg.Pool, student_id: UUID) -> UUID | None:
     row = await pool.fetchrow("select room_id from students where id = $1", student_id)
     return row["room_id"] if row else None
-

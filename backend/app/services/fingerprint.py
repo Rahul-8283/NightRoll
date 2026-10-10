@@ -66,8 +66,7 @@ async def submit_room_fingerprint(
                     code="MISSING_OWN_AP",
                     status_code=400,
                     message=(
-                        f"Room's own access point was not detected in scan {idx + 1}. "
-                        "Stand closer to the room's AP."
+                        f"Room's own access point was not detected in scan {idx + 1}. Stand closer to the room's AP."
                     ),
                 )
 
