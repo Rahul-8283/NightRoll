@@ -1,39 +1,24 @@
-// Web build stub. The camera module is native-only, so on web it is never imported (Metro picks this file).
-import { StyleSheet, View } from 'react-native';
-
-import { Button } from '@/components/Button';
-import { Body, Display, Eyebrow } from '@/components/Text';
-import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+// Web build. Metro picks this file on web, so the native camera never enters the bundle.
+import { CameraUnavailable } from '@/components/CameraUnavailable';
 
 export type CapturedFrame = {
   name: string;
   uri: string;
   type: string;
+  base64?: string;
 };
 
-type Props = {
+export type FaceCaptureProps = {
   onCaptured: (frames: CapturedFrame[]) => void;
   onCancel?: () => void;
 };
 
-export function FaceCapture({ onCancel }: Props) {
+export function FaceCapture({ onCancel }: FaceCaptureProps) {
   return (
-    <View style={styles.container}>
-      <Eyebrow>Camera</Eyebrow>
-      <Display>Enrollment needs the phone</Display>
-      <Body>Face capture only works in the NightRoll Android app. Open it on your phone to enroll.</Body>
-      {onCancel && <Button label="Back" variant="quiet" onPress={onCancel} />}
-    </View>
+    <CameraUnavailable
+      title="Enrollment needs the phone"
+      detail="Face capture only works in the NightRoll Android app. Open it on your phone to enroll."
+      onCancel={onCancel}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-    backgroundColor: colors.ink0,
-  },
-});
