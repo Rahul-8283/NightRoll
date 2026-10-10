@@ -1575,3 +1575,24 @@ a.window:hover {
   border-color: var(--lamp);
   box-shadow: inset 3px 0 0 var(--lamp);
 }
+
+/* ---------- Enrollment code: one line, sized to its panel, and a tidy card header ---------- */
+
+.code-display {
+  min-width: 0;
+}
+
+.code-display__value {
+  display: block;
+  font-size: clamp(var(--text-xl), 6.5vw, var(--text-2xl));
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.card__head {
+  flex-wrap: wrap;
+}
+
+.card__head .eyebrow {
+  white-space: nowrap;
+}
