@@ -1,0 +1,63 @@
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.jks
+*.keystore
+!debug.keystore
+google-services.json
+*service-account*.json
+*firebase-adminsdk*.json
+
+# Real hostel data
+config/rooms.local.json
+config/*.local.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+npm-debug.log*
+yarn-error.log*
+
+# React Native and Android
+app/android/.gradle/
+app/android/app/build/
+app/android/build/
+app/android/local.properties
+app/android/.cxx/
+*.apk
+*.aab
+*.hprof
+.metro-health-check*
+
+# Models and biometric data
+face/models/*
+!face/models/README.md
+*.onnx
+*.tflite
+frames/
+captures/
+
+# Supabase CLI
+supabase/.temp/
+supabase/.branches/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
