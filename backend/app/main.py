@@ -11,7 +11,7 @@ from app.db import pool as db_pool
 from app.errors import register_error_handlers
 from app.logging import RequestLoggingMiddleware, configure_logging, log_event
 from app.redis import client as redis_client
-from app.routers import health, rooms, students, windows
+from app.routers import attendance, health, rooms, students, windows
 
 logger = logging.getLogger("nightroll.app")
 
@@ -42,6 +42,7 @@ def create_app() -> FastAPI:
     app.include_router(rooms.router)
     app.include_router(students.router)
     app.include_router(windows.router)
+    app.include_router(attendance.router)
     return app
 
 
