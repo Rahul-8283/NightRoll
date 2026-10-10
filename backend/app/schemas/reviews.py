@@ -86,3 +86,18 @@ class ManualMarkOut(ApiModel):
     student_id: UUID
     window_id: UUID
     status: EffectiveStatus
+
+
+class FramesViewIn(ApiModel):
+    reason: str = Field(min_length=10, max_length=500)
+
+
+class FrameLinkOut(ApiModel):
+    name: str
+    url: str
+
+
+class FramesViewOut(ApiModel):
+    mark_id: UUID
+    expires_in_seconds: int
+    links: list[FrameLinkOut]

@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from app.config import Settings, get_settings
 from app.deps import CurrentWarden, DbPool, RedisClient
 from app.schemas.reviews import (
+    FramesViewIn,
+    FramesViewOut,
     ManualMarkIn,
     ManualMarkOut,
     MarkDecisionOut,
@@ -16,6 +20,7 @@ from app.schemas.reviews import (
     ReviewDecisionIn,
     ReviewItem,
 )
+from app.services import frames as frames_svc
 from app.services import review as review_svc
 
 router = APIRouter(tags=["reviews"])
@@ -52,3 +57,16 @@ async def override_mark(
 @router.post("/v1/attendance/manual", response_model=ManualMarkOut)
 async def manual_mark(body: ManualMarkIn, pool: DbPool, redis: RedisClient, warden: CurrentWarden) -> ManualMarkOut:
     return await review_svc.manual_mark(pool, redis, body, warden)
+
+
+@router.post("/v1/attendance/marks/{mark_id}/frames/view", response_model=FramesViewOut)
+async def view_frames(
+    mark_id: UUID,
+    body: FramesViewIn,
+    pool: DbPool,
+    warden: CurrentWarden,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> FramesViewOut:
+    """Signed links to a disputed mark's frames. Needs a written reason, which is audited before any link is made."""
+    result = await frames_svc.view_frames(pool, settings, mark_id, body.reason, warden)
+    return FramesViewOut(**result)
