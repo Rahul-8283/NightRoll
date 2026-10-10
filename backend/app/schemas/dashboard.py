@@ -29,6 +29,7 @@ class RoomCount(ApiModel):
     present: int
     total: int
     pending_review: int
+    absent: int = 0
     rejected: int
 
 
@@ -47,6 +48,7 @@ class Totals(ApiModel):
     present: int
     pending_review: int
     not_marked: int
+    absent: int = 0
     rejected: int
 
 

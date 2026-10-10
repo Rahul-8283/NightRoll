@@ -33,7 +33,7 @@ RECENT_LIMIT = 20
 NOT_CONFIRMED = "Your attendance could not be confirmed from here."
 
 
-def _reason_out(code: str) -> ReasonOut:
+def reason_out(code: str) -> ReasonOut:
     # Old marks may carry a code that is no longer in the catalogue; never fail the page for it.
     try:
         return ReasonOut(code=code, message=reason(code).message)
@@ -53,7 +53,7 @@ def _recent(row) -> RecentMark:
     return RecentMark(
         mark_id=row["mark_id"],
         verdict=row["verdict"],
-        reasons=[_reason_out(code) for code in row["reasons"] or []],
+        reasons=[reason_out(code) for code in row["reasons"] or []],
         marked_at=row["marked_at"],
         room_number=row["room_number"],
         student_name=row["student_name"],
@@ -77,6 +77,7 @@ async def tonight(pool: asyncpg.Pool) -> TonightOut:
             present=row["present"],
             total=row["total"],
             pending_review=row["pending_review"],
+            absent=row["absent"],
             rejected=row["rejected"],
         )
         for row in counts
@@ -84,6 +85,7 @@ async def tonight(pool: asyncpg.Pool) -> TonightOut:
     enrolled = sum(room.total for room in rooms)
     present = sum(room.present for room in rooms)
     pending = sum(room.pending_review for room in rooms)
+    absent = sum(room.absent for room in rooms)
     recent = [_recent(row) for row in await dash_q.recent_marks(pool, window_id, RECENT_LIMIT)] if window_id else []
     return TonightOut(
         window=_window(window),
@@ -91,7 +93,8 @@ async def tonight(pool: asyncpg.Pool) -> TonightOut:
             enrolled=enrolled,
             present=present,
             pending_review=pending,
-            not_marked=max(0, enrolled - present - pending),
+            not_marked=max(0, enrolled - present - pending - absent),
+            absent=absent,
             rejected=sum(room.rejected for room in rooms),
         ),
         rooms=rooms,
@@ -135,7 +138,7 @@ async def room_tonight(pool: asyncpg.Pool, room_id: UUID, room_row) -> RoomTonig
                 mark_id=row["mark_id"],
                 verdict=row["verdict"],
                 score=float(row["score"]) if row["score"] is not None else None,
-                reasons=[_reason_out(code) for code in row["reasons"] or []],
+                reasons=[reason_out(code) for code in row["reasons"] or []],
                 marked_at=row["marked_at"],
                 attempt=row["attempt"],
                 scorers=[ScorerOut(**item) for item in scores.get("scorers", [])],
