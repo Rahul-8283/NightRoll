@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMarkDetail, useReviewQueue } from '../api/queries'
-import type { ReviewItem } from '../api/types'
+import type { FramesView, ReviewItem } from '../api/types'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { ScoreBars } from '../components/ScoreBars'
+import { useNow } from '../hooks/useNow'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ApiError, postJson } from '../lib/api'
 import { formatClock } from '../lib/format'
@@ -37,6 +38,76 @@ function EarlierAttempts({ markId, open }: { markId: string; open: boolean }) {
         </li>
       ))}
     </ol>
+  )
+}
+
+// Disputes only. A written reason is required and audited before any link is made. Links last 60 seconds.
+function FramesViewer({ markId, available }: { markId: string; available: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('')
+  const [view, setView] = useState<{ data: FramesView; fetchedAt: number } | null>(null)
+  const now = useNow()
+  const fetchFrames = useMutation({
+    mutationFn: () => postJson<FramesView>(`/attendance/marks/${markId}/frames/view`, { reason: reason.trim() }),
+    onSuccess: (data) => setView({ data, fetchedAt: Date.now() }),
+  })
+
+  if (!available) {
+    return <p className="muted">Frames are removed after 24 hours, so there is nothing to view for this mark.</p>
+  }
+
+  const remaining = view ? Math.max(0, view.data.expires_in_seconds - Math.floor((now - view.fetchedAt) / 1000)) : 0
+  const expired = view !== null && remaining === 0
+
+  return (
+    <div className="frames" onClick={(event) => event.stopPropagation()}>
+      {!open && (
+        <button className="btn btn--quiet-small" type="button" onClick={() => setOpen(true)}>
+          View captured frames
+        </button>
+      )}
+      {open && !view && (
+        <div className="confirm">
+          <div className="field">
+            <label htmlFor={`frames-reason-${markId}`}>Why do you need the frames? (at least {MIN_NOTE} characters)</label>
+            <textarea id={`frames-reason-${markId}`} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus />
+          </div>
+          {fetchFrames.isError && (
+            <p className="form-error" role="alert">
+              {fetchFrames.error instanceof ApiError ? fetchFrames.error.message : 'The frames could not be opened.'}
+            </p>
+          )}
+          <div className="confirm__actions">
+            <button
+              className="btn btn--danger"
+              type="button"
+              disabled={reason.trim().length < MIN_NOTE || fetchFrames.isPending}
+              onClick={() => fetchFrames.mutate()}
+            >
+              {fetchFrames.isPending ? 'Opening…' : 'Open frames'}
+            </button>
+            <button className="btn" type="button" onClick={() => setOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {view && !expired && (
+        <div className="frames__viewer">
+          <p className="muted" aria-live="polite">Links stop working in {remaining} seconds. Open again to refresh them.</p>
+          <div className="frames__grid">
+            {view.data.links.map((link) => (
+              <img key={link.name} src={link.url} alt={`Captured frame ${link.name}`} loading="lazy" referrerPolicy="no-referrer" />
+            ))}
+          </div>
+        </div>
+      )}
+      {view && expired && (
+        <p className="muted">
+          The links have expired. <button className="btn btn--quiet-small" type="button" onClick={() => { setView(null); fetchFrames.reset() }}>Open again with a new reason</button>
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -99,6 +170,7 @@ function ReviewCard({ item, selected, declining, onSelect, onStartDecline, onCan
         {showAttempts ? 'Hide earlier attempts' : `Earlier attempts (${Math.max(0, item.attempts_tonight - 1)})`}
       </button>
       <EarlierAttempts markId={item.mark_id} open={showAttempts} />
+      <FramesViewer markId={item.mark_id} available={item.frames_available} />
 
       {!declining ? (
         <div className="confirm__actions">

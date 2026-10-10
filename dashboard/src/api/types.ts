@@ -193,3 +193,11 @@ export type MarkDecision = {
   status: EffectiveStatus
   decided_how: 'override' | 'manual' | 'automatic' | 'approved' | 'declined' | null
 }
+
+export type FrameLink = { name: string; url: string }
+
+export type FramesView = {
+  mark_id: string
+  expires_in_seconds: number
+  links: FrameLink[]
+}

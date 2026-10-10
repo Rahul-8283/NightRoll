@@ -1352,3 +1352,30 @@ a.window:hover {
   color: var(--paper);
   resize: vertical;
 }
+
+.frames {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.frames__viewer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.frames__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--s-2);
+}
+
+.frames__grid img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: var(--r-control);
+  border: 1px solid var(--line);
+  background: var(--ink-0);
+}
