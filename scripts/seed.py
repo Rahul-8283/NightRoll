@@ -96,8 +96,8 @@ async def seed_students(conn: asyncpg.Connection, room_ids: dict[str, str]) -> N
         room_number = room_numbers[i % len(room_numbers)]
         await conn.execute(
             """
-            insert into students (roll_number, name, room_id, consent_at, active)
-            values ($1, $2, $3, now(), true)
+            insert into students (roll_number, name, room_id, active)
+            values ($1, $2, $3, true)
             on conflict (roll_number) do update
               set name = excluded.name, room_id = excluded.room_id, active = true
             """,

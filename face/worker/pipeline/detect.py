@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+
 import cv2
 import numpy as np
 
@@ -12,18 +13,22 @@ from worker.schemas import FrameIssue, HeadPose
 
 # Canonical 3D facial landmark model points for solvePnP pose estimation
 # Order: Left Eye, Right Eye, Nose Tip, Left Mouth Corner, Right Mouth Corner
-CANONICAL_3D_FACE = np.array([
-    [-30.0, 30.0, -30.0],   # Left eye
-    [30.0, 30.0, -30.0],    # Right eye
-    [0.0, 0.0, 0.0],        # Nose tip
-    [-20.0, -35.0, -25.0],  # Left mouth corner
-    [20.0, -35.0, -25.0],   # Right mouth corner
-], dtype=np.float64)
+CANONICAL_3D_FACE = np.array(
+    [
+        [-30.0, 30.0, -30.0],  # Left eye
+        [30.0, 30.0, -30.0],  # Right eye
+        [0.0, 0.0, 0.0],  # Nose tip
+        [-20.0, -35.0, -25.0],  # Left mouth corner
+        [20.0, -35.0, -25.0],  # Right mouth corner
+    ],
+    dtype=np.float64,
+)
 
 
 @dataclass
 class QualityResult:
     """Result of quality and detection evaluation on a single frame."""
+
     valid: bool
     issues: list[FrameIssue]
     face: Any | None
@@ -43,8 +48,21 @@ def decode_image(image_bytes: bytes) -> np.ndarray | None:
         return None
 
 
+SHARPNESS_SIZE = 128
+
+
+def face_region_gray(img: np.ndarray, bbox: np.ndarray) -> np.ndarray:
+    """Grayscale crop of the face box, scaled to a fixed size so scores do not depend on resolution."""
+    h, w = img.shape[:2]
+    x1, y1 = max(0, int(bbox[0])), max(0, int(bbox[1]))
+    x2, y2 = min(w, int(bbox[2])), min(h, int(bbox[3]))
+    region = img[y1:y2, x1:x2] if x2 > x1 and y2 > y1 else img
+    gray = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
+    return cv2.resize(gray, (SHARPNESS_SIZE, SHARPNESS_SIZE), interpolation=cv2.INTER_AREA)
+
+
 def calculate_blur_score(gray_img: np.ndarray) -> float:
-    """Compute variance of the Laplacian as a measure of sharpness."""
+    """Variance of the Laplacian: higher means sharper."""
     return float(cv2.Laplacian(gray_img, cv2.CV_64F).var())
 
 
@@ -71,9 +89,7 @@ def estimate_head_pose(face: Any, img_shape: tuple[int, int]) -> HeadPose:
             focal_length = w
             center = (w / 2.0, h / 2.0)
             camera_matrix = np.array(
-                [[focal_length, 0, center[0]],
-                 [0, focal_length, center[1]],
-                 [0, 0, 1]], dtype=np.float64
+                [[focal_length, 0, center[0]], [0, focal_length, center[1]], [0, 0, 1]], dtype=np.float64
             )
             dist_coeffs = np.zeros((4, 1), dtype=np.float64)
             image_points = np.array(face.kps[:5], dtype=np.float64)
@@ -128,43 +144,12 @@ def evaluate_frame(
     img = decode_image(image_bytes)
     if img is None:
         issues.append(FrameIssue(frame_index=frame_index, code="BAD_IMAGE", detail="Corrupted or unreadable image"))
-        return QualityResult(valid=False, issues=issues, face=None, head_pose=HeadPose(pitch=0, yaw=0, roll=0), img=None)
-
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # 2. Blur / sharpness check
-    blur_score = calculate_blur_score(gray)
-    if blur_score < settings.BLUR_THRESHOLD:
-        issues.append(
-            FrameIssue(
-                frame_index=frame_index,
-                code="TOO_BLURRY",
-                detail=f"Blur score {blur_score:.1f} is below floor {settings.BLUR_THRESHOLD}",
-            )
-        )
-
-    # 3. Lighting check
-    light_score = calculate_lighting_score(gray)
-    if not (settings.LIGHT_MIN <= light_score <= settings.LIGHT_MAX):
-        issues.append(
-            FrameIssue(
-                frame_index=frame_index,
-                code="BAD_LIGHTING",
-                detail=f"Mean brightness {light_score:.1f} outside range [{settings.LIGHT_MIN}, {settings.LIGHT_MAX}]",
-            )
-        )
-
-    # 4. Face detection
-    if face_app is None:
-        # Mock / offline testing mode when model is not initialized
-        head_pose = HeadPose(pitch=0.0, yaw=0.0, roll=0.0)
         return QualityResult(
-            valid=len(issues) == 0,
-            issues=issues,
-            face={"bbox": [0, 0, 150, 150], "embedding": np.ones(512) / np.sqrt(512)},
-            head_pose=head_pose,
-            img=img,
+            valid=False, issues=issues, face=None, head_pose=HeadPose(pitch=0, yaw=0, roll=0), img=None
         )
+
+    if face_app is None:
+        raise RuntimeError("Face model is not loaded; refusing to score frames without it")
 
     faces = face_app.get(img)
 
@@ -192,6 +177,29 @@ def evaluate_frame(
             )
         )
 
+    # Sharpness and brightness are judged on the face itself, not the whole frame: a sharp face in front
+    # of a flat, dark wall is a good capture, and a blurry face in front of a busy room is not.
+    face_gray = face_region_gray(img, bbox)
+    blur_score = calculate_blur_score(face_gray)
+    if blur_score < settings.BLUR_THRESHOLD:
+        issues.append(
+            FrameIssue(
+                frame_index=frame_index,
+                code="TOO_BLURRY",
+                detail=f"Blur score {blur_score:.1f} is below floor {settings.BLUR_THRESHOLD}",
+            )
+        )
+
+    light_score = calculate_lighting_score(face_gray)
+    if not (settings.LIGHT_MIN <= light_score <= settings.LIGHT_MAX):
+        issues.append(
+            FrameIssue(
+                frame_index=frame_index,
+                code="BAD_LIGHTING",
+                detail=f"Mean brightness {light_score:.1f} outside range [{settings.LIGHT_MIN}, {settings.LIGHT_MAX}]",
+            )
+        )
+
     # 6. Pose estimation & pose check
     head_pose = estimate_head_pose(face, (img.shape[0], img.shape[1]))
 
@@ -205,7 +213,10 @@ def evaluate_frame(
                 FrameIssue(
                     frame_index=frame_index,
                     code="BAD_POSE",
-                    detail=f"Head pose (yaw={head_pose.yaw:.1f}°, pitch={head_pose.pitch:.1f}°, roll={head_pose.roll:.1f}°) exceeds limits",
+                    detail=(
+                        f"Head pose (yaw={head_pose.yaw:.1f}°, pitch={head_pose.pitch:.1f}°, "
+                        f"roll={head_pose.roll:.1f}°) exceeds limits"
+                    ),
                 )
             )
 

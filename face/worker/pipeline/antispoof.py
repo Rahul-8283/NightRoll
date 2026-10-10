@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+
 import cv2
 import numpy as np
 
@@ -65,69 +65,73 @@ class AntiSpoofClassifier:
             self.is_available = False
             return False
 
+    def _crop_box(
+        self, src_w: int, src_h: int, x: float, y: float, box_w: float, box_h: float
+    ) -> tuple[int, int, int, int]:
+        """Scale the face box by `scale_ratio`, then slide it back inside the frame.
+
+        Ported from Silent-Face-Anti-Spoofing (`CropImage._get_new_box`). The box is shifted, not cut,
+        at the image border, so the crop keeps the proportions the model was trained on.
+        """
+        scale = min((src_h - 1) / box_h, (src_w - 1) / box_w, self.scale_ratio)
+        new_w, new_h = box_w * scale, box_h * scale
+        cx, cy = x + box_w / 2.0, y + box_h / 2.0
+        left, top = cx - new_w / 2.0, cy - new_h / 2.0
+        right, bottom = cx + new_w / 2.0, cy + new_h / 2.0
+        if left < 0:
+            right -= left
+            left = 0
+        if top < 0:
+            bottom -= top
+            top = 0
+        if right > src_w - 1:
+            left -= right - src_w + 1
+            right = src_w - 1
+        if bottom > src_h - 1:
+            top -= bottom - src_h + 1
+            bottom = src_h - 1
+        return int(left), int(top), int(right), int(bottom)
+
     def preprocess_crop(self, img: np.ndarray, bbox: list[int] | np.ndarray) -> np.ndarray:
-        """Crop and prepare face image according to MiniFASNet specifications."""
+        """Crop a BGR frame the way MiniFASNet was trained.
+
+        The model expects BGR channel order and raw 0..255 float values (no scaling to 0..1).
+        """
         h_img, w_img = img.shape[:2]
-        x1, y1, x2, y2 = [int(v) for v in bbox[:4]]
-
-        w_box = x2 - x1
-        h_box = y2 - y1
-
-        # Center point
-        cx = x1 + w_box / 2.0
-        cy = y1 + h_box / 2.0
-
-        # Scale bbox by model ratio
-        max_side = max(w_box, h_box)
-        crop_size = max_side * self.scale_ratio
-
-        nx1 = max(0, int(cx - crop_size / 2.0))
-        ny1 = max(0, int(cy - crop_size / 2.0))
-        nx2 = min(w_img, int(cx + crop_size / 2.0))
-        ny2 = min(h_img, int(cy + crop_size / 2.0))
-
-        cropped = img[ny1:ny2, nx1:nx2]
-        if cropped.size == 0:
+        x1, y1, x2, y2 = (float(v) for v in bbox[:4])
+        box_w, box_h = x2 - x1, y2 - y1
+        if box_w <= 1 or box_h <= 1:
             cropped = img
+        else:
+            left, top, right, bottom = self._crop_box(w_img, h_img, x1, y1, box_w, box_h)
+            cropped = img[top : bottom + 1, left : right + 1]
+            if cropped.size == 0:
+                cropped = img
 
         target_h, target_w = 80, 80
         if len(self.input_shape) >= 4 and isinstance(self.input_shape[2], int) and isinstance(self.input_shape[3], int):
             target_h, target_w = self.input_shape[2], self.input_shape[3]
 
-        resized = cv2.resize(cropped, (target_w, target_h))
-        # Convert BGR to RGB and normalize to [0, 1] or standard tensor format
-        rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB).astype(np.float32)
-        # Transpose HWC to CHW
-        chw = np.transpose(rgb, (2, 0, 1))
-        # Add batch dimension NCHW
-        tensor = np.expand_dims(chw, axis=0)
-        return tensor
+        resized = cv2.resize(cropped, (target_w, target_h)).astype(np.float32)
+        chw = np.transpose(resized, (2, 0, 1))
+        return np.expand_dims(chw, axis=0)
 
     def score(self, img: np.ndarray, bbox: list[int] | np.ndarray) -> float:
-        """Predict real-face probability for a face bounding box.
-
-        Returns float between 0.0 (spoof) and 1.0 (real).
-        """
+        """Probability that the face is a live person, from 0.0 (attack) to 1.0 (real)."""
         if not self.is_available or self.session is None:
-            # If model is unavailable, return 0.0 so liveness fails safely
+            # If the model is unavailable, return 0.0 so liveness fails safely
             return 0.0
 
         try:
             tensor = self.preprocess_crop(img, bbox)
-            outputs = self.session.run([self.output_name], {self.input_name: tensor})
-            raw = outputs[0]  # shape: (1, num_classes)
+            raw = self.session.run([self.output_name], {self.input_name: tensor})[0]  # shape: (1, num_classes)
 
-            # Softmax
             exp_scores = np.exp(raw - np.max(raw))
             probs = exp_scores / np.sum(exp_scores)
 
-            # MiniFASNet usually outputs: class 0 is spoof/background, class 1 is real face
-            # Or 3 classes: [fake_type1, fake_type2, real]
-            if probs.shape[-1] == 2:
+            # MiniFASNetV2 has 3 classes: 0 = print attack, 1 = real face, 2 = screen replay.
+            if probs.shape[-1] >= 2:
                 real_score = float(probs[0, 1])
-            elif probs.shape[-1] >= 3:
-                # If 3 classes, last class is typically real
-                real_score = float(probs[0, -1])
             else:
                 real_score = float(probs[0, 0])
 

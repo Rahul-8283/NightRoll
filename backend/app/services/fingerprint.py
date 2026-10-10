@@ -18,6 +18,10 @@ from app.services import audit
 
 logger = logging.getLogger("nightroll.fingerprint")
 
+FINGERPRINT_EXISTS_MESSAGE = (
+    "Room already has a fingerprint. A warden must reset it before a new scan can be submitted."
+)
+
 
 async def submit_room_fingerprint(
     pool: asyncpg.Pool,
@@ -42,7 +46,7 @@ async def submit_room_fingerprint(
         raise AppError(
             code="FINGERPRINT_EXISTS",
             status_code=400,
-            message="Room already has a fingerprint. A warden must reset it before a new scan can be submitted.",
+            message=FINGERPRINT_EXISTS_MESSAGE,
         )
 
     # 7.2 Require at least 3 scans
@@ -57,19 +61,23 @@ async def submit_room_fingerprint(
     room_aps = await rooms_q.list_access_points(pool, room_id)
     own_bssids = {row["bssid"].lower() for row in room_aps}
 
-    # Require the room's own access point to appear in every scan (if room has configured APs)
-    if own_bssids:
-        for idx, scan in enumerate(payload.scans):
-            scan_bssids = {net.bssid.strip().lower() for net in scan.networks}
-            if not (scan_bssids & own_bssids):
-                raise AppError(
-                    code="MISSING_OWN_AP",
-                    status_code=400,
-                    message=(
-                        f"Room's own access point was not detected in scan {idx + 1}. "
-                        "Stand closer to the room's AP."
-                    ),
-                )
+    # Without a mapped access point there is nothing to anchor the fingerprint to.
+    if not own_bssids:
+        raise AppError(
+            code="ROOM_NOT_MAPPED",
+            status_code=409,
+            message="This room has no access point in the room map yet. Ask the warden to add it.",
+        )
+
+    # 7.2 The room's own access point must appear in every scan
+    for idx, scan in enumerate(payload.scans):
+        scan_bssids = {net.bssid.strip().lower() for net in scan.networks}
+        if not (scan_bssids & own_bssids):
+            raise AppError(
+                code="MISSING_OWN_AP",
+                status_code=400,
+                message=f"Room's own access point was not detected in scan {idx + 1}. Stand closer to the room's AP.",
+            )
 
     # 7.3 & 7.4 Build the pattern and label each BSSID
     # Fetch all access points across the hostel to label own vs hostel vs unknown
@@ -123,16 +131,24 @@ async def submit_room_fingerprint(
 
     async with pool.acquire() as conn:
         async with conn.transaction():
-            row = await conn.fetchrow(
-                """
-                insert into room_fingerprints (room_id, version, pattern, created_at)
-                values ($1, $2, $3::jsonb, now())
-                returning id, created_at
-                """,
-                room_id,
-                next_version,
-                json.dumps(pattern),
-            )
+            try:
+                row = await conn.fetchrow(
+                    """
+                    insert into room_fingerprints (room_id, version, pattern, created_at)
+                    values ($1, $2, $3::jsonb, now())
+                    returning id, created_at
+                    """,
+                    room_id,
+                    next_version,
+                    json.dumps(pattern),
+                )
+            except asyncpg.UniqueViolationError as exc:
+                # Another roommate submitted at the same moment and won.
+                raise AppError(
+                    code="FINGERPRINT_EXISTS",
+                    status_code=400,
+                    message=FINGERPRINT_EXISTS_MESSAGE,
+                ) from exc
             # Clear reset pending flag
             await conn.execute(
                 "update rooms set fingerprint_reset_pending = false where id = $1",

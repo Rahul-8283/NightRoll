@@ -5,8 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from typing import Any
 from uuid import UUID
+
 import httpx
 import numpy as np
 
@@ -43,8 +43,8 @@ class StorageClient:
     async def upload_frame(self, path: str, frame_bytes: bytes) -> bool:
         """Upload a single JPEG frame to the private Supabase storage bucket."""
         if not self.url or not self.key:
-            logger.warning("Supabase credentials not configured, skipping storage upload")
-            return True
+            logger.error("Supabase credentials not configured; frame not stored")
+            return False
 
         upload_url = f"{self.url}/storage/v1/object/{self.bucket}/{path}"
         headers = self._headers(content_type="image/jpeg")
@@ -66,17 +66,19 @@ class StorageClient:
         window_id: UUID,
         mark_id: UUID,
         frames: list[tuple[int, bytes]],
-    ) -> str:
+    ) -> str | None:
         """Upload nightly frames to frames/{window_id}/{mark_id}/{index}.jpg.
 
-        Returns folder path: frames/{window_id}/{mark_id}/
+        Returns the folder path, or None if any frame failed to store, so the backend never records
+        a path for evidence that does not exist.
         """
         folder_path = f"frames/{window_id}/{mark_id}"
+        stored_all = True
         for idx, frame_bytes in frames:
-            file_path = f"{folder_path}/{idx}.jpg"
-            await self.upload_frame(file_path, frame_bytes)
+            if not await self.upload_frame(f"{folder_path}/{idx}.jpg", frame_bytes):
+                stored_all = False
 
-        return f"{folder_path}/"
+        return f"{folder_path}/" if stored_all else None
 
     # --- Database Operations (face_embeddings table only) ---
 
@@ -88,8 +90,8 @@ class StorageClient:
     ) -> bool:
         """Upsert 512-dimension vector into face_embeddings table."""
         if not self.url or not self.key:
-            logger.warning("Supabase credentials missing; embedding not persisted")
-            return True
+            logger.error("Supabase credentials missing; embedding not persisted")
+            return False
 
         endpoint = f"{self.url}/rest/v1/face_embeddings"
         headers = self._headers()

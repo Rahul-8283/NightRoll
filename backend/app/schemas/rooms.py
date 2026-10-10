@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
+
+from pydantic import Field
 
 from app.schemas.common import ApiModel
 
@@ -37,17 +40,17 @@ class RoomDetailOut(ApiModel):
 
 
 class WifiNetworkScan(ApiModel):
-    bssid: str
-    rssi: float
-    band: str  # '2.4GHz' or '5GHz'
+    bssid: str = Field(pattern=r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
+    rssi: float = Field(ge=-127, le=0, description="Signal strength in dBm")
+    band: Literal["2.4GHz", "5GHz", "6GHz"]
 
 
 class RoomScanObservation(ApiModel):
-    networks: list[WifiNetworkScan]
+    networks: list[WifiNetworkScan] = Field(max_length=300)
 
 
 class SubmitRoomScansRequest(ApiModel):
-    scans: list[RoomScanObservation]
+    scans: list[RoomScanObservation] = Field(max_length=10)
 
 
 class RoomFingerprintResponse(ApiModel):

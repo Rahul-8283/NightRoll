@@ -82,4 +82,3 @@ async def get_room_fingerprint_endpoint(
 ) -> RoomFingerprintResponse:
     result = await fingerprint_svc.get_room_fingerprint_status(pool, room_id)
     return RoomFingerprintResponse(**result)
-

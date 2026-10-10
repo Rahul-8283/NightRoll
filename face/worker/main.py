@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
-import hashlib
 import json
 import logging
-from typing import Any
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Annotated, Any
 from uuid import UUID
+
 import numpy as np
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 
@@ -24,7 +25,6 @@ from worker.schemas import (
     FrameIssue,
     HeadPose,
     HealthResponse,
-    VerifyJSONRequest,
     VerifyResponse,
 )
 from worker.storage import storage
@@ -37,6 +37,37 @@ face_app: Any | None = None
 antispoof_classifier: AntiSpoofClassifier | None = None
 worker_ready: bool = False
 cleanup_task: asyncio.Task[None] | None = None
+
+
+def load_face_app() -> Any:
+    """Load InsightFace from the files `scripts/download_models.py` verified, and nothing else.
+
+    InsightFace looks for `<root>/models/<name>`, so the root is the parent of FACE_MODEL_DIR. If the
+    folder is missing we fail loudly instead of letting InsightFace download an unverified copy.
+    """
+    from insightface.app import FaceAnalysis
+
+    model_dir = Path(settings.FACE_MODEL_DIR).resolve()
+    if model_dir.name != "models":
+        raise RuntimeError(f"FACE_MODEL_DIR must be a folder named 'models', got '{model_dir}'")
+    if not (model_dir / settings.FACE_MODEL_NAME).is_dir():
+        raise FileNotFoundError(
+            f"{model_dir / settings.FACE_MODEL_NAME} is missing. Run: python scripts/download_models.py"
+        )
+
+    face_app = FaceAnalysis(
+        name=settings.FACE_MODEL_NAME,
+        root=str(model_dir.parent),
+        providers=["CPUExecutionProvider"],
+    )
+    face_app.prepare(ctx_id=0, det_size=(640, 640))
+    return face_app
+
+
+def require_ready() -> None:
+    """Never score a face with a model that did not load."""
+    if not worker_ready or face_app is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Face model is not loaded")
 
 
 async def cleanup_loop() -> None:
@@ -60,16 +91,10 @@ async def lifespan(app: FastAPI):
 
     # 1. Load InsightFace FaceAnalysis on CPU
     try:
-        from insightface.app import FaceAnalysis
-        face_app = FaceAnalysis(
-            name=settings.FACE_MODEL_NAME,
-            root=settings.FACE_MODEL_DIR,
-            providers=["CPUExecutionProvider"],
-        )
-        face_app.prepare(ctx_id=0, det_size=(640, 640))
+        face_app = load_face_app()
         logger.info(f"Loaded InsightFace model '{settings.FACE_MODEL_NAME}'")
     except Exception as e:
-        logger.warning(f"InsightFace initialization skipped or model absent: {e}")
+        logger.error(f"InsightFace did not load: {e}")
         face_app = None
 
     # 2. Load Anti-spoofing ONNX model
@@ -86,7 +111,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Warm-up inference warning: {e}")
 
-    worker_ready = True
+    worker_ready = face_app is not None
+    if not worker_ready:
+        logger.error("Face model failed to load: /health will report ready=false")
 
     # 4. Start background retention cleanup
     cleanup_task = asyncio.create_task(cleanup_loop())
@@ -107,7 +134,7 @@ app = FastAPI(
 )
 
 
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health", response_model=HealthResponse, dependencies=[Depends(verify_service_token)])
 async def health_check() -> HealthResponse:
     """Report readiness, model versions, anti-spoof availability, and last cleanup time."""
     antispoof_ok = antispoof_classifier.is_available if antispoof_classifier else False
@@ -121,17 +148,20 @@ async def health_check() -> HealthResponse:
 
 @app.post("/enroll", response_model=EnrollmentResponse, dependencies=[Depends(verify_service_token)])
 async def enroll_student_face(
-    student_id: UUID = Form(...),
-    frames: list[UploadFile] = File(...),
+    student_id: Annotated[UUID, Form()],
+    frames: Annotated[list[UploadFile], File()],
 ) -> EnrollmentResponse:
     """Process 3 to 5 enrollment frames, generate and store an aggregate 512-d ArcFace embedding.
 
     Enrollment photos are NEVER saved to disk or storage (Task 7.3).
     """
+    require_ready()
     if len(frames) < settings.ENROLL_MIN_VALID_FRAMES or len(frames) > 5:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Enrollment requires between {settings.ENROLL_MIN_VALID_FRAMES} and 5 frames, received {len(frames)}",
+            detail=(
+                f"Enrollment requires between {settings.ENROLL_MIN_VALID_FRAMES} and 5 frames, received {len(frames)}"
+            ),
         )
 
     valid_embeddings: list[np.ndarray] = []
@@ -155,14 +185,17 @@ async def enroll_student_face(
         reasons = [f"Frame {iss.frame_index}: {iss.code} ({iss.detail})" for iss in issues_encountered]
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Fewer than {settings.ENROLL_MIN_VALID_FRAMES} frames passed quality checks. Issues: {'; '.join(reasons)}",
+            detail=(
+                f"Fewer than {settings.ENROLL_MIN_VALID_FRAMES} frames passed quality checks. "
+                f"Issues: {'; '.join(reasons)}"
+            ),
         )
 
     # Validate cross-frame consistency and compute normalized average vector
     try:
         final_embedding, count_used = aggregate_enrollment_embeddings(valid_embeddings)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     # Persist directly into face_embeddings table
     saved = await storage.save_embedding(student_id, final_embedding, settings.MODEL_VERSION)
@@ -180,11 +213,11 @@ async def enroll_student_face(
 
 @app.post("/verify", response_model=VerifyResponse, dependencies=[Depends(verify_service_token)])
 async def verify_nightly_frames(
-    student_id: UUID = Form(...),
-    window_id: UUID = Form(...),
-    mark_id: UUID = Form(...),
-    frame_hashes: str = Form(..., description="JSON-encoded list of expected frame SHA-256 hex hashes"),
-    frames: list[UploadFile] = File(...),
+    student_id: Annotated[UUID, Form()],
+    window_id: Annotated[UUID, Form()],
+    mark_id: Annotated[UUID, Form()],
+    frame_hashes: Annotated[str, Form(description="JSON-encoded list of expected frame SHA-256 hex hashes")],
+    frames: Annotated[list[UploadFile], File()],
 ) -> VerifyResponse:
     """Score nightly frames for cosine similarity, anti-spoofing, and head pose.
 
@@ -195,10 +228,13 @@ async def verify_nightly_frames(
     5. Computes best and median cosine similarity.
     6. Stores frames in the private frames bucket for 24-hour audit retention.
     """
+    require_ready()
     try:
         expected_hashes: list[str] = json.loads(frame_hashes)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="frame_hashes must be a valid JSON array")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="frame_hashes must be a valid JSON array"
+        ) from e
 
     if len(frames) != len(expected_hashes):
         raise HTTPException(
@@ -221,7 +257,7 @@ async def verify_nightly_frames(
     frame_issues: list[FrameIssue] = []
 
     # 2. Process frames
-    for idx, (upload, expected_hash) in enumerate(zip(frames, expected_hashes)):
+    for idx, (upload, expected_hash) in enumerate(zip(frames, expected_hashes, strict=True)):
         content = await upload.read()
 
         # SHA-256 check
