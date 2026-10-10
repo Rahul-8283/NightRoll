@@ -5,6 +5,7 @@ Run from the backend folder:
 
 from __future__ import annotations
 
+import json
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -95,5 +96,6 @@ async def test_every_export_is_audited_with_its_filters(connected):
         await c.get("/v1/exports/attendance", params={"from": "2030-03-01", "to": "2030-03-07", "floor": 1})
     row = await pool.fetchrow("select payload from audit_log where action = 'export.created' order by id desc limit 1")
     assert row is not None
-    assert row["payload"]["from"] == "2030-03-01"
-    assert row["payload"]["floor"] == 1
+    payload = json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"]
+    assert payload["from"] == "2030-03-01"
+    assert payload["floor"] == 1
