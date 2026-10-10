@@ -19,24 +19,42 @@ CONSUME_LUA = (Path(__file__).resolve().parent.parent / "redis" / "consume_nonce
 STATE_TTL_SECONDS = 86400
 
 
-async def issue(redis: Redis, window_id: UUID, student_ids: list[UUID], closes_at: datetime) -> None:
+CHALLENGE_ACTIONS = ["blink", "turn_left", "turn_right", "smile"]
+
+
+def generate_challenge() -> list[str]:
+    return secrets.SystemRandom().sample(CHALLENGE_ACTIONS, 2)
+
+
+async def issue(
+    redis: Redis,
+    window_id: UUID,
+    student_ids: list[UUID],
+    closes_at: datetime,
+    challenges: dict[UUID, list[str]] | None = None,
+) -> None:
     expires_at = int(closes_at.timestamp())
     async with redis.pipeline(transaction=False) as pipe:
         for student_id in student_ids:
             key = keys.nonce_key(window_id, student_id)
             pipe.hsetnx(key, "value", secrets.token_urlsafe(32))
             pipe.hsetnx(key, "used", "0")
+            ch = challenges.get(student_id) if challenges else generate_challenge()
+            pipe.hsetnx(key, "challenge", ",".join(ch))
             pipe.expireat(key, expires_at)
         await pipe.execute()
 
 
-async def peek(redis: Redis, window_id: UUID, student_id: UUID) -> tuple[str, str | None]:
-    value, used = await redis.hmget(keys.nonce_key(window_id, student_id), "value", "used")
+async def peek(redis: Redis, window_id: UUID, student_id: UUID) -> tuple[str, str | None, list[str] | None]:
+    value, used, challenge_raw = await redis.hmget(
+        keys.nonce_key(window_id, student_id), "value", "used", "challenge"
+    )
     if value is None:
-        return "missing", None
+        return "missing", None, None
+    challenge = [c.strip() for c in challenge_raw.split(",")] if challenge_raw else None
     if used == "1":
-        return "already_used", None
-    return "ok", value
+        return "already_used", None, challenge
+    return "ok", value, challenge
 
 
 async def consume(redis: Redis, window_id: UUID, student_id: UUID, value: str) -> str:

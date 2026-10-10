@@ -26,17 +26,17 @@ async def student_status(pool: asyncpg.Pool, redis: Redis, student_id: UUID) -> 
         if await attendance_q.has_present_mark(pool, window_id, student_id):
             return {"state": "marked", "window_id": window_id}
 
-        status, nonce = await nonces.peek(redis, window_id, student_id)
+        status, nonce, challenge = await nonces.peek(redis, window_id, student_id)
         if status == "missing":
             await nonces.issue(redis, window_id, [student_id], window["closes_at"])
-            status, nonce = await nonces.peek(redis, window_id, student_id)
+            status, nonce, challenge = await nonces.peek(redis, window_id, student_id)
         if status == "ok":
             return {
                 "state": "open",
                 "window_id": window_id,
                 "nonce": nonce,
                 "closes_at": window["closes_at"],
-                "challenge": CHALLENGE,
+                "challenge": challenge or CHALLENGE,
             }
         return {"state": "pending", "window_id": window_id}
 

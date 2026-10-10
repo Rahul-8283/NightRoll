@@ -219,12 +219,59 @@ Gates run in this order. The first failure ends the request.
 
 1. **Window:** `opens_at <= server_now <= closes_at`. Server time only.
 2. **Nonce:** exists, unused, and belongs to this student. It is consumed only after the signature check passes, so a request that fails the signature does not burn the nonce.
-3. **Signature:** ECDSA P-256 verification over the canonical JSON of the payload without the `signature` field, using the active device public key for the student. Reject if the device is inactive or not registered.
-4. **Integrity:** decode the Play Integrity token through the Google API. Require `MEETS_DEVICE_INTEGRITY`. Require the token's request hash to equal the SHA-256 of the signed payload, which binds the token to this request.
+3. **Signature:** ECDSA P-256 verification over the exact UTF-8 bytes of `payload` received in the multipart submission, using the active device public key for the student. To avoid any mismatch between what the phone signs and what the server checks, the phone signs an exact string of bytes and sends that same string. The server verifies the signature over the bytes it received, and only then reads them as JSON.
+4. **Integrity:** decode the Play Integrity token through the Google API. Require `MEETS_DEVICE_INTEGRITY`. Require the token's request hash to equal the SHA-256 of the raw payload bytes, which binds the token to this request.
 5. **Environment:** VPN, proxy, and mock location all false. These are client reports, so they count as supporting evidence. Play Integrity and the network gate are the independent checks.
 6. **Network:**
    - MVP: source IP is inside the room's subnet.
    - Production: the controller or RADIUS reports the device's MAC associated with the room's access point within the last 60 seconds.
+
+### 6.2.1 Submission Envelope and Multipart Format
+
+Nightly attendance is submitted via `POST /v1/attendance/verify` as `multipart/form-data`:
+
+| Part | Content |
+|---|---|
+| `payload` | The exact UTF-8 string serialized once on the phone |
+| `signature` | Base64 DER ECDSA P-256 signature over the payload bytes |
+| `integrity_token` | Play Integrity token bound to SHA-256(`payload`), or empty |
+| `integrity_error` | Error code if Play Integrity token request failed (optional) |
+| `frame_0` to `frame_3` | JPEG image bytes (action 1, action 2, neutral 1, neutral 2) |
+
+**Core Payload schema:**
+
+```json
+{
+  "v": 1,
+  "student_id": "uuid",
+  "window_id": "uuid",
+  "nonce": "base64url",
+  "client_time": "2026-10-10T22:01:14+05:30",
+  "challenge": [
+    {"action": "blink", "started_ms": 0, "detected_ms": 1180},
+    {"action": "turn_right", "started_ms": 1400, "detected_ms": 2950}
+  ],
+  "frames": [
+    {"index": 0, "sha256": "hex", "tag": "blink"},
+    {"index": 1, "sha256": "hex", "tag": "turn_right"},
+    {"index": 2, "sha256": "hex", "tag": "neutral"},
+    {"index": 3, "sha256": "hex", "tag": "neutral"}
+  ],
+  "wifi": {
+    "connected": {"bssid": "aa:bb:cc:00:01:05", "rssi": -52, "band": "5GHz"},
+    "scan_age_ms": 800,
+    "scan": [
+      {"bssid": "aa:bb:cc:00:01:05", "rssi": -52, "band": "5GHz"},
+      {"bssid": "aa:bb:cc:00:02:05", "rssi": -71, "band": "5GHz"}
+    ]
+  },
+  "environment": {
+    "vpn": false, "proxy": false, "mock_location": false,
+    "developer_options": false, "on_wifi": true
+  },
+  "app_version": "0.1.0"
+}
+```
 
 ### 6.3 Scorers
 

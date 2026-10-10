@@ -41,6 +41,7 @@ expo-env.d.ts
 web-build/
 app/android/
 app/ios/
+.gradle/
 .kotlin/
 *.orig.*
 *.apk
@@ -68,3 +69,5 @@ supabase/.branches/
 .vscode/*
 !.vscode/extensions.json
 *.log
+powershell.cmd
+app/test_phase7.mjs
