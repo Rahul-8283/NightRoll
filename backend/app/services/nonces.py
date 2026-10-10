@@ -80,6 +80,12 @@ async def extend(redis: Redis, window_id: UUID, student_ids: list[UUID], closes_
     await set_open(redis, window_id, closes_at)
 
 
+async def reissue(redis: Redis, window_id: UUID, student_id: UUID, closes_at: datetime) -> None:
+    """Replace a used nonce with a fresh value and challenge, for a retry in the same window."""
+    await redis.delete(keys.nonce_key(window_id, student_id))
+    await issue(redis, window_id, [student_id], closes_at)
+
+
 async def drop(redis: Redis, window_id: UUID, student_ids: list[UUID]) -> None:
     if not student_ids:
         return
