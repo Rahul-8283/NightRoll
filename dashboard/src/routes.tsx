@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router'
 import { RequireWarden } from './auth/RequireWarden'
 import { Layout } from './components/Layout'
 import { Absentees } from './pages/Absentees'
+import { Audit } from './pages/Audit'
 import { Enrollment } from './pages/Enrollment'
 import { Export } from './pages/Export'
 import { Landing } from './pages/Landing'
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
           { path: 'review', element: <Review /> },
           { path: 'absentees', element: <Absentees /> },
           { path: 'export', element: <Export /> },
+          { path: 'audit', element: <Audit /> },
           { path: 'rooms/:roomId', element: <Room /> },
           { path: 'windows', element: <Windows /> },
           { path: 'enrollment', element: <Enrollment /> },

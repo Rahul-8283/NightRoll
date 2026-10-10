@@ -1398,3 +1398,13 @@ a.window:hover {
   width: 100%;
   margin-top: var(--s-3);
 }
+
+.audit__row {
+  align-items: flex-start;
+}
+
+.audit__time {
+  flex: none;
+  min-width: 9.5em;
+  font-size: var(--text-sm);
+}
