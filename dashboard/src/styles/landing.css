@@ -108,16 +108,6 @@
   gap: var(--s-3);
 }
 
-.landing__signin {
-  color: var(--paper-2);
-  font-weight: 500;
-  padding: 8px 12px;
-}
-
-.landing__signin:hover {
-  color: var(--paper);
-}
-
 .landing__signup {
   padding: 9px 16px;
 }
@@ -599,10 +589,6 @@
 @media (max-width: 640px) {
   .landing__nav {
     padding: var(--s-3) var(--s-4);
-  }
-
-  .landing__signin {
-    display: none;
   }
 
   .hero,
