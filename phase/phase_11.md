@@ -102,7 +102,7 @@ Every frame view is in the audit log with the warden's name and reason.
 |---|---|
 | 5.1 | `GET /v1/attendance/absentees?window_id=` returns students whose effective status is absent, with room, floor and the reason: no attempt, rejected attempts only, or declined in review |
 | 5.2 | A page listing them, grouped by floor |
-| 5.3 | While the window is open, the page is titled "Not yet marked" and offers "Send reminder" |
+| 5.3 | While the window is open, the page is titled "Not yet marked" and shows how many students are still to mark |
 | 5.4 | After close, each row has "Record manual mark", for a student who was verified in person |
 | 5.5 | Students with no enrolled device are shown separately, since they use the ground-floor scanner |
 
@@ -137,9 +137,9 @@ Every frame view is in the audit log with the warden's name and reason.
 
 | # | Task |
 |---|---|
-| 8.1 | Add `GET /v1/attendance/status` (device signature): the student's effective status for tonight |
-| 8.2 | When a review or override changes a student's status, send a data push with `type=status_changed`. No detail in the message. |
-| 8.3 | The app fetches the status on receiving it and updates the Home screen: "Approved by your warden" or "Marked absent by your warden. Please see the warden." |
+| 8.1 | The `GET /v1/attendance/nonce` response from Phase 3 also carries the student's effective status for tonight, from the view in task 1 |
+| 8.2 | A review or override changes the status returned to the app. Nothing is sent to the phone. The student sees the change at the next refresh, or when they next open NightRoll. |
+| 8.3 | The Home screen shows the new status at its next refresh: "Approved by your warden" or "Marked absent by your warden. Please see the warden." |
 | 8.4 | The Home screen also fetches the status whenever the app opens |
 
 ### 9. Room health flags
@@ -155,7 +155,7 @@ Every frame view is in the audit log with the warden's name and reason.
 ## Exit criteria
 
 - [ ] A mark in `NEEDS_REVIEW` appears in the queue with its scores and reasons.
-- [ ] Approving it turns the room tile and the student's app to present.
+- [ ] Approving it turns the room tile and the student's app to present at its next refresh.
 - [ ] Declining it requires a note and makes the student absent.
 - [ ] A second decision on the same mark returns `409`.
 - [ ] Overriding a rejected mark to present requires a note and is reflected everywhere.

@@ -43,7 +43,7 @@ Turn a set of services that work on developers' machines into one system that st
 | 1.8 | Only nginx publishes ports. Redis, the face worker and the API are reachable inside the Compose network only. |
 | 1.9 | Env files are passed at run time. No secret is baked into an image. |
 
-Supabase is hosted, so there is no database container. The host needs outbound internet access to Supabase, Firebase and Google.
+Supabase is hosted, so there is no database container. The host needs outbound internet access to Supabase and Google.
 
 ### 2. Reverse proxy and TLS
 
@@ -104,9 +104,9 @@ Database backups are handled by Supabase. Write down in the runbook which backup
 |---|---|
 | 6.1 | All services log JSON to standard output with the same request ID, passed from nginx through the API to the face worker |
 | 6.2 | `GET /v1/metrics` (admin, or internal network only), in Prometheus text format |
-| 6.3 | Metrics: requests and latency per route; verdicts by type; gate failures by reason; per-stage timings; face worker latency; pushes sent and failed; open WebSocket connections; scheduler heartbeat age |
+| 6.3 | Metrics: requests and latency per route; verdicts by type; gate failures by reason; per-stage timings; face worker latency; open WebSocket connections; scheduler heartbeat age |
 | 6.4 | An admin-only "System" page on the dashboard: service health, tonight's verdict counts, gate failures by reason, latency, last cleanup, last scheduler heartbeat |
-| 6.5 | Alerts shown as a banner on the dashboard: face worker down during an open window; scheduler heartbeat stale; rejection rate above 20% in the last 5 minutes; push failure rate above 10% |
+| 6.5 | Alerts shown as a banner on the dashboard: face worker down during an open window; scheduler heartbeat stale; rejection rate above 20% in the last 5 minutes |
 
 A full monitoring stack is not needed for the pilot. The System page and the logs are enough.
 
@@ -201,7 +201,7 @@ Write `docs/runbook.md`.
 | Risk | What to do |
 |---|---|
 | Venue network differs from the practice setup | Bring the routers and a switch so the demo network is self-contained; only the laptop needs internet |
-| No internet at the venue | Supabase, Firebase and Play Integrity all need it. Bring a phone hotspot as the laptop's uplink, and have the backup video ready. |
+| No internet at the venue | Supabase and Play Integrity both need it. Bring a phone hotspot as the laptop's uplink, and have the backup video ready. |
 | Phones do not trust the local certificate | Install the certificate authority during setup, and check it on each phone |
 | Fingerprint captured in a different place than the demo | Capture at the venue during setup (task 9.8) |
 

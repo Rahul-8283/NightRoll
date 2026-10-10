@@ -46,7 +46,6 @@ flowchart LR
 
     NightRoll["NightRoll system"]
 
-    FCM["Firebase Cloud Messaging"]
     PI["Google Play Integrity API"]
     Ctrl["WiFi controller or RADIUS<br/>optional"]
     Fallback["Ground-floor scanner<br/>existing"]
@@ -55,8 +54,6 @@ flowchart LR
     Warden -- "manages window, reviews marks" --> NightRoll
     Admin -- "exports records" --> NightRoll
     NetAdmin -- "provides room-to-subnet map" --> NightRoll
-    NightRoll -- "window push" --> FCM
-    FCM -- "notification" --> Student
     NightRoll -- "verifies device integrity" --> PI
     NightRoll -. "reads client association" .-> Ctrl
     Student -. "fallback when app fails" .-> Fallback
@@ -66,7 +63,6 @@ flowchart LR
 
 | System | Role | Required? |
 |---|---|---|
-| Firebase Cloud Messaging | Delivers the window-open push | Yes |
 | Google Play Integrity API | Confirms the app runs on a genuine, unmodified device | Yes |
 | WiFi controller or RADIUS | Confirms which access point a client is on | No for MVP; yes for production |
 | Ground-floor scanner | Fallback for dead phones and outages | Yes (existing) |
@@ -101,7 +97,6 @@ flowchart TB
         Dash["Warden dashboard<br/>React, static"]
     end
 
-    Ext1["Firebase Cloud Messaging"]
     Ext2["Play Integrity API"]
     Ext3["WiFi controller or RADIUS"]
 
@@ -114,8 +109,6 @@ flowchart TB
     Face --> PG
     Face --> Frames
     Sched --> Redis
-    Sched --> Ext1
-    Ext1 --> App
     API --> Ext2
     Adapter --> Ext3
     API --> Adapter
@@ -127,10 +120,10 @@ flowchart TB
 
 | Container | Responsibility | Talks to | Owns data |
 |---|---|---|---|
-| NightRoll app | Enrollment, challenge, capture, WiFi scan, signing | API (via AP), FCM, Keystore | Key alias only |
+| NightRoll app | Enrollment, challenge, capture, WiFi scan, signing | API (via AP), Keystore | Key alias only |
 | Reverse proxy | TLS termination, routing, rate limits at the edge | API, dashboard | None |
 | API service | Gates, scoring orchestration, fusion, window and review logic, WebSocket hub | Redis, Supabase PostgreSQL, Supabase Auth, face worker, Play Integrity, network adapter | Attendance records, via Supabase PostgreSQL |
-| Scheduler | Opens and closes windows, issues nonces, triggers push, records absentees | Redis, API, FCM | Window state, via Redis |
+| Scheduler | Opens and closes windows, issues nonces, records absentees | Redis, API | Window state, via Redis |
 | Face worker | Embedding and anti-spoof on frames | Supabase PostgreSQL (embeddings only), Supabase Storage | Frames, deleted after 24 hours |
 | Network adapter | Reads client-to-AP association from controller or RADIUS | Controller or RADIUS, API | None |
 | Dashboard | Room tiles, review queue, exports | API over HTTPS and WebSocket | None |
@@ -223,7 +216,6 @@ sequenceDiagram
     participant S as Scheduler
     participant R as Redis
     participant DB as PostgreSQL
-    participant F as FCM
     participant A as Student app
 
     W->>API: POST /windows (opens_at, closes_at)
@@ -232,8 +224,7 @@ sequenceDiagram
     Note over S: At opens_at
     S->>DB: Load active students
     S->>R: Create nonce per student, TTL to closes_at
-    S->>F: Send window-open message per student
-    F->>A: Deliver push with window_id
+    Note over A: Student opens NightRoll during the window<br/>and the app fetches its nonce
 ```
 
 ### 6.2 Enrollment
@@ -276,7 +267,7 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Dash as Dashboard
 
-    Student->>App: Tap push notification
+    Student->>App: Opens NightRoll at window time
     App->>App: Environment check
     App->>Student: Liveness challenge
     Student->>App: Performs action
@@ -375,7 +366,7 @@ flowchart LR
 
     subgraph T1["Semi-trusted"]
         AP["Room access point<br/>source address evidence"]
-        Ext["Google and Firebase APIs"]
+        Ext["Google APIs"]
     end
 
     subgraph T2["Trusted"]
@@ -453,7 +444,7 @@ flowchart TB
     end
 
     APs --> N
-    A --> Google["Google and Firebase"]
+    A --> Google["Google APIs"]
     Google --> Ph
 ```
 
@@ -507,6 +498,7 @@ Nothing in the design requires a rewrite to scale. Each container can move to it
 | ADR-12 | Android first, iOS deferred | Both platforms at once | iOS cannot perform full WiFi scans, which the design depends on |
 | ADR-13 | Supabase for database, auth, and frame storage | Self-hosted PostgreSQL, a separate auth provider, and S3-compatible storage | One managed platform with pgvector, MFA-capable auth, and private buckets; less to operate in a hackathon and pilot |
 | ADR-14 | Redis kept for nonces and window state | Supabase-only (Postgres with short TTL tables) | Atomic consume and TTL expiry are a natural fit for Redis; keeps the nonce path independent of database load |
+| ADR-15 | No push notifications; students open the app at window time | FCM push at window open; background polling | Push adds a Google dependency and a token per student. Background polling drains batteries and is unreliable on many Android phones. A student who opens the app at 10 PM is the simplest reliable path for this hostel. |
 
 ---
 

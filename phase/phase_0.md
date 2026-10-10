@@ -15,7 +15,7 @@ Every teammate can clone the repo, fill in one env file per service, start the l
 
 - The repo has its final folder structure, with a placeholder in each service folder.
 - `.gitignore` and a `.env.example` per service are committed. No real secret is in git.
-- Supabase, Firebase and Google Cloud projects exist, and every credential is shared with the team outside git.
+- Supabase and Google Cloud projects exist, and every credential is shared with the team outside git.
 - Redis runs locally through Docker Compose.
 - Two test Android phones and two routers are ready for the demo network.
 - Four risk spikes are done and their results are written down.
@@ -26,14 +26,14 @@ Every teammate can clone the repo, fill in one env file per service, start the l
 
 | # | Task | Result |
 |---|---|---|
-| 1.1 | Create one team Google account (or pick one owner account) for Firebase and Google Cloud | Shared login in the team password manager |
+| 1.1 | Create one team Google account (or pick one owner account) for Google Cloud | Shared login in the team password manager |
 | 1.2 | Create a Supabase organisation and a project named `nightroll-dev` | Project URL and keys |
-| 1.3 | Create a Firebase project named `nightroll` and add an Android app with the package name `com.zerolatency.nightroll` | `google-services.json` |
+| 1.3 | Create a Google Cloud project named `nightroll`. Record the Android package name `com.zerolatency.nightroll` for the Play Integrity setup. | Project ID and number noted |
 | 1.4 | In the linked Google Cloud project, enable the Play Integrity API | API enabled, project number noted |
 | 1.5 | Give all four teammates write access to the GitHub repo | Everyone can push to `base` |
-| 1.6 | Ask the campus network admin the three network questions (section 11) | Written answer, or a date for one |
+| 1.6 | Ask the campus network admin the three network questions (section 10) | Written answer, or a date for one |
 
-The package name is fixed here. Changing it later breaks Firebase and Play Integrity.
+The package name is fixed here. Changing it later breaks Play Integrity.
 
 ## 2. Tooling versions
 
@@ -93,9 +93,7 @@ Commit this file at the repo root before any service code exists.
 *.jks
 *.keystore
 !debug.keystore
-google-services.json
 *service-account*.json
-*firebase-adminsdk*.json
 
 # Real hostel data
 config/rooms.local.json
@@ -178,9 +176,8 @@ REDIS_URL=redis://localhost:6379/0
 FACE_WORKER_URL=http://localhost:8100
 FACE_WORKER_TOKEN=
 
-# Firebase Cloud Messaging
-FIREBASE_PROJECT_ID=
-GOOGLE_APPLICATION_CREDENTIALS=./secrets/firebase-service-account.json
+# Google service account (Play Integrity decode)
+GOOGLE_APPLICATION_CREDENTIALS=./secrets/google-service-account.json
 
 # Play Integrity
 PLAY_INTEGRITY_PACKAGE_NAME=com.zerolatency.nightroll
@@ -250,8 +247,7 @@ Rules:
 | Supabase service role key | Same page | `backend/.env`, `face/.env` | No |
 | Supabase JWT secret | Project Settings, API, JWT settings | `backend/.env` | No |
 | Database connection string | Project Settings, Database (use the pooled connection) | `backend/.env` | No |
-| Firebase service account JSON | Firebase console, Project Settings, Service accounts | `backend/secrets/` | No |
-| `google-services.json` | Firebase console, Android app | `app/android/app/` | No |
+| Google service account JSON (Play Integrity) | Google Cloud console, IAM, Service accounts | `backend/secrets/` | No |
 | Google Cloud project number | Google Cloud console, project dashboard | `app/.env` | No |
 | Face worker token | Generate locally: `openssl rand -hex 32` | `backend/.env`, `face/.env` | No |
 | Android release keystore | Generate once with `keytool`, one copy with the app lead | Password manager | No |
@@ -286,25 +282,17 @@ Check: `docker compose -f infra/docker-compose.yml up -d` and then `redis-cli pi
 
 Tables and policies are Phase 1. This phase only prepares the project.
 
-## 9. Firebase setup
+## 9. Play Integrity setup
 
 | # | Task |
 |---|---|
-| 9.1 | Download `google-services.json` to `app/android/app/` and confirm it is ignored by git |
-| 9.2 | Download the service account JSON to `backend/secrets/` and confirm it is ignored by git |
-| 9.3 | Confirm Cloud Messaging is enabled for the project |
+| 9.1 | Enable the Play Integrity API in the Google Cloud project |
+| 9.2 | Give the backend's service account permission to call the API's token decode method |
+| 9.3 | Note the Cloud project number for the app |
 
-## 10. Play Integrity setup
+Whether full verdicts work for an app that is installed directly on a phone, without going through the Play Store, is checked in spike 11.2.
 
-| # | Task |
-|---|---|
-| 10.1 | Enable the Play Integrity API in the Google Cloud project linked to Firebase |
-| 10.2 | Give the backend's service account permission to call the API's token decode method |
-| 10.3 | Note the Cloud project number for the app |
-
-Whether full verdicts work for an app that is installed directly on a phone, without going through the Play Store, is checked in spike 12.2.
-
-## 11. Demo network kit and network questions
+## 10. Demo network kit and network questions
 
 **Kit**
 - Two Wi-Fi routers, labelled Room 101 and Room 102, both plugged into the network the laptop is on.
@@ -336,22 +324,21 @@ Record each router's SSID, BSSIDs for both bands, and the address the laptop see
 
 The answers decide what the network gate can prove in production. The demo does not depend on them.
 
-## 12. Risk spikes
+## 11. Risk spikes
 
 Each spike is a throwaway script or app in `scripts/spikes/`. The aim is a yes or no, not clean code. Write the result in `scripts/spikes/RESULTS.md`.
 
 | # | Spike | Question | Pass looks like |
 |---|---|---|---|
-| 12.1 | Keystore signing | Can a test phone create a non-exportable P-256 key and sign bytes that Python verifies? | Python verifies a signature made on the phone |
-| 12.2 | Play Integrity | Does a directly installed build get a token the backend can decode, and what verdict fields come back? | Decoded verdict printed on the laptop |
-| 12.3 | Face latency | How long does `buffalo_l` take per frame on the demo laptop's CPU? | Under about 300 ms per frame; record the number |
-| 12.4 | FCM delivery | Does a data message sent from Python reach a locked test phone? | Notification appears within a few seconds |
-| 12.5 | Wi-Fi scan | Does a test phone return BSSIDs and signal strength for nearby networks? | List of networks with RSSI printed |
-| 12.6 | Source address | Does the laptop see a different source address for each router? | Two different addresses logged |
+| 11.1 | Keystore signing | Can a test phone create a non-exportable P-256 key and sign bytes that Python verifies? | Python verifies a signature made on the phone |
+| 11.2 | Play Integrity | Does a directly installed build get a token the backend can decode, and what verdict fields come back? | Decoded verdict printed on the laptop |
+| 11.3 | Face latency | How long does `buffalo_l` take per frame on the demo laptop's CPU? | Under about 300 ms per frame; record the number |
+| 11.4 | Wi-Fi scan | Does a test phone return BSSIDs and signal strength for nearby networks? | List of networks with RSSI printed |
+| 11.5 | Source address | Does the laptop see a different source address for each router? | Two different addresses logged |
 
 If a spike fails, stop and decide the workaround before Phase 1 starts. Likely workarounds: run Play Integrity in a warn-only mode for the demo, or run anti-spoof on one frame instead of all.
 
-## 13. Repo conventions
+## 12. Repo conventions
 
 - Work on `base`. Follow the git workflow in `CLAUDE.md`: conventional commits, short messages, every commit pushed.
 - One phase file is the unit of work. A phase is finished when its exit criteria are all true.
@@ -367,8 +354,8 @@ If a spike fails, stop and decide the workaround before Phase 1 starts. Likely w
 - [ ] Every teammate has a filled `.env` for the service they own.
 - [ ] Redis answers `PONG` on every teammate's machine.
 - [ ] The Supabase project has the `vector` extension, the `frames` bucket, sign-ups off, and one test warden.
-- [ ] `google-services.json` and the Firebase service account file are in place locally and ignored by git.
-- [ ] All six spikes have a written result.
+- [ ] The Google service account file is in place locally and ignored by git.
+- [ ] All five spikes have a written result.
 - [ ] The network admin has been asked the three questions.
 
 ## Risks

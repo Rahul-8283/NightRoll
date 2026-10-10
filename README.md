@@ -48,7 +48,7 @@ Every night at 10:00 PM, every hosteller walks down to the ground floor to scan 
 
 ## The solution
 
-NightRoll moves the check to the student's phone and the hostel's existing per-room WiFi. A push arrives when the window opens, the student completes a short face check in bed, and the room tile turns green on the warden's dashboard.
+NightRoll moves the check to the student's phone and the hostel's existing per-room WiFi. At 10 PM the student opens NightRoll and completes a short face check in bed, and the room tile turns green on the warden's dashboard.
 
 A selfie alone would be easy to fake, so every mark has to prove three things at once:
 
@@ -68,7 +68,7 @@ flowchart LR
     end
     subgraph After["With NightRoll"]
         direction LR
-        B1["Push at 22:00"] --> B2["Face check in bed"] --> B3["Marked present"]
+        B1["Opens app at 22:00"] --> B2["Face check in bed"] --> B3["Marked present"]
     end
     Before -.-> After
 ```
@@ -111,7 +111,6 @@ flowchart LR
 **Dashboard and delivery**
 
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![Firebase Cloud Messaging](https://img.shields.io/badge/Firebase%20Cloud%20Messaging-DD2C00?style=for-the-badge&logo=firebase&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
 | Layer | Choice | Why |
@@ -127,7 +126,7 @@ flowchart LR
 | Frame storage | Supabase Storage (private bucket) | Encrypted, short-lived frames with a 24-hour deletion job |
 | Network verify | Subnet check, then controller API or RADIUS accounting | Starts simple, upgrades without app changes |
 | Dashboard | React over WebSocket | Room tiles update live |
-| Push | Firebase Cloud Messaging | Opens the window on every phone at once |
+| Window status | Pulled from the API when the app opens | No push service; students open the app at window time |
 
 ---
 
@@ -176,7 +175,7 @@ flowchart LR
 
     subgraph Out["4. Outputs"]
         direction TB
-        O1["FCM push"]
+        O1["Window status on Home"]
         O2["Student result"]
         O3["Warden dashboard"]
     end
@@ -185,7 +184,7 @@ flowchart LR
     N2 -- "source IP = room" --> B1
     N3 -.-> B7
     B0 --> O1
-    O1 -- "window open + nonce" --> P1
+    O1 -- "shown when app opens" --> P1
     B4 --> O2
     B4 --> O3
 ```
@@ -214,7 +213,6 @@ flowchart TB
     WV --> PG
     FE --> PG
     FE --> RT["WebSocket hub"] --> DB["Warden dashboard"]
-    WS --> FCM["Firebase Cloud Messaging"]
 ```
 
 ---
@@ -263,7 +261,6 @@ sequenceDiagram
     participant D as Dashboard
     participant S as Backend
     participant R as Redis
-    participant F as FCM
     participant A as NightRoll app
     actor U as Student
     participant AP as Room AP
@@ -272,9 +269,7 @@ sequenceDiagram
     D->>S: Save window and off days
     Note over S: 22:00 window opens
     S->>R: Store one nonce per student with TTL
-    S->>F: Send push to every student
-    F->>A: Window open, nonce attached
-    U->>A: Tap notification in bed
+    U->>A: Opens NightRoll in bed
     A->>A: Guard checks for VPN, proxy, mock location
     A->>U: Random liveness challenge
     U->>A: Blink, turn head
@@ -556,7 +551,6 @@ flowchart TB
     end
 
     subgraph Cloud["Google services"]
-        FCMS["Firebase Cloud Messaging"]
         PIS["Play Integrity API"]
     end
 
@@ -564,8 +558,6 @@ flowchart TB
     CTRL -.-> API
     WD --> WEB
     WEB <--> API
-    API --> FCMS
-    FCMS --> PH
     API --> PIS
 ```
 

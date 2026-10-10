@@ -49,7 +49,7 @@ On the packaged system from Phase 12, on the demo hardware.
 | 1.1 | Start everything from a clean state with the runbook | All services healthy |
 | 1.2 | Warden logs in with password and code | Reaches Tonight page |
 | 1.3 | Enroll a new student from scratch | Enrolled, with room fingerprint |
-| 1.4 | Admin opens the window | Push arrives on the phone |
+| 1.4 | Admin opens the window | Window shows as open once the student opens the app |
 | 1.5 | Student marks from their room | `PRESENT`, tile turns within 2 s |
 | 1.6 | Admin closes the window | Absentees listed |
 | 1.7 | Export tonight's CSV | File has the right rows |
@@ -195,7 +195,7 @@ Update `backend/.env.example`, the README and the TRD with the final values, and
 | 5.1 | Replay recorded submissions at 5 per second for 2 minutes | 95th percentile under 2 s, no errors |
 | 5.2 | Burst of 20 per second for 30 seconds | No crash; requests queue and complete |
 | 5.3 | Face worker alone, one frame | Record the time on the demo laptop |
-| 5.4 | Open a window for 1,000 seeded students | Nonces issued and pushes queued within 60 s |
+| 5.4 | Open a window for 1,000 seeded students | Nonces issued within 60 s |
 | 5.5 | 20 dashboards connected during the replay | All stay in step |
 | 5.6 | Marking flow on the slowest test phone | Under 30 s, tap to result |
 
@@ -231,7 +231,7 @@ Target length: 4 minutes for the live part.
 
 | # | Action | On screen | Line to say |
 |---|---|---|---|
-| 0 | Admin opens the window | Push arrives on both phones | "It's 10 PM. Every phone in the hostel just got this." |
+| 0 | Admin opens the window | Both phones show it open once the app is opened | "It's 10 PM. Students open NightRoll and the window is waiting for them." |
 | 1 | Teammate A marks from Room 101 | Tile turns green | "Marked from bed. That took about fifteen seconds." |
 | 2 | Teammate A joins the Room 102 router and tries | Rejected: wrong room network | "Same person, same phone, wrong room." |
 | 3 | Hold a photo, then a video, to phone A | Rejected: liveness | "A photo or a video of a face is not a person." |
