@@ -85,6 +85,9 @@ class Settings(BaseSettings):
         if not self.REDIS_URL.startswith("rediss://"):
             raise ValueError("REDIS_URL must use TLS (rediss://); a plain redis:// URL is refused")
 
+        if self.NETWORK_VERIFY_MODE not in ("subnet", "controller", "radius", "off"):
+            raise ValueError("NETWORK_VERIFY_MODE must be one of: subnet, controller, radius, off")
+
         if self.NETWORK_VERIFY_MODE == "off" and self.APP_ENV in ("pilot", "production"):
             raise ValueError("NETWORK_VERIFY_MODE=off is not allowed when APP_ENV is pilot or production")
 
