@@ -21,8 +21,12 @@ export type RoomCount = {
   present: number
   total: number
   pending_review: number
+  absent: number
   rejected: number
+  health: HealthFlag[]
 }
+
+export type HealthFlag = 'rescan_wifi' | 'check_router'
 
 export type RecentMark = {
   mark_id: string
@@ -55,6 +59,7 @@ export type RoomUpdate = {
   total: number
   pending_review: number
   rejected: number
+  health: HealthFlag[]
   last: RecentMark | null
 }
 
@@ -88,6 +93,7 @@ export type RoomTonight = {
   floor: number
   window: WindowBrief | null
   students: RoomStudentStatus[]
+  health: HealthFlag[]
 }
 
 export type WindowHistory = {

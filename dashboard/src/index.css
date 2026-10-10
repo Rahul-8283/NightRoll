@@ -1433,3 +1433,15 @@ a.window:hover {
 .override .btn {
   align-self: flex-start;
 }
+
+.window__flag {
+  max-width: 100%;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(238, 108, 77, 0.35);
+  background: var(--ember-wash);
+  color: var(--ember);
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: center;
+}

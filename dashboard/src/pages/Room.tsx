@@ -254,6 +254,26 @@ export function Room() {
       {query.isError && <ErrorBanner error={query.error} onRetry={() => void query.refetch()} stale />}
 
       <div className={query.isError ? 'stack is-stale' : 'stack'}>
+        {data.health.length > 0 && (
+          <div className="stack">
+            {data.health.includes('check_router') && (
+              <div className="banner banner--ember" role="status">
+                <div className="banner__text">
+                  <strong>Check the router</strong>
+                  <span className="muted">No student has seen this room’s own access point tonight. The router may be down or unplugged.</span>
+                </div>
+              </div>
+            )}
+            {data.health.includes('rescan_wifi') && (
+              <div className="banner banner--moon" role="status">
+                <div className="banner__text">
+                  <strong>Re-scan this room’s Wi-Fi</strong>
+                  <span className="muted">More than 30% of this room’s recent marks went to review or failed on Wi-Fi reasons. The room’s pattern may be stale.</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <section className="card room-head">
           <RoomWindow
             size="lg"
