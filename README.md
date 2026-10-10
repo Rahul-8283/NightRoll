@@ -642,3 +642,32 @@ Two things are still open and are marked as provisional above: the trust score w
 ## License
 
 Released under the [Apache License 2.0](LICENSE).
+
+## Team
+
+**Team Zero_Latency**
+
+<table align="center">
+  <tr>
+    <td align="center" width="25%">
+      <a href="https://github.com/Rahul-8283"><img src="https://github.com/Rahul-8283.png?size=200" width="100" alt="Rahul L S"></a><br>
+      <b>Rahul L S</b><br>
+      <a href="https://github.com/Rahul-8283">@Rahul-8283</a>
+    </td>
+    <td align="center" width="25%">
+      <a href="https://github.com/djivites"><img src="https://github.com/djivites.png?size=200" width="100" alt="Jivites"></a><br>
+      <b>Jivites</b><br>
+      <a href="https://github.com/djivites">@djivites</a>
+    </td>
+    <td align="center" width="25%">
+      <a href="https://github.com/sukanthan06"><img src="https://github.com/sukanthan06.png?size=200" width="100" alt="Sukanthan"></a><br>
+      <b>Sukanthan</b><br>
+      <a href="https://github.com/sukanthan06">@sukanthan06</a>
+    </td>
+    <td align="center" width="25%">
+      <a href="https://github.com/kesavvvvvv"><img src="https://github.com/kesavvvvvv.png?size=200" width="100" alt="Kesav Satya Sai Nimmagadda"></a><br>
+      <b>Kesav Satya Sai Nimmagadda</b><br>
+      <a href="https://github.com/kesavvvvvv">@kesavvvvvv</a>
+    </td>
+  </tr>
+</table>
