@@ -20,16 +20,30 @@ export type Enrollment = {
   roomNumber: string;
 };
 
+/**
+ * SecureStore has no real web implementation, and some Expo Go builds ship a native module
+ * that lags the installed JS package. Either way, this is an automatic check that runs on
+ * every app open; it must never crash the screen, so a failure here just means "not
+ * enrolled yet" rather than an uncaught error.
+ */
+async function readItemSafe(key: string): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(key);
+  } catch {
+    return null;
+  }
+}
+
 export async function getEnrollmentState(): Promise<EnrollmentState> {
-  const value = await SecureStore.getItemAsync(KEYS.state);
+  const value = await readItemSafe(KEYS.state);
   return value === 'enrolled' ? 'enrolled' : 'none';
 }
 
 export async function getEnrollment(): Promise<Enrollment | null> {
   const [studentId, roomId, roomNumber] = await Promise.all([
-    SecureStore.getItemAsync(KEYS.studentId),
-    SecureStore.getItemAsync(KEYS.roomId),
-    SecureStore.getItemAsync(KEYS.roomNumber),
+    readItemSafe(KEYS.studentId),
+    readItemSafe(KEYS.roomId),
+    readItemSafe(KEYS.roomNumber),
   ]);
   if (!studentId || !roomId || !roomNumber) {
     return null;
