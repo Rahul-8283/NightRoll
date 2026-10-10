@@ -52,7 +52,7 @@ class VerifyResponse(BaseModel):
     antispoof_scores: list[float]
     head_poses: list[HeadPose]
     frame_issues: list[FrameIssue]
-    frames_path: str
+    frames_path: str | None
     model_version: str
 
 
