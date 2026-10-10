@@ -843,3 +843,199 @@ a.window:hover {
   letter-spacing: 0.12em;
   overflow-wrap: anywhere;
 }
+
+/* ---------- Tonight: top bar, live status, banners, tile captions (Phase 10) ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--s-4);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.topbar__window {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.topbar__countdown {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--ink-2);
+  color: var(--paper-2);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.live__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--paper-3);
+}
+
+.live--live {
+  color: var(--lamp-bright);
+  background: var(--lamp-wash);
+  border-color: rgba(245, 185, 92, 0.25);
+}
+
+.live--live .live__dot {
+  background: var(--lamp);
+  box-shadow: 0 0 10px var(--lamp-glow);
+}
+
+.live--connecting,
+.live--reconnecting,
+.live--polling {
+  color: var(--moon);
+  background: var(--moon-wash);
+  border-color: rgba(169, 193, 232, 0.25);
+}
+
+.live--connecting .live__dot,
+.live--reconnecting .live__dot,
+.live--polling .live__dot {
+  background: var(--moon);
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-control);
+  border: 1px solid var(--line);
+  background: var(--ink-2);
+  color: var(--paper-2);
+  font-size: var(--text-sm);
+}
+
+.banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.banner--ember {
+  border-color: rgba(238, 108, 77, 0.35);
+  background: var(--ember-wash);
+  color: var(--paper);
+}
+
+.inline-link {
+  color: var(--lamp-bright);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.is-stale {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
+.tally--five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line-soft);
+}
+
+.tally--five .tally__cell {
+  border: 0;
+  background: var(--ink-2);
+}
+
+.tally__note {
+  font-size: var(--text-xs);
+  color: var(--paper-3);
+}
+
+.tally__value--mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  padding-top: 6px;
+}
+
+.facade__rooms {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}
+
+.window__frame {
+  position: relative;
+}
+
+.window__frame--problem {
+  border-color: var(--ember);
+}
+
+.window__caption {
+  max-width: 100%;
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  text-align: center;
+  color: var(--paper-2);
+}
+
+/* One ring that fades out when a room's count changes. Keyed by timestamp, so it replays on each change. */
+.window__pulse {
+  position: absolute;
+  inset: -5px;
+  border-radius: 12px;
+  border: 2px solid var(--lamp-bright);
+  box-shadow: 0 0 22px var(--lamp-glow);
+  pointer-events: none;
+  animation: pulse-ring 1600ms var(--ease) 1 both;
+}
+
+@keyframes pulse-ring {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+.activity__row {
+  align-items: center;
+}
+
+.activity__time {
+  flex: none;
+  min-width: 4.5em;
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 900px) {
+  .tally--five {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tally--five .tally__cell:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .topbar {
+    align-items: flex-start;
+  }
+}
