@@ -6,6 +6,8 @@
 
 Prove the **right person**, in the **right room**, on the **right device**, inside the **warden's window** — with no new hardware.
 
+**Team:** FAB4 · **Team ID:** GEN26-A0H-H051
+
 ![Status](https://img.shields.io/badge/status-development-B86E00?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/platform-Android%20first-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge)
