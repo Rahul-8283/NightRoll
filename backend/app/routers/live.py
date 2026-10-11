@@ -15,6 +15,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app import metrics
 from app.auth.supabase import authenticate_token
 from app.config import get_settings
 from app.db import pool as db_pool
@@ -102,6 +103,14 @@ async def live_rooms(websocket: WebSocket) -> None:
         await websocket.close(code=CLOSE_UNAUTHORIZED, reason="No valid token received")
         return
 
+    metrics.websocket_connections.inc()
+    try:
+        await _serve(websocket, expires_at)
+    finally:
+        metrics.websocket_connections.dec()
+
+
+async def _serve(websocket: WebSocket, expires_at: float) -> None:
     pool = db_pool.get_pool()
     redis = redis_client.get_client()
     send_lock = asyncio.Lock()

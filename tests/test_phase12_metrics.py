@@ -119,3 +119,51 @@ async def test_a_caller_on_the_internal_network_needs_no_token_unless_it_is_the_
     proxy = get_settings().TRUSTED_PROXY_IPS.split(",")[0].strip()
     async with _client(proxy) as c:
         assert (await c.get("/v1/metrics")).status_code == 401
+
+
+def _before(counter: metrics.Counter, *labels: str) -> float:
+    return counter.values.get(labels, 0.0)
+
+
+def test_a_decided_attempt_counts_its_verdict_the_gate_that_stopped_it_and_each_stage():
+    from app.services.verification import service
+    from app.services.verification.runner import GateRecord
+
+    verdicts = _before(metrics.verdicts, "REJECTED")
+    failures = _before(metrics.gate_failures, "NETWORK_MISMATCH")
+    records = [GateRecord("window", True, None, "", 2.0), GateRecord("network", False, "NETWORK_MISMATCH", "x", 5.0)]
+    service._count("REJECTED", records, None)
+    assert _before(metrics.verdicts, "REJECTED") == verdicts + 1
+    assert _before(metrics.gate_failures, "NETWORK_MISMATCH") == failures + 1
+    assert ("gate_network",) in metrics.stage_latency.series
+    assert ("gate_window",) in metrics.stage_latency.series
+
+
+def test_a_passing_attempt_counts_no_gate_failure():
+    from app.services.verification import service
+    from app.services.verification.runner import GateRecord
+
+    before = metrics.gate_failures.total()
+    service._count("PRESENT", [GateRecord("window", True, None, "", 1.0)], None)
+    assert metrics.gate_failures.total() == before
+
+
+@pytest.mark.asyncio
+async def test_a_face_worker_call_is_timed_by_outcome():
+    from app.services.verification import face
+
+    face.TRANSPORT = httpx.MockTransport(lambda request: httpx.Response(404))
+    before = metrics.face_latency.series.get(("not_enrolled",), ([], [0.0, 0.0]))[1][1]
+    try:
+        await face.verify_frames(
+            get_settings(),
+            student_id=uuid4(),
+            window_id=uuid4(),
+            mark_id=uuid4(),
+            frames=[b"x"],
+            hashes=["0" * 64],
+            tags=["neutral"],
+        )
+    finally:
+        face.TRANSPORT = None
+    assert metrics.face_latency.series[("not_enrolled",)][1][1] == before + 1
