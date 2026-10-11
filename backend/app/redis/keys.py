@@ -6,6 +6,10 @@ WINDOW_CURRENT = "window:current"
 SCHEDULER_HEARTBEAT = "scheduler:heartbeat"
 
 
+def job_record_key(job: str) -> str:
+    return f"ops:job:{job}"
+
+
 def nonce_key(window_id: UUID | str, student_id: UUID | str) -> str:
     return f"nonce:{window_id}:{student_id}"
 

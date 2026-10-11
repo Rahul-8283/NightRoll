@@ -20,11 +20,11 @@ from app.db.queries import windows as windows_q
 from app.logging import configure_logging, log_event
 from app.redis import client as redis_client
 from app.redis import keys
+from app.services import ops
 from app.services import windows as windows_service
 
 TICK_SECONDS = 15
 CLAIM_SECONDS = 120
-HEARTBEAT_SECONDS = 60
 SCHEDULER_ACTOR = "scheduler"
 
 logger = logging.getLogger("nightroll.scheduler")
@@ -36,7 +36,7 @@ async def _claim(redis: Redis, window_id, job: str) -> bool:
 
 async def tick(settings: Settings, pool, redis: Redis) -> None:
     now = datetime.now(UTC)
-    await redis.set(keys.SCHEDULER_HEARTBEAT, now.isoformat(), ex=HEARTBEAT_SECONDS)
+    await ops.write_heartbeat(redis, now)
     await windows_service.ensure_default_windows(pool, settings, now)
 
     for row in await windows_q.due_to_open(pool, now):
