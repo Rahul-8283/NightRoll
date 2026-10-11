@@ -16,6 +16,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, sta
 from worker.auth import verify_service_token
 from worker.cleanup import get_last_cleanup_time, run_frame_cleanup
 from worker.config import settings
+from worker.logs import RequestContextMiddleware, configure_logging
 from worker.pipeline.antispoof import AntiSpoofClassifier, calculate_median_antispoof
 from worker.pipeline.detect import evaluate_frame
 from worker.pipeline.embed import aggregate_enrollment_embeddings, extract_unit_embedding
@@ -33,7 +34,7 @@ from worker.schemas import (
 )
 from worker.storage import storage
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+configure_logging()
 logger = logging.getLogger("face_worker")
 
 # Global model state
@@ -136,6 +137,7 @@ app = FastAPI(
     description="Internal face embedding extraction, anti-spoofing, and frame retention service",
     lifespan=lifespan,
 )
+app.add_middleware(RequestContextMiddleware)
 
 
 @app.get("/health", response_model=HealthResponse, dependencies=[Depends(verify_service_token)])
