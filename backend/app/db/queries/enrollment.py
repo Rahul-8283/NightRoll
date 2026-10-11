@@ -100,3 +100,23 @@ async def get_valid_code_record(
         code_hash,
         student_id,
     )
+
+
+async def delete_spent_codes(pool: asyncpg.Pool, older_than: datetime) -> int:
+    """Remove codes that were used, or expired, before `older_than`. Returns how many were removed.
+
+    A code is kept for a day after it is spent, so a student who types a stale code still hears "used" or
+    "expired" instead of "invalid".
+    """
+    return await pool.fetchval(
+        """
+        with removed as (
+          delete from enrollment_codes
+          where coalesce(used_at, expires_at) < $1
+            and (used_at is not null or expires_at < $1)
+          returning 1
+        )
+        select count(*) from removed
+        """,
+        older_than,
+    )
