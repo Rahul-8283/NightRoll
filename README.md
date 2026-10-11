@@ -6,7 +6,7 @@
 
 Prove the **right person**, in the **right room**, on the **right device**, inside the **warden's window** — with no new hardware.
 
-![Status](https://img.shields.io/badge/status-design%20stage-B86E00?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-development-B86E00?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/platform-Android%20first-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge)
 ![Hackathon](https://img.shields.io/badge/built%20for-Genesis%20Hackathon-141B2E?style=for-the-badge)
@@ -87,6 +87,7 @@ flowchart LR
 ![ML Kit](https://img.shields.io/badge/ML%20Kit-4285F4?style=for-the-badge&logo=google&logoColor=white)
 ![TensorFlow Lite](https://img.shields.io/badge/TensorFlow%20Lite-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)
 ![Play Integrity](https://img.shields.io/badge/Play%20Integrity-414141?style=for-the-badge&logo=googleplay&logoColor=white)
+![Expo Router](https://img.shields.io/badge/Expo%20Router-000020?style=for-the-badge&logo=expo&logoColor=white)
 
 **Backend**
 
@@ -95,6 +96,10 @@ flowchart LR
 ![Upstash Redis](https://img.shields.io/badge/Upstash%20Redis-00E9A3?style=for-the-badge&logo=upstash&logoColor=white)
 ![Celery](https://img.shields.io/badge/Celery-37814A?style=for-the-badge&logo=celery&logoColor=white)
 ![WebSocket](https://img.shields.io/badge/WebSocket-010101?style=for-the-badge)
+![APScheduler](https://img.shields.io/badge/APScheduler-2E7D32?style=for-the-badge)
+![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=for-the-badge&logo=pydantic&logoColor=white)
+![asyncpg](https://img.shields.io/badge/asyncpg-2F4F4F?style=for-the-badge)
+![Uvicorn](https://img.shields.io/badge/Uvicorn-499848?style=for-the-badge)
 
 **Face and liveness**
 
@@ -113,21 +118,26 @@ flowchart LR
 **Dashboard and delivery**
 
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![React Router](https://img.shields.io/badge/React%20Router-CA4245?style=for-the-badge&logo=reactrouter&logoColor=white)
+![TanStack Query](https://img.shields.io/badge/TanStack%20Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![nginx](https://img.shields.io/badge/nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
 
 | Layer | Choice | Why |
 |---|---|---|
-| App | Expo (React Native), Kotlin Expo Modules, VisionCamera, ML Kit | Expo for builds and EAS cloud builds; a development build runs the native code; one codebase for screens |
-| On-device ML | TFLite MobileFaceNet | Quick pre-check so a bad capture fails before upload |
+| App | Expo (React Native, TypeScript), Expo Router, Kotlin Expo Modules, VisionCamera, ML Kit | Expo for builds and EAS cloud builds; a development build runs the native code; one codebase for screens |
+| On-device ML | ML Kit face detection; TFLite MobileFaceNet planned | Quick pre-check so a bad capture fails before upload |
 | Device trust | Android Keystore / StrongBox, Play Integrity | Key never leaves the chip; blocks root, emulators, virtual cameras |
-| API | FastAPI | Async, typed, fast to build |
-| State | Upstash Redis (hosted, TLS) | Nonces and window state with native TTL, no local server to run |
-| Face | InsightFace `buffalo_l` on ONNX Runtime | Strong open ArcFace embeddings, runs on CPU |
-| Database | Supabase (PostgreSQL with pgvector) | Relational data and 512-dimension embeddings in one managed database |
+| API | FastAPI, Pydantic, Uvicorn | Async, typed, and every request is validated against a schema; fast to build |
+| State | Upstash Redis (hosted, TLS) | Nonces, window state and rate limits with native TTL, no local server to run |
+| Face | InsightFace `buffalo_l` on ONNX Runtime, Silent-Face anti-spoofing | Strong open ArcFace embeddings and an anti-spoof check, both on CPU |
+| Database | Supabase (PostgreSQL with pgvector), asyncpg | Relational data and 512-dimension embeddings in one managed database |
 | Auth | Supabase Auth | Warden and admin login with MFA; student devices are bound by Keystore keys, not passwords |
 | Frame storage | Supabase Storage (private bucket) | Encrypted, short-lived frames with a 24-hour deletion job |
-| Network verify | Subnet check, then controller API or RADIUS accounting | Starts simple, upgrades without app changes |
-| Dashboard | React over WebSocket | Room tiles update live |
+| Network verify | Subnet check built; controller API or RADIUS accounting behind one interface | Starts simple, upgrades without app changes |
+| Dashboard | React, Vite, React Router, TanStack Query over WebSocket | Room tiles update live, and fall back to polling when the socket drops |
 | Window status | Pulled from the API when the app opens | No push service; students open the app at window time |
 
 ---
