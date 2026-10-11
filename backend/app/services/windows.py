@@ -15,7 +15,7 @@ from app.db.queries import windows as windows_q
 from app.errors import AppError
 from app.logging import log_event
 from app.redis import keys
-from app.services import absentees, audit, nonces
+from app.services import absentees, audit, housekeeping, nonces
 
 logger = logging.getLogger("nightroll.windows")
 
@@ -135,6 +135,11 @@ async def close_window(pool: asyncpg.Pool, redis: Redis, window_id: UUID, actor:
     await nonces.set_closed(redis, window_id)
     log_event(logger, logging.INFO, "window closed", window_id=str(window_id), absent=absent_count)
     await _publish_state(redis, window_id, "closed")
+    try:
+        await housekeeping.snapshot_room_health(pool, redis, window_id)
+    except Exception:
+        # The window is closed and announced; a failed health record must not undo or hide that.
+        logger.exception("room health record failed", extra={"extra_fields": {"window_id": str(window_id)}})
     return True
 
 
