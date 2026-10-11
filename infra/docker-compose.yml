@@ -1,6 +1,126 @@
-# Local services for NightRoll.
-# Redis is hosted on Upstash, so there is no Redis container here.
-# Phase 12 adds api, scheduler, face-worker and nginx.
-# Run from the repo root:  docker compose -f infra/docker-compose.yml up -d
+# The whole server side: nginx (dashboard, TLS, proxy), api, scheduler and face-worker.
+# Redis is hosted on Upstash and the database on Supabase, so neither has a container here.
+#
+# Run from the repo root:
+#   docker compose -f infra/docker-compose.yml up -d --build
+#
+# Needs filled-in backend/.env, face/.env and infra/.env (see infra/README.md), the models in face/models,
+# the Google service account in backend/secrets, and the certificate in infra/certs.
+# Env files are read when the containers start; nothing secret is copied into an image.
 
-services: {}
+name: nightroll
+
+x-service: &service
+  restart: unless-stopped
+  networks: [nightroll]
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  face-worker:
+    <<: *service
+    build: { context: ../face }
+    env_file: ../face/.env
+    environment:
+      FACE_HOST: 0.0.0.0
+    volumes:
+      - ../face/models:/app/models:ro
+    # No ports: published. Only the api reaches this service, over the Compose network.
+    expose: ["8100"]
+    healthcheck:
+      # Ready means the face model is loaded. The worker's /health needs its service token.
+      test:
+        - CMD
+        - python
+        - -c
+        - "import json,os,sys,urllib.request as u; r=u.Request('http://127.0.0.1:8100/health',headers={'Authorization':'Bearer '+os.environ['FACE_WORKER_TOKEN']}); sys.exit(0 if json.load(u.urlopen(r,timeout=4)).get('ready') else 1)"
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 120s
+
+  api:
+    <<: *service
+    build: { context: ../backend }
+    env_file: ../backend/.env
+    environment: &backend-environment
+      APP_ENV: ${APP_ENV:?Set APP_ENV (demo, pilot or production) in infra/.env}
+      API_HOST: 0.0.0.0
+      API_PORT: "8000"
+      FACE_WORKER_URL: http://face-worker:8100
+      # nginx's fixed address on the Compose network (see the networks section below).
+      TRUSTED_PROXY_IPS: 172.28.0.10
+      GOOGLE_APPLICATION_CREDENTIALS: /app/secrets/google-service-account.json
+      DASHBOARD_ORIGINS: https://${SERVER_NAME:?Set SERVER_NAME in infra/.env}
+    volumes:
+      - ../backend/secrets:/app/secrets:ro
+    expose: ["8000"]
+    depends_on:
+      face-worker: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.healthcheck", "api"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 30s
+
+  scheduler:
+    <<: *service
+    build: { context: ../backend }
+    command: ["python", "-m", "app.scheduler"]
+    env_file: ../backend/.env
+    environment: *backend-environment
+    volumes:
+      - ../backend/secrets:/app/secrets:ro
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.healthcheck", "scheduler"]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 45s
+
+  nginx:
+    restart: unless-stopped
+    networks:
+      nightroll:
+        ipv4_address: 172.28.0.10
+    build:
+      context: ../dashboard
+      args:
+        VITE_API_BASE_URL: /v1
+        VITE_WS_URL: /v1/ws/rooms
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:?Set VITE_SUPABASE_URL in infra/.env}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:?Set VITE_SUPABASE_ANON_KEY in infra/.env}
+    environment:
+      SERVER_NAME: ${SERVER_NAME}
+      SUPABASE_ORIGIN: ${VITE_SUPABASE_URL}
+    # The only published ports in the whole stack.
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nightroll.conf:/etc/nginx/templates/nightroll.conf.template:ro
+      - ./nginx/proxy-headers.conf:/etc/nginx/snippets/proxy-headers.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+networks:
+  nightroll:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
