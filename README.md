@@ -4,9 +4,9 @@
 
 ### Hostel attendance, marked from your bed.
 
-Prove the **right person**, in the **right room**, on the **right device**, inside the **warden's window** — with no new hardware.
+Prove the **right person**, in the **right room**, on the **right device**, inside the **warden's window** - with no new hardware.
 
-**Team:** FAB4 · **Team ID:** GEN26-A0H-H051
+**Team Name:** Zero_Latency · **Team ID:** GEN26-A0H-H051
 
 ![Status](https://img.shields.io/badge/status-v1-B86E00?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/platform-Android%20first-3DDC84?style=for-the-badge&logo=android&logoColor=white)
