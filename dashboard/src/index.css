@@ -1604,3 +1604,30 @@ a.window:hover {
   flex-direction: column;
   gap: var(--s-2);
 }
+
+/* ---------- System page (Phase 12) ---------- */
+
+.system__counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+
+.system__counts > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.system__note {
+  margin-top: var(--s-4);
+}
+
+.system__sub {
+  margin: var(--s-5) 0 var(--s-3);
+}
+
+.system__relaxed {
+  margin: 0;
+  padding-left: var(--s-4);
+}

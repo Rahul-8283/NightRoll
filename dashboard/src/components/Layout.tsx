@@ -18,7 +18,10 @@ const links = [
 // Phase 11 pages are listed so the layout is complete, and stay inactive until they are built.
 const later: string[] = []
 
-const adminLinks = [{ to: '/dashboard/audit', label: 'Audit', end: false }]
+const adminLinks = [
+  { to: '/dashboard/audit', label: 'Audit', end: false },
+  { to: '/dashboard/system', label: 'System', end: false },
+]
 
 export function Layout() {
   const { email, role, signOut } = useAuth()

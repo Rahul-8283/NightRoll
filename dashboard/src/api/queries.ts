@@ -1,6 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiFetch, ApiError } from '../lib/api'
-import type { AbsenteeList, Alert, MarkDetailFull, ReviewItem, RoomFingerprint, RoomTonight, TonightData } from './types'
+import type {
+  AbsenteeList,
+  Alert,
+  MarkDetailFull,
+  ReviewItem,
+  RoomFingerprint,
+  RoomTonight,
+  SystemOverview,
+  TonightData,
+} from './types'
 
 // The live provider writes into this key, so the page and the top bar always share one copy.
 export function useTonight() {
@@ -57,5 +66,15 @@ export function useAlerts() {
     queryFn: () => apiFetch<{ alerts: Alert[] }>('/alerts'),
     refetchInterval: 15_000,
     select: (data) => data.alerts,
+  })
+}
+
+// Admin only: service health, tonight's counts, latency and the housekeeping jobs.
+export function useSystem(enabled: boolean) {
+  return useQuery({
+    queryKey: ['system'],
+    queryFn: () => apiFetch<SystemOverview>('/system'),
+    refetchInterval: 10_000,
+    enabled,
   })
 }

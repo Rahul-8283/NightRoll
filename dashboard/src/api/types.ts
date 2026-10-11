@@ -233,3 +233,45 @@ export type Alert = {
   severity: 'critical' | 'warning'
   message: string
 }
+
+type Health = 'ok' | 'degraded' | 'down'
+
+export type SystemOverview = {
+  generated_at: string
+  app_env: string
+  version: string
+  relaxed_settings: string[]
+  database: { status: Health; detail: string | null }
+  redis: { status: Health; detail: string | null }
+  face_worker: {
+    status: Health
+    detail: string | null
+    ready: boolean
+    antispoof_available: boolean
+    model_version: string | null
+    latency_ms: number | null
+  }
+  scheduler: {
+    status: Health
+    detail: string | null
+    last_heartbeat: string | null
+    age_seconds: number | null
+  }
+  window: { id: string; night: string; opens_at: string; closes_at: string; state: WindowState } | null
+  tonight: {
+    attempts: number
+    verdicts: Record<string, number>
+    gate_failures: { reason: string; message: string; count: number }[]
+    rejection_rate_5m: number | null
+    attempts_5m: number
+  }
+  latency: {
+    requests_p50_ms: number | null
+    requests_p95_ms: number | null
+    verify_p95_ms: number | null
+    face_worker_p95_ms: number | null
+  }
+  websocket_connections: number
+  jobs: { name: string; last_run: string | null; detail: string | null }[]
+  alerts: Alert[]
+}
