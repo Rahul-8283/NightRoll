@@ -21,7 +21,7 @@ from datetime import UTC, datetime
 
 import asyncpg
 
-from app import ratelimit
+from app import metrics, ratelimit
 from app.db.queries import verification as verification_q
 from app.errors import AppError
 from app.logging import log_event, short_hash
@@ -149,6 +149,7 @@ async def _record(
     student_id = payload.student_id
     window = submission.window
     window_id = window["id"] if window is not None else payload.window_id
+    _count(verdict, records, outcome)
 
     total, rejected = await verification_q.attempt_counts(submission.pool, window_id, student_id)
     rejected_after = rejected + (1 if verdict == "REJECTED" else 0)
@@ -240,12 +241,25 @@ async def _record(
     return response
 
 
+def _count(verdict: str, records: list[GateRecord], outcome) -> None:
+    """Metrics for one decided attempt: the verdict, the gate that stopped it, and how long each stage took."""
+    metrics.verdicts.inc(verdict)
+    if not records[-1].passed:
+        metrics.gate_failures.inc(records[-1].code)
+    for record in records:
+        metrics.stage_latency.observe(record.ms / 1000, f"gate_{record.name}")
+    if outcome is not None:
+        for stage, ms in outcome.timings_ms.items():
+            metrics.stage_latency.observe(ms / 1000, stage)
+
+
 async def _unattributed(submission: Submission, failed: GateRecord) -> VerifyOut:
     """The signature did not check out, so the sender is not proven to be any student."""
     day = datetime.now(UTC).date().isoformat()
     await ratelimit.record(
         submission.redis, "signature-failures", submission.client_ip or "unknown", ratelimit.SIGNATURE_WINDOW_SECONDS
     )
+    _count("REJECTED", [failed], None)
     await submission.redis.incr(keys.unattributed_counter_key(day))
     await submission.redis.expire(keys.unattributed_counter_key(day), 2 * 86400)
     logger.warning(
