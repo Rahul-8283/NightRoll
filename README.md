@@ -44,11 +44,12 @@ Prove the **right person**, in the **right room**, on the **right device**, insi
 
 ## The problem
 
-Every night at 10:00 PM, every hosteller walks down to the ground floor to scan their face at a single attendance point. Students on the first, second, third and higher floors all queue at the same scanner.
+Every night at 10:00 PM, every hosteller has to walk down to the ground floor to prove they are in the hostel. Students on the first, second, third and higher floors all queue at the same scanner, whatever their situation.
 
-- One scanner serves the whole hostel, so there is a queue every night.
-- Students leave their rooms and climb back up just to prove they are in the building.
-- The check proves you were at the ground floor at 10:00 PM. It says nothing about whether you stayed.
+- A student with a fever or a fall-related injury still has to climb down the stairs to be marked. Some stay in bed and get marked absent instead.
+- A final-year student back from an interview, or in the middle of a video call with a recruiter, loses time and focus on the walk down and back up.
+- Students who are unwell or hurt are the ones most likely to need help, but the system gives the warden no sign of who is in their room.
+- The check proves you were at the ground floor at 10:00 PM. It says nothing about whether you are safe, or whether you stayed.
 
 ## The solution
 
