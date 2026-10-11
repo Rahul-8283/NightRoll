@@ -23,6 +23,7 @@ from app.routers import (
     reviews,
     rooms,
     students,
+    system,
     windows,
 )
 from app.startup_checks import run as run_startup_checks
@@ -79,6 +80,7 @@ def create_app() -> FastAPI:
     app.include_router(reviews.router)
     app.include_router(exports.router)
     app.include_router(audit.router)
+    app.include_router(system.router)
     app.include_router(enrollment.router)
     return app
 
