@@ -708,7 +708,22 @@ uv run uvicorn app.main:app --reload --port 8000
 curl http://localhost:8000/v1/health    # expect {"status":"ok"}
 ```
 
-**Window scheduler (from Phase 3)** runs in its own terminal: `cd backend && uv run python -m app.scheduler`.
+**Window scheduler (from Phase 3)** opens and closes attendance windows at the right time, and records housekeeping tasks. Run it in its own terminal:
+
+```bash
+cd backend
+uv run python -m app.scheduler
+```
+
+The scheduler writes a heartbeat to Redis every 15 seconds. If the heartbeat goes stale (older than 60 seconds), the dashboard shows a critical alert. To restart a stalled scheduler:
+
+```bash
+# In Docker
+docker compose -f infra/docker-compose.yml restart scheduler
+
+# Or locally
+cd backend && uv run python -m app.scheduler
+```
 
 **Face worker (from Phase 5)**
 
