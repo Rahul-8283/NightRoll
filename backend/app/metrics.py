@@ -95,19 +95,25 @@ class Histogram:
         totals[0] += seconds
         totals[1] += 1
 
-    def merged(self) -> tuple[list[int], float, int]:
-        """Counts, sum and number of observations over every label set."""
+    def merged(self, **only: str) -> tuple[list[int], float, int]:
+        """Counts, sum and number of observations over every label set, or only those matching `only`."""
         counts = [0] * (len(self.buckets) + 1)
         total_sum, total_count = 0.0, 0
-        for series_counts, (series_sum, series_count) in self.series.values():
+        for label_values, (series_counts, (series_sum, series_count)) in self.series.items():
+            named = dict(zip(self.labels, label_values, strict=True))
+            if any(named.get(name) != value for name, value in only.items()):
+                continue
             counts = [a + b for a, b in zip(counts, series_counts, strict=True)]
             total_sum += series_sum
             total_count += int(series_count)
         return counts, total_sum, total_count
 
-    def quantile(self, q: float) -> float | None:
-        """An estimate of the q-th quantile over every label set, by interpolating inside the bucket it falls in."""
-        counts, _, total = self.merged()
+    def quantile(self, q: float, **only: str) -> float | None:
+        """An estimate of the q-th quantile, by interpolating inside the bucket it falls in.
+
+        Over every label set, or only those matching `only` (for example `route="/v1/attendance/verify"`).
+        """
+        counts, _, total = self.merged(**only)
         if total == 0:
             return None
         target = q * total
