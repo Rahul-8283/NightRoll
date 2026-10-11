@@ -1,0 +1,18 @@
+# Nothing in this list may enter an image: env files and local build output.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+.git/
+.vscode/
+.DS_Store
+*.log
+README.md
+Dockerfile
+.dockerignore

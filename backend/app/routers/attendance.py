@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request
 from starlette.datastructures import UploadFile
 
+from app import ratelimit
 from app.config import Settings, get_settings
 from app.deps import CurrentStudent, CurrentWarden, DbPool, RedisClient
 from app.errors import AppError
@@ -36,6 +37,7 @@ async def tonight(pool: DbPool, _: CurrentWarden) -> TonightOut:
 
 @router.get("/nonce", response_model=NonceStatusOut, response_model_exclude_none=True)
 async def nonce_status(student_id: CurrentStudent, pool: DbPool, redis: RedisClient) -> NonceStatusOut:
+    await ratelimit.enforce(redis, "nonce", str(student_id), ratelimit.NONCE_PER_MINUTE, 60)
     return NonceStatusOut(**await attendance_service.student_status(pool, redis, student_id))
 
 
@@ -80,6 +82,13 @@ async def verify_attendance(
     redis: RedisClient,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> VerifyOut:
+    trusted = parse_trusted_proxies(settings.TRUSTED_PROXY_IPS)
+    await ratelimit.blocked(
+        redis,
+        "signature-failures",
+        client_address(request, trusted) or "unknown",
+        ratelimit.SIGNATURE_FAILURES_PER_MINUTE,
+    )
     form = await request.form()
 
     payload_field = form.get("payload")
@@ -99,7 +108,7 @@ async def verify_attendance(
         settings=settings,
         pool=pool,
         redis=redis,
-        client_ip=client_address(request, parse_trusted_proxies(settings.TRUSTED_PROXY_IPS)),
+        client_ip=client_address(request, trusted),
         payload_bytes=payload_bytes,
         signature=signature,
         integrity_token=integrity_token if isinstance(integrity_token, str) else "",

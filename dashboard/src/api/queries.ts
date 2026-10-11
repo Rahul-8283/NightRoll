@@ -1,6 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiFetch, ApiError } from '../lib/api'
-import type { AbsenteeList, MarkDetailFull, ReviewItem, RoomFingerprint, RoomTonight, TonightData } from './types'
+import type {
+  AbsenteeList,
+  Alert,
+  MarkDetailFull,
+  ReviewItem,
+  RoomFingerprint,
+  RoomTonight,
+  SystemOverview,
+  TonightData,
+} from './types'
 
 // The live provider writes into this key, so the page and the top bar always share one copy.
 export function useTonight() {
@@ -46,5 +55,26 @@ export function useAbsentees() {
   return useQuery({
     queryKey: ['absentees'],
     queryFn: () => apiFetch<AbsenteeList>('/attendance/absentees'),
+  })
+}
+
+// What every warden should be told right now. Checked often because a face worker that stops during a window is
+// the kind of thing someone has to act on within minutes.
+export function useAlerts() {
+  return useQuery({
+    queryKey: ['alerts'],
+    queryFn: () => apiFetch<{ alerts: Alert[] }>('/alerts'),
+    refetchInterval: 15_000,
+    select: (data) => data.alerts,
+  })
+}
+
+// Admin only: service health, tonight's counts, latency and the housekeeping jobs.
+export function useSystem(enabled: boolean) {
+  return useQuery({
+    queryKey: ['system'],
+    queryFn: () => apiFetch<SystemOverview>('/system'),
+    refetchInterval: 10_000,
+    enabled,
   })
 }

@@ -10,4 +10,5 @@ class HealthOut(ApiModel):
     db: ServiceStatus
     redis: ServiceStatus
     scheduler: ServiceStatus
+    scheduler_age_seconds: float | None = None
     version: str

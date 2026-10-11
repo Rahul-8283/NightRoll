@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router'
 import { useTonight } from '../api/queries'
 import { useAuth } from '../auth/useAuth'
 import { LiveProvider } from '../live/LiveProvider'
+import { AlertBanner } from './AlertBanner'
 import { TopBar } from './TopBar'
 import { Wordmark } from './ui/Wordmark'
 
@@ -17,7 +18,10 @@ const links = [
 // Phase 11 pages are listed so the layout is complete, and stay inactive until they are built.
 const later: string[] = []
 
-const adminLinks = [{ to: '/dashboard/audit', label: 'Audit', end: false }]
+const adminLinks = [
+  { to: '/dashboard/audit', label: 'Audit', end: false },
+  { to: '/dashboard/system', label: 'System', end: false },
+]
 
 export function Layout() {
   const { email, role, signOut } = useAuth()
@@ -57,6 +61,7 @@ export function Layout() {
         </aside>
         <main className="page">
           <TopBar />
+          <AlertBanner />
           <Outlet />
         </main>
       </div>

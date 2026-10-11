@@ -3,6 +3,8 @@ import type { ExpoConfig } from 'expo/config';
 // EAS sets EAS_BUILD_PROFILE during a cloud build; it is unset for `expo start` and for the
 // production profile, so cleartext HTTP only ever reaches the development build (task 9.5).
 const isDevelopmentBuild = process.env.EAS_BUILD_PROFILE === 'development';
+// Release builds trust only the server's own certificate authority (Phase 12, task 2.7).
+const isReleaseBuild = ['production', 'preview'].includes(process.env.EAS_BUILD_PROFILE ?? '');
 
 const config: ExpoConfig = {
   name: 'NightRoll',
@@ -45,6 +47,7 @@ const config: ExpoConfig = {
       },
     ],
     ...(isDevelopmentBuild ? ['./plugins/withDevCleartextHttp'] : []),
+    ...(isReleaseBuild ? ['./plugins/withPinnedCa'] : []),
   ],
   experiments: {
     typedRoutes: true,

@@ -15,6 +15,7 @@ from app.auth.supabase import Warden
 from app.config import Settings
 from app.db.queries import reviews as review_q
 from app.errors import AppError
+from app.logging import request_headers
 from app.services import audit
 from app.services.review import actor_of
 
@@ -51,7 +52,7 @@ async def view_frames(
         async with httpx.AsyncClient(timeout=settings.FACE_WORKER_TIMEOUT_SECONDS, transport=TRANSPORT) as client:
             response = await client.post(
                 f"{settings.FACE_WORKER_URL.rstrip('/')}/frames/links",
-                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}"},
+                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}", **request_headers()},
                 json={"folder": folder},
             )
     except httpx.HTTPError as exc:

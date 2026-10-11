@@ -121,11 +121,11 @@ flowchart TB
 | Container | Responsibility | Talks to | Owns data |
 |---|---|---|---|
 | NightRoll app | Enrollment, challenge, capture, WiFi scan, signing | API (via AP), Keystore | Key alias only |
-| Reverse proxy | TLS termination, routing, rate limits at the edge | API, dashboard | None |
+| Reverse proxy (nginx) | TLS termination, serves the dashboard build, routes `/v1/` to the API, upgrades the live socket, sets the real client address and a request ID, limits request sizes | API | None |
 | API service | Gates, scoring orchestration, fusion, window and review logic, WebSocket hub | Redis, Supabase PostgreSQL, Supabase Auth, face worker, Play Integrity, network adapter | Attendance records, via Supabase PostgreSQL |
-| Scheduler | Opens and closes windows, issues nonces, records absentees | Redis, API | Window state, via Redis |
+| Scheduler | Opens and closes windows, issues nonces, records absentees, writes its heartbeat, clears spent enrollment codes, records room health | Redis, Supabase PostgreSQL | Window state, via Redis |
 | Face worker | Embedding and anti-spoof on frames | Supabase PostgreSQL (embeddings only), Supabase Storage | Frames, deleted after 24 hours |
-| Network adapter | Reads client-to-AP association from controller or RADIUS | Controller or RADIUS, API | None |
+| Network adapter | Judges where the phone is behind the `NetworkVerifier` interface: the room subnet today, a controller or RADIUS later (`docs/network-adapter.md`) | Inside the API; controller or RADIUS when built | None |
 | Dashboard | Room tiles, review queue, exports | API over HTTPS and WebSocket | None |
 | Supabase PostgreSQL | Relational records and pgvector embeddings; hosted by Supabase | API, face worker | All durable records |
 | Supabase Auth | Warden and admin login, MFA, JWT issuance | Dashboard, API | Warden and admin accounts |
@@ -188,10 +188,10 @@ flowchart TB
 
 The pipeline runs in strict order. A failure at any stage stops the request.
 
-1. **Ingress:** schema validation, session or device authentication, rate limit.
-2. **Gates:** window, nonce, signature, integrity, environment, network. Nonce is consumed only after the signature check.
-3. **Scorers:** face, liveness, room fingerprint, own access point, access point agreement. Scorers run in parallel where independent.
-4. **Fusion:** weighted sum, then verdict thresholds.
+1. **Ingress:** size limits, rate limit for addresses that keep failing signatures, then the signature gate, because nothing in the payload is believed before it passes. A repeated submission gets its stored answer, an existing PRESENT mark is returned as it is, and one new submission per student per 20 seconds is allowed.
+2. **Gates:** signature, window, nonce, integrity, environment, network. The nonce is consumed only after the signature check, and the challenge is compared before it is consumed.
+3. **Scorers:** face, liveness, room fingerprint, own access point, access point agreement. The face worker call and the local database reads run at the same time.
+4. **Fusion:** weighted sum, with two floors first (a face or liveness score of zero rejects, whatever the total), then the verdict thresholds. A room with no learned Wi-Fi fingerprint cannot be presented as confirmed, so it goes to review.
 5. **Verdict builder:** creates the mark, reason codes, and response. Writes the audit entry.
 6. **Notify:** updates the WebSocket snapshot for the room.
 
@@ -200,7 +200,7 @@ The pipeline runs in strict order. A failure at any stage stops the request.
 - **Gates are a list, not nested conditionals.** Each gate is a small function returning pass or a reason code. New gates can be added without changing the others.
 - **Scorers are pure functions.** Given inputs, they return a score and a reason. They are easy to test with recorded data and easy to re-run after a threshold change.
 - **Thresholds are configuration.** Fusion reads weights and cutoffs at runtime, so the walk test can change them without a deploy.
-- **Idempotent verification.** A repeated request with the same nonce returns the existing mark. Retries from a weak connection do not create duplicates.
+- **Idempotent verification.** A repeat of the same signed submission returns the answer already stored for it. Retries from a weak connection do not create duplicates.
 
 ---
 
@@ -278,8 +278,9 @@ sequenceDiagram
     Ks-->>App: Signature
     App->>AP: POST /attendance/verify
     AP->>API: Forward (source IP = room subnet)
-    API->>R: Consume nonce atomically
-    API->>API: Gates
+    API->>API: Signature gate
+    API->>R: Window, then consume nonce atomically
+    API->>API: Integrity, environment, network gates
     API->>Face: Embed and anti-spoof frames
     Face-->>API: Scores
     API->>API: Fingerprint, own AP, AP agreement
@@ -340,7 +341,7 @@ sequenceDiagram
 | Students, rooms, devices | PostgreSQL | Long-lived | Relational integrity |
 | Embeddings | Supabase PostgreSQL (pgvector) | Until student leaves | Vector search close to the record |
 | Marks, reviews, audit | PostgreSQL | Per hostel policy | Durable and queryable |
-| Frames | Encrypted file store | 24 hours | Kept only for audit of disputed marks |
+| Frames | Supabase Storage, private bucket | 24 hours | Kept only for audit of disputed marks; the face worker deletes them |
 | Device private key | Android Keystore | Life of the device | Never leaves hardware |
 
 ### 7.2 Consistency rules
@@ -411,7 +412,7 @@ flowchart LR
 
 ### 9.1 Pilot
 
-One host on the campus LAN runs all server containers via Docker Compose. Phones reach it through the room access points. The warden's desk reaches it on the LAN.
+One host on the campus LAN runs the server containers (nginx, api, scheduler, face-worker) from `infra/docker-compose.yml`. There is no database or Redis container: Supabase and Upstash are hosted. Only nginx publishes ports (80 and 443); the API and the face worker are reachable inside the Compose network only. Phones reach the host through the room access points. The warden's desk reaches it on the LAN.
 
 ```mermaid
 flowchart TB

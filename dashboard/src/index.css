@@ -720,7 +720,11 @@ a.window:hover {
   }
 
   .rail__nav {
+    flex: 1 1 100%;
     flex-direction: row;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
   .rail__foot {
@@ -1538,4 +1542,96 @@ a.window:hover {
 
 .facade__rooms {
   grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+}
+
+/* ---------- Search results: each student is one spaced row, status on the right ---------- */
+
+.result.ledger__row,
+.result.ledger__row:first-child,
+.result.ledger__row:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  margin: 0 0 var(--s-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-control);
+  background: var(--ink-1);
+}
+
+.result.ledger__row:last-child {
+  margin-bottom: 0;
+}
+
+.result.ledger__row .ledger__main {
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.result .pill {
+  flex: none;
+  font-size: var(--text-xs);
+  padding: 3px 9px;
+}
+
+.result.is-selected {
+  border-color: var(--lamp);
+  box-shadow: inset 3px 0 0 var(--lamp);
+}
+
+/* ---------- Enrollment code: one line, sized to its panel, and a tidy card header ---------- */
+
+.code-display {
+  min-width: 0;
+}
+
+.code-display__value {
+  display: block;
+  font-size: clamp(var(--text-xl), 6.5vw, var(--text-2xl));
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.card__head {
+  flex-wrap: wrap;
+}
+
+.card__head .eyebrow {
+  white-space: nowrap;
+}
+
+/* ---------- Alerts: problems with the system itself (Phase 12) ---------- */
+
+.alerts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+/* ---------- System page (Phase 12) ---------- */
+
+.system__counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+
+.system__counts > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.system__note {
+  margin-top: var(--s-4);
+}
+
+.system__sub {
+  margin: var(--s-5) 0 var(--s-3);
+}
+
+.system__relaxed {
+  margin: 0;
+  padding-left: var(--s-4);
 }

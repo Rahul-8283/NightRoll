@@ -86,14 +86,25 @@ async def seed_rooms(conn: asyncpg.Connection, rooms: list[dict]) -> dict[str, s
     return room_ids
 
 
+def load_roster() -> list[tuple[str, str, str]]:
+    """(roll number, name, room number) for each student. Uses config/students.local.json when it exists."""
+    local = ROOT / "config" / "students.local.json"
+    if local.exists():
+        data = json.loads(local.read_text(encoding="utf-8"))
+        print(f"Reading roster from {local.relative_to(ROOT)}")
+        return [(s["roll_number"], s["name"], s["room"]) for s in data["students"]]
+    room_numbers = [r for r in ("101", "102")]
+    return [(f"TEST{i + 1:03d}", name, room_numbers[i % len(room_numbers)]) for i, name in enumerate(TEST_STUDENTS)]
+
+
 async def seed_students(conn: asyncpg.Connection, room_ids: dict[str, str]) -> None:
-    room_numbers = list(room_ids.keys())
-    if not room_numbers:
+    if not room_ids:
         print("No rooms to assign students to; skipping students", file=sys.stderr)
         return
-    for i, name in enumerate(TEST_STUDENTS):
-        roll_number = f"TEST{i + 1:03d}"
-        room_number = room_numbers[i % len(room_numbers)]
+    roster = load_roster()
+    for roll_number, name, room_number in roster:
+        if room_number not in room_ids:
+            sys.exit(f"Student {roll_number} is in room {room_number}, which is not in the room map")
         await conn.execute(
             """
             insert into students (roll_number, name, room_id, active)
@@ -105,7 +116,7 @@ async def seed_students(conn: asyncpg.Connection, room_ids: dict[str, str]) -> N
             name,
             room_ids[room_number],
         )
-    print(f"Seeded {len(TEST_STUDENTS)} test students")
+    print(f"Seeded {len(roster)} students")
 
 
 async def main() -> int:

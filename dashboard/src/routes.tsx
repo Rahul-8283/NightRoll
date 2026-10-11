@@ -10,6 +10,7 @@ import { Login } from './pages/Login'
 import { NotFound } from './pages/NotFound'
 import { Review } from './pages/Review'
 import { Room } from './pages/Room'
+import { System } from './pages/System'
 import { Tonight } from './pages/Tonight'
 import { Windows } from './pages/Windows'
 
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
           { path: 'absentees', element: <Absentees /> },
           { path: 'export', element: <Export /> },
           { path: 'audit', element: <Audit /> },
+          { path: 'system', element: <System /> },
           { path: 'rooms/:roomId', element: <Room /> },
           { path: 'windows', element: <Windows /> },
           { path: 'enrollment', element: <Enrollment /> },

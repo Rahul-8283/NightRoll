@@ -25,11 +25,19 @@ error_logger = logging.getLogger("nightroll.error")
 class AppError(Exception):
     """Raise this for any expected failure. `code` is a stable, machine-readable name."""
 
-    def __init__(self, code: str, status_code: int, message: str, details: list[dict] | None = None) -> None:
+    def __init__(
+        self,
+        code: str,
+        status_code: int,
+        message: str,
+        details: list[dict] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.code = code
         self.status_code = status_code
         self.message = message
         self.details = details or []
+        self.headers = headers
         super().__init__(message)
 
 
@@ -39,7 +47,11 @@ def _body(request: Request, code: str, message: str, details: list[dict]) -> dic
 
 
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status_code, content=_body(request, exc.code, exc.message, exc.details))
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=_body(request, exc.code, exc.message, exc.details),
+        headers=exc.headers,
+    )
 
 
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

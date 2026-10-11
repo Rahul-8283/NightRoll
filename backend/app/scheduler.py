@@ -20,11 +20,11 @@ from app.db.queries import windows as windows_q
 from app.logging import configure_logging, log_event
 from app.redis import client as redis_client
 from app.redis import keys
+from app.services import housekeeping, ops
 from app.services import windows as windows_service
 
 TICK_SECONDS = 15
 CLAIM_SECONDS = 120
-HEARTBEAT_SECONDS = 60
 SCHEDULER_ACTOR = "scheduler"
 
 logger = logging.getLogger("nightroll.scheduler")
@@ -36,7 +36,7 @@ async def _claim(redis: Redis, window_id, job: str) -> bool:
 
 async def tick(settings: Settings, pool, redis: Redis) -> None:
     now = datetime.now(UTC)
-    await redis.set(keys.SCHEDULER_HEARTBEAT, now.isoformat(), ex=HEARTBEAT_SECONDS)
+    await ops.write_heartbeat(redis, now)
     await windows_service.ensure_default_windows(pool, settings, now)
 
     for row in await windows_q.due_to_open(pool, now):
@@ -56,6 +56,16 @@ async def tick(settings: Settings, pool, redis: Redis) -> None:
             logger.exception("window close failed", extra={"extra_fields": {"window_id": str(row["id"])}})
 
 
+async def clear_spent_codes(pool, redis: Redis) -> None:
+    """Daily. The Redis claim keeps a second scheduler process from running it at the same moment."""
+    if not await redis.set("lock:job:enrollment-code-cleanup", "1", nx=True, ex=CLAIM_SECONDS):
+        return
+    try:
+        await housekeeping.clear_spent_enrollment_codes(pool, redis)
+    except Exception:
+        logger.exception("enrollment code cleanup failed")
+
+
 async def main() -> None:
     settings = get_settings()
     configure_logging(settings.LOG_LEVEL)
@@ -63,6 +73,17 @@ async def main() -> None:
     redis = await redis_client.connect(settings)
 
     scheduler = AsyncIOScheduler(timezone="UTC")
+    scheduler.add_job(
+        clear_spent_codes,
+        "cron",
+        hour=3,
+        minute=30,
+        timezone=settings.TIMEZONE,
+        args=[pool, redis],
+        max_instances=1,
+        coalesce=True,
+        id="enrollment-code-cleanup",
+    )
     scheduler.add_job(
         tick,
         "interval",

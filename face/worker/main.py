@@ -16,6 +16,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, sta
 from worker.auth import verify_service_token
 from worker.cleanup import get_last_cleanup_time, run_frame_cleanup
 from worker.config import settings
+from worker.logs import RequestContextMiddleware, configure_logging
 from worker.pipeline.antispoof import AntiSpoofClassifier, calculate_median_antispoof
 from worker.pipeline.detect import evaluate_frame
 from worker.pipeline.embed import aggregate_enrollment_embeddings, extract_unit_embedding
@@ -33,7 +34,7 @@ from worker.schemas import (
 )
 from worker.storage import storage
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+configure_logging()
 logger = logging.getLogger("face_worker")
 
 # Global model state
@@ -74,11 +75,20 @@ def require_ready() -> None:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Face model is not loaded")
 
 
+FIRST_CLEANUP_DELAY_SECONDS = 30
+
+
 async def cleanup_loop() -> None:
-    """Hourly background loop for frame retention cleanup."""
+    """Background loop for frame retention cleanup: once shortly after start, then every hour.
+
+    The first run is not left for an hour later, so a worker that restarts often still cleans up, and the
+    dashboard's System page has a "last cleanup" time soon after a start.
+    """
+    delay = FIRST_CLEANUP_DELAY_SECONDS
     while True:
         try:
-            await asyncio.sleep(3600)  # 1 hour
+            await asyncio.sleep(delay)
+            delay = 3600  # 1 hour
             await run_frame_cleanup()
         except asyncio.CancelledError:
             break
@@ -136,6 +146,7 @@ app = FastAPI(
     description="Internal face embedding extraction, anti-spoofing, and frame retention service",
     lifespan=lifespan,
 )
+app.add_middleware(RequestContextMiddleware)
 
 
 @app.get("/health", response_model=HealthResponse, dependencies=[Depends(verify_service_token)])
@@ -364,4 +375,3 @@ async def frame_links(body: FrameLinksRequest) -> FrameLinksResponse:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Could not sign a frame link")
         links.append(FrameLink(name=path.rsplit("/", 1)[-1], url=url))
     return FrameLinksResponse(expires_in_seconds=FRAME_LINK_SECONDS, links=links)
-

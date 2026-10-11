@@ -4,9 +4,11 @@ Hostel attendance marked from bed. Built for the Genesis hackathon at our colleg
 
 ## Current status
 
-- Repo contains only README.md, LICENSE, and .git. No code yet.
-- Plan lives in the Claude Docs pages "NightRoll: Hostel Attendance From Your Bed" and "NightRoll Geofencing", and in the "NightRoll Architecture" artifact. Those are the sources; this file is the working summary.
-- Two versions of the design currently conflict (see Open decisions). Resolve them before building.
+- Built and on `feat/native`: the API (gates, scoring, review, windows, enrollment, exports, audit, System status), the scheduler, the face worker, the warden dashboard, the Expo app, and the Supabase migrations. Phases 1 to 11 are done; Phase 12 is done except the release app build (task 8) and the demo environment (task 9).
+- Phase 12 added: Dockerfiles and `infra/docker-compose.yml` (nginx, api, scheduler, face-worker), HTTPS and the real client address through nginx, startup safety checks (`APP_ENV` is `local`, `demo`, `pilot` or `production`), Redis rate limits, JSON logs with a request ID from nginx to the face worker, `/v1/metrics`, the admin System page and alert banner, the `NetworkVerifier.locate` contract, `docs/runbook.md`, and a release-build plugin that pins the app to the server's certificate authority.
+- Still to do: the signed release build and the two demo phones (Phase 12 tasks 8 and 9), then Phase 13 (load, security checks, timed demo rehearsals). The Docker images were built once to check the Dockerfiles; the full stack has not yet been run from Compose.
+- Plan lives in the Claude Docs pages "NightRoll: Hostel Attendance From Your Bed" and "NightRoll Geofencing", the "NightRoll Architecture" artifact, and in `docs/` (PRD, TRD, architecture, runbook, network adapter). Those are the sources; this file is the working summary.
+- Start each service from its own README; run the whole server side with `docker compose -f infra/docker-compose.yml up -d --build` (see `infra/README.md`).
 
 ## Core idea
 
@@ -89,10 +91,11 @@ Be honest in the demo: the subnet check needs real router subnets; phone hotspot
 
 ## Open decisions
 
-- **Window time:** 22:00–22:30 (diagram artifact) vs 9:55–10:15 (architecture text). The user's own problem is 10 PM, so default to 22:00–22:30 unless told otherwise.
-- **Trust weights and cutoffs:** diagram says 0.30 / 0.20 / 0.30 / 0.15 / 0.05 with PRESENT ≥ 0.80, REVIEW 0.60–0.80, REJECT < 0.60. Text says 0.35 / 0.25 / 0.25 / 0.10 / 0.05 with PRESENT ≥ 0.85. Pick one set and mark it provisional until the walk test.
-- **Face threshold:** ~0.45–0.50 cosine similarity for ArcFace, to be tuned on our own enrollment data.
-- **Network path:** does the hostel give per-room or per-floor subnets, controller API access, or RADIUS accounting? Unknown. Confirm with the network admin before promising production.
+- **Window time:** settled at 22:00 to 22:30 (`WINDOW_DEFAULT_OPEN` and `WINDOW_DEFAULT_CLOSE`). The warden can change any night.
+- **Trust weights and cutoffs:** set to 0.30 face, 0.30 fingerprint, 0.20 liveness, 0.15 own access point, 0.05 access point agreement, with PRESENT at 0.80 or more and review from 0.60. Still provisional until the walk test. A face or liveness score of zero rejects whatever the total, and a room with no learned Wi-Fi fingerprint is capped at review.
+- **Face threshold:** 0.45 to 0.50 cosine similarity for ArcFace, to be tuned on our own enrollment data.
+- **Network path:** the demo and first pilot use the subnet check. Whether the hostel offers per-room or per-floor subnets, controller API access, or RADIUS accounting is still unknown; `docs/network-adapter.md` says what to ask the network admin for.
+- **Supabase backup plan:** not recorded. The runbook says where to check and where to write it down.
 - **Team:** four people; split is app + liveness, backend + crypto + network, face service, dashboard + demo.
 
 ## Constraints and gotchas

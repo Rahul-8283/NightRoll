@@ -1,0 +1,24 @@
+# Nothing in this list may enter an image: env files, secrets, local data, tooling caches.
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.p12
+*.jks
+*service-account*.json
+
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.git/
+.vscode/
+.DS_Store
+*.log
+README.md
+Dockerfile
+.dockerignore

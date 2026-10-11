@@ -6,13 +6,16 @@ The worker only answers numbers. A worker that cannot be reached is a 503, never
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from uuid import UUID
 
 import httpx
 
+from app import metrics
 from app.config import Settings
 from app.errors import AppError
+from app.logging import request_headers
 from app.services.verification.scorers import FrameMeasure
 
 # Test seam: tests replace this with an httpx.MockTransport. Never set in production code.
@@ -53,22 +56,27 @@ async def verify_frames(
         "mark_id": str(mark_id),
         "frame_hashes": json.dumps(hashes),
     }
+    started = time.perf_counter()
     try:
         async with httpx.AsyncClient(timeout=settings.FACE_WORKER_TIMEOUT_SECONDS, transport=TRANSPORT) as client:
             resp = await client.post(
                 f"{settings.FACE_WORKER_URL.rstrip('/')}/verify",
-                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}"},
+                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}", **request_headers()},
                 data=data,
                 files=files,
             )
     except httpx.HTTPError as exc:
+        metrics.face_latency.observe(time.perf_counter() - started, "unreachable")
         raise FaceUnavailable("the face service did not answer") from exc
 
     if resp.status_code == 404:
+        metrics.face_latency.observe(time.perf_counter() - started, "not_enrolled")
         return None
     if resp.status_code != 200:
+        metrics.face_latency.observe(time.perf_counter() - started, "error")
         raise FaceUnavailable(f"the face service returned HTTP {resp.status_code}")
 
+    metrics.face_latency.observe(time.perf_counter() - started, "ok")
     body = resp.json()
     measures = [
         FrameMeasure(
