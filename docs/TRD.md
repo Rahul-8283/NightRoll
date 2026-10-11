@@ -63,8 +63,8 @@ flowchart LR
 | Mobile app | Enrollment, liveness UI, face capture, WiFi scan, signing | Expo (React Native, TypeScript), Expo Modules in Kotlin, VisionCamera, ML Kit, TFLite | Development and production builds via EAS; Expo Go for screens only |
 | API service | Hard gates, orchestration, scoring, fusion, window and review logic | FastAPI on Python 3.12 | Container |
 | Face worker | Embedding extraction, anti-spoof scoring | InsightFace buffalo_l on ONNX Runtime, Silent-Face | Container, separate from API |
-| Scheduler | Opens and closes windows, issues nonces | Celery beat or APScheduler | Container |
-| Network adapter | Reads client-to-AP association from controller or RADIUS | Python module behind an interface | Container, optional |
+| Scheduler | Opens and closes windows, issues nonces, runs housekeeping | APScheduler, in its own process | Container, same image as the API |
+| Network adapter | Judges where the phone is: the room subnet today, a controller or RADIUS later | Python module behind the `NetworkVerifier` interface (`docs/network-adapter.md`) | Inside the API; subnet mode built, controller and RADIUS are contract only |
 | Dashboard | Room tiles, review queue, exports | React, WebSocket | Static build behind the gateway |
 | Database | Relational data and vector search | Supabase PostgreSQL with pgvector | Hosted, managed by Supabase |
 | Auth | Warden and admin login, MFA, JWT issuance | Supabase Auth | Hosted, managed by Supabase |
@@ -121,41 +121,32 @@ Base path `/v1`, JSON over HTTPS. Enrollment and verification are called by the 
 
 | Method | Path | Caller | Purpose |
 |---|---|---|---|
+| GET | `/health` | Anyone | Database, Redis and scheduler status |
+| GET | `/metrics` | Admin, or the internal network reaching the API directly | Prometheus text (section 13) |
+| GET | `/windows`, `/windows/current`, `/windows/history` | Warden | Windows, tonight's window, past nights |
 | POST | `/windows` | Warden | Create or update a window for a night |
-| POST | `/windows/{id}/off` | Warden | Mark a night as off |
-| POST | `/enrollments` | Student app | Submit consent, embedding, device public key |
-| POST | `/rooms/{room_id}/fingerprint` | Warden or enrollment | Submit room WiFi scans |
-| POST | `/attendance/verify` | Student app | Submit signed marking payload |
-| GET | `/attendance/{window_id}` | Warden | List marks for a window |
-| POST | `/attendance/{mark_id}/review` | Warden | Approve, decline, or override |
-| POST | `/attendance/manual` | Warden | Record a manual mark with reason |
-| GET | `/exports/attendance` | Administration | CSV export by date range, floor, or room |
-| WS | `/ws/rooms` | Warden dashboard | Live room status stream |
+| POST | `/windows/{id}/off`, `/open-now`, `/close-now` | Warden | Mark a night off, or open or close a window by hand |
+| POST | `/enrollment-codes` | Warden | Issue a 15-minute, single-use enrollment code for a student |
+| POST | `/enrollments` | Student app | Submit the code, consent, face frames and device public key |
+| GET | `/attendance/nonce` | Student app (device signature) | Window status, and the nonce and challenge when open |
+| POST | `/attendance/verify` | Student app (device signature in the body) | Submit the signed marking envelope (section 6.2.1) |
+| GET | `/attendance/tonight`, `/attendance/absentees` | Warden | Room counts and the absentee list |
+| GET | `/reviews`, `/attendance/marks/{id}` | Warden | The review queue, and one attempt with its scores |
+| POST | `/attendance/marks/{id}/review`, `/override` | Warden | Approve or decline a review, or override a decision |
+| POST | `/attendance/manual` | Warden | Record a manual mark with a reason |
+| POST | `/attendance/marks/{id}/frames/view` | Warden | Signed, 60-second links to a mark's retained frames |
+| GET | `/rooms`, `/rooms/{id}`, `/rooms/{id}/tonight` | Warden | Rooms and their state tonight |
+| GET, POST | `/rooms/{id}/fingerprint`, `/fingerprint/reset` | Warden | Read, capture or reset a room's Wi-Fi fingerprint |
+| GET, PATCH, POST | `/students`, `/students/{id}/enrollment`, `/room`, `/withdraw` | Warden | Roster, enrollment status, room change, consent withdrawal |
+| GET | `/exports/attendance` | Warden | CSV export by date range, floor, or room |
+| GET | `/audit` | Admin | The audit trail |
+| GET | `/alerts` | Warden | The alerts shown as a banner (section 13) |
+| GET | `/system` | Admin | Service health, tonight's counts, latency, housekeeping |
+| WS | `/ws/rooms` | Warden dashboard | Live room status stream; the first message carries the access token |
 
 ### 5.2 Verification request
 
-```json
-{
-  "student_id": "uuid",
-  "window_id": "uuid",
-  "nonce": "base64url, 32 bytes",
-  "client_time": "RFC 3339, informational only",
-  "wifi": {
-    "bssid": "aa:bb:cc:dd:ee:ff",
-    "ssid_hash": "sha256 of SSID",
-    "rssi": -58,
-    "band": "5GHz",
-    "scan": [{"bssid": "aa:bb:cc:dd:ee:00", "rssi": -61, "band": "2.4GHz"}]
-  },
-  "frames": [{"sha256": "hex", "liveness_passed": true}],
-  "liveness": {"challenge_id": "string", "completed": true, "duration_ms": 4200},
-  "integrity_token": "string",
-  "environment": {"vpn": false, "proxy": false, "mock_location": false},
-  "signature": "base64, ECDSA P-256 over canonical payload"
-}
-```
-
-Frames are uploaded alongside the request. Each frame's SHA-256 must match the hash in the signed payload.
+The marking request is the multipart envelope in section 6.2.1: the signed `payload`, its `signature`, the Play Integrity token and the camera frames. Everything the server decides on is inside the signed payload, and each frame's SHA-256 in it must match the frame that was uploaded. A field the phone did not sign never reaches the decision.
 
 ### 5.3 Verification response
 
@@ -166,6 +157,7 @@ Frames are uploaded alongside the request. Each frame's SHA-256 must match the h
   "score": 0.87,
   "reasons": [{"code": "WIFI_PATTERN_MISMATCH", "message": "WiFi pattern does not match this room"}],
   "retry_allowed": true,
+  "attempts_left": 2,
   "fallback": "GROUND_FLOOR_SCANNER | NONE"
 }
 ```
@@ -176,13 +168,14 @@ Reason codes come from a fixed set (section 6.4). Messages are for display only.
 
 | HTTP | When | Behaviour |
 |---|---|---|
-| 200 | Hard gate rejects the mark | Body has verdict REJECTED and a reason, so the app can show it |
-| 400 | Schema validation fails | Field-level errors |
-| 401 | Missing or invalid access token | Generic message |
-| 403 | Device not enrolled, or student not in window | Generic message |
-| 409 | Nonce already used, or a PRESENT mark exists for this window | Returns the existing mark ID |
-| 429 | Rate limit exceeded | `Retry-After` header |
-| 503 | Face worker or Play Integrity unavailable | App shows the ground-floor fallback |
+| 200 | A gate rejects the mark, or a PRESENT mark already exists, or the same submission is repeated | Body has the verdict and a reason, so the app can show it. A repeat returns the stored answer. |
+| 401 | Missing or invalid access token or device signature | Generic message |
+| 403 | The account has no warden or admin role, or MFA is not complete | Generic message |
+| 409 | The same submission is still being checked, or a review or manual mark conflicts with an earlier one | Error code says which |
+| 413 | Payload over 64 KiB, or a frame over 1 MiB | Error code says which |
+| 422 | Schema validation fails | Field-level errors |
+| 429 | Rate limit exceeded (section 11) | `Retry-After` header, in seconds |
+| 503 | Face worker, Play Integrity or the network source unavailable | App shows the ground-floor fallback. Never a pass. |
 
 ### 5.5 WebSocket messages
 
@@ -217,14 +210,16 @@ No messages are pushed to phones. The student app calls `GET /v1/attendance/nonc
 
 Gates run in this order. The first failure ends the request.
 
-1. **Window:** `opens_at <= server_now <= closes_at`. Server time only.
-2. **Nonce:** exists, unused, and belongs to this student. It is consumed only after the signature check passes, so a request that fails the signature does not burn the nonce.
-3. **Signature:** ECDSA P-256 verification over the exact UTF-8 bytes of `payload` received in the multipart submission, using the active device public key for the student. To avoid any mismatch between what the phone signs and what the server checks, the phone signs an exact string of bytes and sends that same string. The server verifies the signature over the bytes it received, and only then reads them as JSON.
+1. **Signature:** ECDSA P-256 verification over the exact UTF-8 bytes of `payload` received in the multipart submission, using the active device public key for the student. The phone signs an exact string of bytes and sends that same string. The server verifies the signature over the bytes it received, and only then reads them as JSON, checks the schema and version, and checks each frame's SHA-256 against the signed hashes. Nothing in the payload is believed before this gate passes, so it runs first.
+2. **Window:** `opens_at <= server_now <= closes_at`, and the signed window is the open one. Server time only; the phone's `client_time` is recorded and never used.
+3. **Nonce:** exists, unused, belongs to this student, and was issued with the same challenge the payload reports. It is consumed only after the signature check has passed (it always has by now), and the challenge is compared before it is consumed, so a wrong challenge does not burn it.
 4. **Integrity:** decode the Play Integrity token through the Google API. Require `MEETS_DEVICE_INTEGRITY`. Require the token's request hash to equal the SHA-256 of the raw payload bytes, which binds the token to this request.
 5. **Environment:** VPN, proxy, and mock location all false. These are client reports, so they count as supporting evidence. Play Integrity and the network gate are the independent checks.
-6. **Network:**
-   - MVP: source IP is inside the room's subnet.
-   - Production: the controller or RADIUS reports the device's MAC associated with the room's access point within the last 60 seconds.
+6. **Network:** the address is read from the connection, or from the forwarded-for header only when the connection comes from a listed reverse proxy (`TRUSTED_PROXY_IPS`), taking the last entry the proxy wrote, which nginx sets from the address it saw and never from the client.
+   - Subnet mode (demo and first pilot): the source address is inside the room's subnet, and the access point the phone reports is one of the room's.
+   - Controller and RADIUS modes: the network reports the device on one of the room's access points within the last 120 seconds. Contract only; see `docs/network-adapter.md`.
+
+A failed signature is counted against the caller's address (section 11), and a gate that cannot be judged because Google, the face worker or the network source is unreachable answers 503, never a pass.
 
 ### 6.2.1 Submission Envelope and Multipart Format
 
@@ -236,7 +231,7 @@ Nightly attendance is submitted via `POST /v1/attendance/verify` as `multipart/f
 | `signature` | Base64 DER ECDSA P-256 signature over the payload bytes |
 | `integrity_token` | Play Integrity token bound to SHA-256(`payload`), or empty |
 | `integrity_error` | Error code if Play Integrity token request failed (optional) |
-| `frame_0` to `frame_3` | JPEG image bytes (action 1, action 2, neutral 1, neutral 2) |
+| `frame_0` to `frame_4` | One to five JPEG frames, each at most 1 MiB (the example below uses four: action 1, action 2, neutral 1, neutral 2) |
 
 **Core Payload schema:**
 
@@ -299,9 +294,15 @@ score = 0.30*face + 0.30*fingerprint + 0.20*liveness + 0.15*own_ap + 0.05*ap_agr
 | 0.60 to below 0.80 | NEEDS_REVIEW |
 | Below 0.60 | REJECTED |
 
+Two floors run before the cutoffs, because a strong Wi-Fi match must not carry a face that does not match:
+
+- A face score of 0 is REJECTED with `FACE_MISMATCH`, whatever the total.
+- A liveness score of 0 is REJECTED with `LIVENESS_FAILED`, whatever the total.
+- A score at or above the PRESENT cutoff in a room with no learned Wi-Fi fingerprint is capped at NEEDS_REVIEW (`FINGERPRINT_MISSING`), because the Wi-Fi signals cannot confirm the room.
+
 Weights and thresholds are read from configuration, so they can be tuned without a release.
 
-**Reason codes (fixed set):** `OUTSIDE_WINDOW`, `NONCE_INVALID`, `SIGNATURE_INVALID`, `DEVICE_NOT_ENROLLED`, `INTEGRITY_FAILED`, `ENVIRONMENT_FLAGGED`, `NETWORK_MISMATCH`, `FACE_MISMATCH`, `LIVENESS_FAILED`, `WIFI_PATTERN_MISMATCH`, `AP_UNAVAILABLE`, `LOW_SCORE`.
+**Reason codes (fixed set):** `OUTSIDE_WINDOW`, `NONCE_INVALID`, `SIGNATURE_INVALID`, `DEVICE_NOT_ENROLLED`, `INTEGRITY_FAILED`, `ENVIRONMENT_FLAGGED`, `NETWORK_MISMATCH`, `PAYLOAD_INVALID`, `FACE_MISMATCH`, `LIVENESS_FAILED`, `FINGERPRINT_MISSING`, `WIFI_PATTERN_MISMATCH`, `AP_UNAVAILABLE`, `LOW_SCORE`.
 
 ### 6.5 Room fingerprint matching
 
@@ -403,6 +404,7 @@ CREATE TABLE attendance_windows (
   opens_at timestamptz NOT NULL,
   closes_at timestamptz NOT NULL,
   off boolean NOT NULL DEFAULT false,
+  state text NOT NULL DEFAULT 'scheduled' CHECK (state IN ('scheduled', 'open', 'closed', 'off')),
   CHECK (closes_at > opens_at)
 );
 
@@ -424,9 +426,12 @@ CREATE UNIQUE INDEX one_present_per_window
   ON attendance_marks (window_id, student_id)
   WHERE verdict = 'PRESENT';
 
+-- Append-only: a mark is never edited. Every decision is a new row, and the latest decision of each kind wins.
 CREATE TABLE reviews (
-  mark_id uuid PRIMARY KEY REFERENCES attendance_marks(id),
-  decision text NOT NULL CHECK (decision IN ('APPROVED', 'DECLINED', 'OVERRIDDEN')),
+  id bigserial PRIMARY KEY,
+  mark_id uuid NOT NULL REFERENCES attendance_marks(id),
+  decision text NOT NULL CHECK (decision IN ('APPROVED', 'DECLINED', 'OVERRIDDEN', 'MANUAL')),
+  status text CHECK (status IN ('PRESENT', 'ABSENT')),   -- required for OVERRIDDEN
   reviewed_by text NOT NULL,
   note text,
   reviewed_at timestamptz NOT NULL DEFAULT now()
@@ -442,6 +447,8 @@ CREATE TABLE audit_log (
 );
 ```
 
+One view, `student_window_status`, decides each student's status in each window (override, then manual mark, automatic present, approved, declined, pending review, absent, off, not marked). Every screen, the export and the room counts read it.
+
 `students.active` and `devices.active` allow revoking access without deleting history. `attendance_marks.attempt` keeps every retry inside a window as its own row, instead of overwriting the previous one. `enrollment_codes` has no foreign key to a warden table; `created_by` is the warden's Supabase user id, checked against Supabase Auth, not a local table.
 
 ### 7.2 Redis keys (Upstash)
@@ -452,8 +459,11 @@ Hosted on Upstash over TLS, so every connection uses a `rediss://` URL. Upstash 
 |---|---|---|
 | `nonce:{window_id}:{student_id}` | `{value, used}` | Until `closes_at` |
 | `window:{window_id}:state` | `open`, `closed`, or `off` | `closes_at` + 1 day |
-| `ratelimit:verify:{student_id}` | Counter | 60 seconds |
-| `ws:snapshot:{window_id}` | Last room status JSON | `closes_at` + 1 hour |
+| `ratelimit:submit:{student_id}` | Marker, one new submission per 20 seconds | 20 seconds |
+| `ratelimit:{name}:{subject}` | Counter for the limits in section 11 | The limit's window |
+| `scheduler:heartbeat` | Time the scheduler last checked in | 24 hours |
+| `ops:job:{job}` | When a housekeeping job last ran, and what it did | 30 days |
+| `submission:{hash}` | The stored answer to a decided submission, for repeats | Until `closes_at` |
 
 ### 7.3 Frame storage
 
@@ -550,11 +560,26 @@ Until Phase 8 wires up signature verification, `backend/app/auth/device.py` is a
 | Authorisation | Roles `warden`, `admin`, `system`. Only `warden` can override or review. |
 | Secrets | Environment or secret manager only. Supabase service role key never reaches the app or dashboard. Never committed to git. |
 | Input validation | Strict schema validation; unknown fields rejected |
-| Rate limiting | One verification per student per 60 seconds; Supabase Auth login limits configured to 5 attempts per 15 minutes |
+| Rate limiting | In Redis, per section below. A limited request gets 429 with `Retry-After`. Supabase Auth login limits are set in Supabase. |
+| Startup checks | With `APP_ENV` `pilot` or `production` the API refuses to start if Play Integrity enforcement is off, the network check is off, MFA is not required, `TRUSTED_PROXY_IPS` is empty or open, `FACE_WORKER_TOKEN` is under 32 characters, or the face worker reports its anti-spoof model unavailable. `APP_ENV=demo` starts and prints a banner listing each relaxed setting. |
+| Edge | nginx terminates TLS, overwrites the forwarded-for header with the address it saw, limits request bodies to what the endpoints accept, and sends HSTS, a content security policy allowing only the API and Supabase, no framing and no MIME sniffing. Release builds of the app trust only the server's own certificate authority. |
 | Logging | No embeddings, frames, tokens, or full signatures. Student IDs hashed in application logs. |
 | Dependencies | Pinned versions; dependency scanning in CI |
-| Backups | Daily encrypted database backups; one restore test before pilot |
+| Backups | Supabase's, by plan (see `docs/runbook.md`); one restore test before pilot |
 | Least privilege | Face worker has no access to attendance tables. API has no access to frame storage. Row-level security on every table. Service role key is server-side only. |
+
+### 11.1 Rate limits
+
+Counters live in Redis. A limited request gets `429` with a `Retry-After` header. If Redis cannot be reached a limit is skipped and logged, because the marking path needs Redis anyway and `/v1/health` reports it as degraded.
+
+| Route | Limit | Keyed by |
+|---|---|---|
+| `POST /v1/attendance/verify` | One new submission per 20 seconds; three rejected attempts per window, after which `retry_allowed` is false | Student |
+| `POST /v1/enrollments` | Five failed codes lock code entry for 15 minutes | Student |
+| `GET /v1/attendance/nonce` | 10 per minute | Student |
+| Any student route failing the signature check | 20 failures per minute, after which the address is refused for the rest of the minute | Client address |
+| Warden API | 300 per minute | Warden |
+| Export | 10 per hour | Warden |
 
 ---
 
@@ -564,50 +589,53 @@ Until Phase 8 wires up signature verification, `backend/app/auth/device.py` is a
 
 | Environment | Purpose | Where |
 |---|---|---|
-| Local | Development | Laptops, Docker Compose |
-| Demo | Hackathon demo | One laptop on a router-backed test network |
-| Pilot | Hostel pilot | One server on the campus LAN |
+| Local | Development | Laptops; services run directly or from `infra/docker-compose.yml`. `APP_ENV=local`. |
+| Demo | Hackathon demo | One laptop on a router-backed test network. `APP_ENV=demo`. |
+| Pilot | Hostel pilot | One server on the campus LAN. `APP_ENV=pilot`, with the safety checks of section 11 enforced. |
 
 ### 12.2 Pilot topology
 
 ```mermaid
 flowchart TB
     subgraph LAN["Campus LAN"]
-        subgraph Host["Single host, Docker Compose, with hosted Supabase and Upstash"]
-            NGX["Reverse proxy<br/>TLS termination"]
+        subgraph Host["Single host, Docker Compose"]
+            NGX["nginx<br/>dashboard, TLS, proxy"]
             API["API service"]
             FW["Face worker"]
             SCH["Scheduler"]
-            PG[("Supabase PostgreSQL + pgvector")]
-            RD[("Upstash Redis")]
-            FS[("Encrypted frame volume")]
             NGX --> API
-            API --> PG
-            API --> RD
             API --> FW
-            SCH --> RD
-            FW --> PG
-            FW --> FS
         end
-        CTRL["WiFi controller or RADIUS"]
+        CTRL["WiFi controller or RADIUS<br/>(later)"]
         CTRL -. "read-only API" .-> API
     end
+    subgraph Hosted["Hosted services, reached over the internet"]
+        PG[("Supabase<br/>PostgreSQL, pgvector, Storage")]
+        RD[("Upstash Redis")]
+    end
+    API --> PG
+    API --> RD
+    SCH --> PG
+    SCH --> RD
+    FW --> PG
 ```
 
 ### 12.3 Containers (pilot sizing)
 
 | Container | Base image | Port | Resources |
 |---|---|---|---|
-| nginx | nginx:stable | 443 | 0.5 vCPU, 256 MB |
-| api | python:3.12-slim | 8000 (internal) | 2 vCPU, 2 GB |
-| face-worker | python:3.12 with ONNX Runtime | internal | 4 vCPU, 4 GB |
-| scheduler | api image | none | 0.25 vCPU, 256 MB |
+| nginx (also serves the dashboard build) | nginx:1.28-alpine | 80 (redirects) and 443, the only ports published | 0.5 vCPU, 256 MB |
+| api | python:3.12-slim-bookworm, dependencies from `uv.lock`, runs as a non-root user | 8000, inside the Compose network only | 2 vCPU, 2 GB |
+| face-worker | python:3.12-slim-bookworm with ONNX Runtime, non-root. Models are mounted read-only and checked against their recorded SHA-256 on every start. | 8100, inside the Compose network only | 4 vCPU, 4 GB |
+| scheduler | api image, command `python -m app.scheduler` | none | 0.25 vCPU, 256 MB |
+
+There is no database container: the database is Supabase's and Redis is Upstash's. Every container has a health check, `api` waits for `face-worker` to be healthy, all restart `unless-stopped`, and no secret is baked into an image: env files are read when the containers start. nginx has a fixed address on the Compose network, which is what `TRUSTED_PROXY_IPS` is set to.
 
 Sizing assumes 1,000 students marking in a 30-minute window: about 0.6 verifications per second at peak, with face work dominating CPU.
 
 ### 12.4 Configuration
 
-Read from environment variables or a config file, never hard-coded:
+Read from environment variables or a config file, never hard-coded. Each service has its own `.env` and a matching `.env.example` that lists every variable the code reads; `infra/.env` holds the few values Compose itself needs:
 - Window defaults
 - Score weights and verdict thresholds
 - Fingerprint constants
@@ -621,13 +649,11 @@ Changing these does not require a code change.
 
 ## 13. Observability
 
-- **Logs:** structured JSON, one line per request, with request ID, endpoint, verdict, reason codes, and latency. No personal data beyond a hashed student ID.
-- **Metrics:** request count and latency per endpoint; verdict counts per window; gate failures by reason code; face worker latency; Redis and PostgreSQL health.
-- **Alerts:**
-  - Verification error rate above 2% in a window
-  - Face worker down while a window is open
-  - Frame volume above 80% full
-- **Dashboards:** one live view for the warden's night (counts, gate failures, latency) and one for the team (all metrics).
+- **Logs:** JSON on standard output from every service, one line per request, each with a timestamp and a request ID. nginx assigns the ID, the API reuses it and passes it to the face worker, so one ID follows a request through all three. The API's lines carry the verdict and reason codes; no personal data beyond a hashed student ID. The face worker logs a route template, never a student's ID.
+- **Metrics:** `GET /v1/metrics` in Prometheus text format, for an admin or for a caller on the internal network that reaches the API directly (never through the proxy). Request count and latency per route template, verdicts, gate failures by reason code, time per verification stage, face worker round trips by outcome, open dashboard sockets, and the age of the scheduler heartbeat.
+- **System page (admins):** service health, tonight's counts, gate failures by reason, latency, the last run of each housekeeping job, and any relaxed settings.
+- **Alerts, as a banner on every dashboard page:** the face worker down while a window is open; the scheduler heartbeat stale (older than 60 seconds); more than 20% of the last five minutes' attempts rejected (needs at least five attempts). Not built: a verification error-rate alert, and a frame-volume alert (frames live in Supabase Storage, not on a volume of ours).
+- **Housekeeping:** the scheduler writes its heartbeat every 15 seconds, clears used and expired enrollment codes daily and records room health when a window closes; the face worker deletes frames older than 24 hours, once shortly after it starts and then hourly.
 
 ---
 
