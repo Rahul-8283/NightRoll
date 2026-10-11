@@ -720,7 +720,11 @@ a.window:hover {
   }
 
   .rail__nav {
+    flex: 1 1 100%;
     flex-direction: row;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
   .rail__foot {
