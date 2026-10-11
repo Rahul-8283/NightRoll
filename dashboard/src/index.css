@@ -1596,3 +1596,11 @@ a.window:hover {
 .card__head .eyebrow {
   white-space: nowrap;
 }
+
+/* ---------- Alerts: problems with the system itself (Phase 12) ---------- */
+
+.alerts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}

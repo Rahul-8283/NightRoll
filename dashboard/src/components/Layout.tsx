@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router'
 import { useTonight } from '../api/queries'
 import { useAuth } from '../auth/useAuth'
 import { LiveProvider } from '../live/LiveProvider'
+import { AlertBanner } from './AlertBanner'
 import { TopBar } from './TopBar'
 import { Wordmark } from './ui/Wordmark'
 
@@ -57,6 +58,7 @@ export function Layout() {
         </aside>
         <main className="page">
           <TopBar />
+          <AlertBanner />
           <Outlet />
         </main>
       </div>

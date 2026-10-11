@@ -227,3 +227,9 @@ export type AbsenteeList = {
   absent: number
   students: AbsenteeRow[]
 }
+
+export type Alert = {
+  code: string
+  severity: 'critical' | 'warning'
+  message: string
+}
