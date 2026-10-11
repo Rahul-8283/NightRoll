@@ -75,11 +75,20 @@ def require_ready() -> None:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Face model is not loaded")
 
 
+FIRST_CLEANUP_DELAY_SECONDS = 30
+
+
 async def cleanup_loop() -> None:
-    """Hourly background loop for frame retention cleanup."""
+    """Background loop for frame retention cleanup: once shortly after start, then every hour.
+
+    The first run is not left for an hour later, so a worker that restarts often still cleans up, and the
+    dashboard's System page has a "last cleanup" time soon after a start.
+    """
+    delay = FIRST_CLEANUP_DELAY_SECONDS
     while True:
         try:
-            await asyncio.sleep(3600)  # 1 hour
+            await asyncio.sleep(delay)
+            delay = 3600  # 1 hour
             await run_frame_cleanup()
         except asyncio.CancelledError:
             break
@@ -366,4 +375,3 @@ async def frame_links(body: FrameLinksRequest) -> FrameLinksResponse:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Could not sign a frame link")
         links.append(FrameLink(name=path.rsplit("/", 1)[-1], url=url))
     return FrameLinksResponse(expires_in_seconds=FRAME_LINK_SECONDS, links=links)
-
