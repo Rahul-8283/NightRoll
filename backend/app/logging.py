@@ -24,6 +24,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app import metrics
+
 REDACT_KEYS = {"authorization", "signature", "integrity_token", "embedding", "frames", "nonce"}
 REDACTED = "[redacted]"
 
@@ -106,7 +108,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             response: Response = await call_next(request)
         finally:
             request_id_var.reset(token)
-        latency_ms = round((time.perf_counter() - start) * 1000, 2)
+        elapsed = time.perf_counter() - start
+        latency_ms = round(elapsed * 1000, 2)
+        # The route template (/v1/rooms/{room_id}), never the path, so the labels stay few and carry no IDs.
+        route = getattr(request.scope.get("route"), "path", None) or "unmatched"
+        metrics.http_requests.inc(request.method, route, str(response.status_code))
+        metrics.http_latency.observe(elapsed, request.method, route)
         response.headers[REQUEST_ID_HEADER] = request_id
         log_event(
             request_logger,

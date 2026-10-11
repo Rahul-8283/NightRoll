@@ -40,7 +40,7 @@ def _forbidden(code: str, message: str) -> AppError:
     return AppError(code=code, status_code=403, message=message)
 
 
-def _extract_token(request: Request) -> str:
+def extract_token(request: Request) -> str:
     header = request.headers.get("authorization") or request.headers.get("Authorization")
     if not header or not header.lower().startswith("bearer "):
         raise _unauthorized("Missing or invalid Authorization header")
@@ -93,7 +93,7 @@ def authenticate_token(token: str, settings: Settings) -> tuple[Warden, dict]:
 
 
 async def current_warden(request: Request, settings: Annotated[Settings, Depends(get_settings)]) -> Warden:
-    warden, _ = authenticate_token(_extract_token(request), settings)
+    warden, _ = authenticate_token(extract_token(request), settings)
     await ratelimit.enforce(redis_client.get_client(), "warden", warden.user_id, ratelimit.WARDEN_PER_MINUTE, 60)
     return warden
 
