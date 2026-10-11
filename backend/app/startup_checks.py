@@ -11,7 +11,7 @@ import logging
 import httpx
 
 from app.config import STRICT_ENVS, Settings
-from app.logging import log_event
+from app.logging import log_event, request_headers
 
 logger = logging.getLogger("nightroll.startup")
 
@@ -24,7 +24,7 @@ async def face_worker_antispoof(settings: Settings) -> bool | None:
         async with httpx.AsyncClient(timeout=settings.FACE_WORKER_TIMEOUT_SECONDS) as client:
             resp = await client.get(
                 f"{settings.FACE_WORKER_URL.rstrip('/')}/health",
-                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}"},
+                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}", **request_headers()},
             )
         if resp.status_code != 200:
             return None

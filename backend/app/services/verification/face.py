@@ -13,6 +13,7 @@ import httpx
 
 from app.config import Settings
 from app.errors import AppError
+from app.logging import request_headers
 from app.services.verification.scorers import FrameMeasure
 
 # Test seam: tests replace this with an httpx.MockTransport. Never set in production code.
@@ -57,7 +58,7 @@ async def verify_frames(
         async with httpx.AsyncClient(timeout=settings.FACE_WORKER_TIMEOUT_SECONDS, transport=TRANSPORT) as client:
             resp = await client.post(
                 f"{settings.FACE_WORKER_URL.rstrip('/')}/verify",
-                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}"},
+                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}", **request_headers()},
                 data=data,
                 files=files,
             )

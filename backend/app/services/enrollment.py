@@ -18,6 +18,7 @@ from app import ratelimit
 from app.config import Settings
 from app.db.queries import enrollment as enrollment_q
 from app.errors import AppError
+from app.logging import request_headers
 from app.redis import keys
 from app.services import audit
 
@@ -131,7 +132,7 @@ async def withdraw_student_consent(
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.delete(
                 face_worker_url,
-                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}"},
+                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}", **request_headers()},
             )
             if resp.status_code not in (200, 404):
                 logger.warning(
@@ -328,7 +329,7 @@ async def _enroll_locked(
                 face_worker_url,
                 data={"student_id": str(student_id)},
                 files=files_payload,
-                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}"},
+                headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}", **request_headers()},
             )
     except Exception as exc:
         logger.error(f"Failed to communicate with face worker: {exc}")
@@ -414,7 +415,7 @@ async def _enroll_locked(
             async with httpx.AsyncClient(timeout=10.0) as client:
                 await client.delete(
                     f"{settings.FACE_WORKER_URL.rstrip('/')}/students/{student_id}/embedding",
-                    headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}"},
+                    headers={"Authorization": f"Bearer {settings.FACE_WORKER_TOKEN}", **request_headers()},
                 )
         except Exception as rollback_err:
             logger.error(f"Failed to delete face embedding on rollback: {rollback_err}")
