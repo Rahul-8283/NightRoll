@@ -291,12 +291,18 @@ async def harness(tmp_path):
             student_id,
         )
 
+    async def clear_limits() -> None:
+        # Every test shares one student and one router address, so earlier tests must not count against later ones.
+        await redis.delete(keys.submit_rate_key(str(student_id)), f"ratelimit:nonce:{student_id}")
+        async for key in redis.scan_iter("ratelimit:signature-failures:*"):
+            await redis.delete(key)
+
     await reset_device()
-    await redis.delete(keys.submit_rate_key(str(student_id)))
+    await clear_limits()
     h = Harness(device, str(student_id), str(row["room_id"]), test_settings.GOOGLE_APPLICATION_CREDENTIALS)
     yield h
 
-    await redis.delete(keys.submit_rate_key(str(student_id)))
+    await clear_limits()
     for window_id in h.windows:
         await redis.delete(keys.window_state_key(window_id), keys.WINDOW_CURRENT)
         await pool.execute("delete from attendance_marks where window_id = $1", uuid.UUID(window_id))
@@ -487,7 +493,9 @@ async def test_new_submissions_are_rate_limited_to_one_per_20_seconds(harness: H
     issued = await harness.nonce()
     assert (await harness.post(harness.build(window_id, issued["nonce"], issued["challenge"]))).status_code == 200
     other = harness.build(window_id, issued["nonce"], issued["challenge"], env={"developer_options": True})
-    assert (await harness.post(other)).status_code == 429
+    limited = await harness.post(other)
+    assert limited.status_code == 429
+    assert 1 <= int(limited.headers["retry-after"]) <= 20
 
 
 @pytest.mark.asyncio
