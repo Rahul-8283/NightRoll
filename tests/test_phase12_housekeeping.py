@@ -64,8 +64,6 @@ async def test_codes_spent_more_than_a_day_ago_are_removed_and_recent_or_live_on
 
     rows = await pool.fetch("select code_hash from enrollment_codes where code_hash like 'test-%'")
     left = {r["code_hash"] for r in rows}
-        r["code_hash"] for r in await pool.fetch("select code_hash from enrollment_codes where code_hash like 'test-%'")
-    }
     assert removed >= 2
     assert left == {recent_used, recent_expired, live}
     assert old_used not in left and old_expired not in left
