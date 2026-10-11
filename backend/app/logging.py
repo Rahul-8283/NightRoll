@@ -13,6 +13,7 @@ import hashlib
 import json
 import logging
 import re
+import sys
 import time
 import uuid
 from contextvars import ContextVar
@@ -84,7 +85,7 @@ class JsonFormatter(logging.Formatter):
 
 
 def configure_logging(level: str = "info") -> None:
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
     root = logging.getLogger()
     root.handlers = [handler]
