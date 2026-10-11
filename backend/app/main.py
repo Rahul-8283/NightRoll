@@ -13,6 +13,7 @@ from app.errors import register_error_handlers
 from app.logging import RequestLoggingMiddleware, configure_logging, log_event
 from app.redis import client as redis_client
 from app.routers import attendance, audit, enrollment, exports, health, live, reviews, rooms, students, windows
+from app.startup_checks import run as run_startup_checks
 
 logger = logging.getLogger("nightroll.app")
 
@@ -23,6 +24,7 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        await run_startup_checks(settings)
         # A dependency that is down at boot must not take the whole API down with it;
         # /v1/health has to stay reachable and report "degraded" instead of failing to start.
         try:

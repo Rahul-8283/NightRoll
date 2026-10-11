@@ -15,6 +15,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
+APP_ENVS = ("local", "demo", "pilot", "production")
+STRICT_ENVS = ("pilot", "production")
+MIN_FACE_WORKER_TOKEN_LENGTH = 32
+# Entries that would make the forwarded-for header believable from anyone.
+OPEN_PROXY_ENTRIES = {"*", "0.0.0.0", "0.0.0.0/0", "::", "::/0"}
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8", case_sensitive=True)
@@ -120,6 +126,9 @@ class Settings(BaseSettings):
         if not self.REDIS_URL.startswith("rediss://"):
             raise ValueError("REDIS_URL must use TLS (rediss://); a plain redis:// URL is refused")
 
+        if self.APP_ENV not in APP_ENVS:
+            raise ValueError(f"APP_ENV must be one of: {', '.join(APP_ENVS)}")
+
         if self.NETWORK_VERIFY_MODE not in ("subnet", "controller", "radius", "off"):
             raise ValueError("NETWORK_VERIFY_MODE must be one of: subnet, controller, radius, off")
 
@@ -132,7 +141,42 @@ class Settings(BaseSettings):
         if not self.REQUIRE_MFA and self.APP_ENV in ("pilot", "production"):
             raise ValueError("REQUIRE_MFA=false is not allowed when APP_ENV is pilot or production")
 
+        if self.APP_ENV in STRICT_ENVS:
+            problem = self.trusted_proxy_problem()
+            if problem:
+                raise ValueError(f"TRUSTED_PROXY_IPS {problem} when APP_ENV is pilot or production")
+            if len(self.FACE_WORKER_TOKEN) < MIN_FACE_WORKER_TOKEN_LENGTH:
+                raise ValueError(
+                    f"FACE_WORKER_TOKEN must be at least {MIN_FACE_WORKER_TOKEN_LENGTH} characters "
+                    "when APP_ENV is pilot or production"
+                )
+
         return self
+
+    def trusted_proxy_problem(self) -> str | None:
+        """Why the proxy list cannot be trusted, or None when it names specific addresses."""
+        entries = [item.strip() for item in self.TRUSTED_PROXY_IPS.split(",") if item.strip()]
+        if not entries:
+            return "is empty; list the reverse proxy's address"
+        if any(entry in OPEN_PROXY_ENTRIES for entry in entries):
+            return "allows every address; list only the reverse proxy's address"
+        return None
+
+    def relaxed_settings(self) -> list[str]:
+        """Every setting that a pilot or production start would refuse. A demo start lists them in its banner."""
+        relaxed = []
+        if not self.PLAY_INTEGRITY_ENFORCE:
+            relaxed.append("PLAY_INTEGRITY_ENFORCE=false: phones are not checked with Play Integrity")
+        if self.NETWORK_VERIFY_MODE == "off":
+            relaxed.append("NETWORK_VERIFY_MODE=off: the room network gate always passes")
+        if not self.REQUIRE_MFA:
+            relaxed.append("REQUIRE_MFA=false: wardens can sign in without a second factor")
+        problem = self.trusted_proxy_problem()
+        if problem:
+            relaxed.append(f"TRUSTED_PROXY_IPS {problem}")
+        if len(self.FACE_WORKER_TOKEN) < MIN_FACE_WORKER_TOKEN_LENGTH:
+            relaxed.append(f"FACE_WORKER_TOKEN is shorter than {MIN_FACE_WORKER_TOKEN_LENGTH} characters")
+        return relaxed
 
     def safe_field_names(self) -> list[str]:
         """Field names only, for startup logs. Never returns values."""
