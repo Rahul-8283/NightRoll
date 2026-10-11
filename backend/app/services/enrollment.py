@@ -14,6 +14,7 @@ import asyncpg
 import httpx
 from redis.asyncio import Redis
 
+from app import ratelimit
 from app.config import Settings
 from app.db.queries import enrollment as enrollment_q
 from app.errors import AppError
@@ -83,6 +84,15 @@ async def issue_enrollment_code(
     return code, expires_at
 
 
+def _locked(retry_after: int) -> AppError:
+    error = ratelimit.too_many(
+        retry_after,
+        "Too many failed attempts. Try again in a few minutes, or ask the warden for a new code.",
+    )
+    error.code = "CODE_LOCKED"
+    return error
+
+
 async def is_student_locked_out(redis: Redis, student_id: UUID) -> bool:
     is_locked = await redis.get(_locked_key(student_id))
     return is_locked is not None
@@ -94,7 +104,7 @@ async def record_failed_attempt(redis: Redis, student_id: UUID) -> int:
     if count == 1:
         await redis.expire(key, LOCKOUT_WINDOW_SECONDS)
     if count >= MAX_FAILED_ATTEMPTS:
-        await redis.set(_locked_key(student_id), "1")
+        await redis.set(_locked_key(student_id), "1", ex=LOCKOUT_WINDOW_SECONDS)
     return count
 
 
@@ -224,11 +234,7 @@ async def complete_student_enrollment(
 
     # Check lockout
     if await is_student_locked_out(redis, student_id):
-        raise AppError(
-            code="CODE_LOCKED",
-            status_code=403,
-            message="Too many failed attempts. Code entry is locked until the warden issues a new code.",
-        )
+        raise _locked(await redis.ttl(_locked_key(student_id)))
 
     # Validate code hash against database
     code_hash = hash_code(code)
@@ -237,11 +243,7 @@ async def complete_student_enrollment(
     if record is None:
         failed_count = await record_failed_attempt(redis, student_id)
         if failed_count >= MAX_FAILED_ATTEMPTS:
-            raise AppError(
-                code="CODE_LOCKED",
-                status_code=403,
-                message="Too many failed attempts. Code entry is locked until the warden issues a new code.",
-            )
+            raise _locked(LOCKOUT_WINDOW_SECONDS)
         raise AppError(
             code="INVALID_CODE",
             status_code=400,

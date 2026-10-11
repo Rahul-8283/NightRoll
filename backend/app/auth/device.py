@@ -18,8 +18,12 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 from fastapi import Request
 
+from app import ratelimit
+from app.config import get_settings
 from app.db import pool as db_pool
 from app.errors import AppError
+from app.redis import client as redis_client
+from app.services.verification.network import client_address, parse_trusted_proxies
 
 MAX_CLOCK_SKEW_SECONDS = 60
 
@@ -28,7 +32,25 @@ def _unauthorized(message: str) -> AppError:
     return AppError(code="UNAUTHORIZED", status_code=401, message=message)
 
 
+def _caller(request: Request) -> str:
+    settings = get_settings()
+    return client_address(request, parse_trusted_proxies(settings.TRUSTED_PROXY_IPS)) or "unknown"
+
+
 async def current_device(request: Request) -> UUID:
+    """Authenticate a student request. An address that keeps failing the signature check is slowed down."""
+    caller = _caller(request)
+    redis = redis_client.get_client()
+    await ratelimit.blocked(redis, "signature-failures", caller, ratelimit.SIGNATURE_FAILURES_PER_MINUTE)
+    try:
+        return await _authenticate(request)
+    except AppError as exc:
+        if exc.status_code == 401:
+            await ratelimit.record(redis, "signature-failures", caller, ratelimit.SIGNATURE_WINDOW_SECONDS)
+        raise
+
+
+async def _authenticate(request: Request) -> UUID:
     raw_student_id = request.headers.get("x-student-id")
     sig_header = request.headers.get("x-signature")
     ts_header = request.headers.get("x-timestamp")

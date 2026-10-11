@@ -17,8 +17,10 @@ from typing import Annotated
 import jwt
 from fastapi import Depends, Request
 
+from app import ratelimit
 from app.config import Settings, get_settings
 from app.errors import AppError
+from app.redis import client as redis_client
 
 AUDIENCE = "authenticated"
 
@@ -92,6 +94,7 @@ def authenticate_token(token: str, settings: Settings) -> tuple[Warden, dict]:
 
 async def current_warden(request: Request, settings: Annotated[Settings, Depends(get_settings)]) -> Warden:
     warden, _ = authenticate_token(_extract_token(request), settings)
+    await ratelimit.enforce(redis_client.get_client(), "warden", warden.user_id, ratelimit.WARDEN_PER_MINUTE, 60)
     return warden
 
 
